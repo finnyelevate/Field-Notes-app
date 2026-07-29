@@ -1,4 +1,4 @@
-const CACHE='efn-v3';
+const CACHE='efn-v4';
 const ASSETS=['./','index.html','manifest.json','icon-192.png','icon-512.png',
  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
@@ -18,7 +18,7 @@ self.addEventListener('fetch',e=>{
   if(isShell){
     // network-first: always get the newest build when online
     e.respondWith(
-      fetch(e.request).then(res=>{
+      fetch(e.request,{cache:'no-cache'}).then(res=>{
         if(res.ok){const cl=res.clone();caches.open(CACHE).then(c=>c.put(e.request,cl));}
         return res;
       }).catch(()=>caches.match(e.request,{ignoreSearch:true})

@@ -86,6 +86,9 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .rline select{border:1.5px solid var(--line);border-radius:10px;padding:12px 6px;background:#fff;font-family:var(--mono);font-weight:700}
 .rline input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:12px 10px;background:#fff}
 .rcomment{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+.mini{flex:1;min-width:0}
+.mini label{display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 3px 2px}
+.mini input{width:100%}
 .row2.struck input,.row2.struck select{text-decoration:line-through;color:var(--danger);background:#FDF3F1}
 .rstrike{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--muted)}
 /* ---------- canvas ---------- */
@@ -270,6 +273,13 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <button class="btn" id="md-ok">Draw</button></div>
 </div></div>
 
+<div class="mback" id="m-ready"><div class="modal">
+  <h2 id="mr-title" style="font-family:var(--mono);font-size:15px;word-break:break-all">File ready</h2>
+  <div class="card-sub" id="mr-sub"></div>
+  <div class="mrow"><button class="btn ghost" id="mr-save">Save file</button>
+  <button class="btn" id="mr-share">Share…</button></div>
+</div></div>
+
 <div class="mback" id="m-confirm"><div class="modal">
   <h2 id="mc-title">Are you sure?</h2>
   <div class="card-sub" id="mc-body"></div>
@@ -406,7 +416,7 @@ function confirmM(title,body,cb){
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build 13';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build 16';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -562,17 +572,22 @@ function syncGps(){
 const ROWTYPES=['CHK','TIE','SET','FND','NOTE'];
 const GROWTYPES=['OBS','CHK','TIE','SET','FND','NOTE'];
 function renderRows(){
+  const g=page.type==='gps';
   $('s-rows').innerHTML=page.rows.map((r,i)=>`
     <div class="row2${r.struck?' struck':''}" data-i="${i}">
       <div class="rline">
-        <select data-rf="t">${(page.type==='gps'?GROWTYPES:ROWTYPES).map(t=>`<option${r.t===t?' selected':''}>${t}</option>`).join('')}</select>
-        <input data-rf="pt" placeholder="pt #" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono">
-        <input data-rf="code" placeholder="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters">
-        ${page.type==='gps'?`<input data-rf="time" placeholder="time" value="${esc(r.time??'')}" class="mono">`:''}
-        <input data-rf="ht" placeholder="HT" inputmode="decimal" value="${esc(r.ht??'')}" class="mono">
-        <button class="rstrike" data-rs="${i}">${r.committed?'⊘':'✕'}</button>
+        <div class="mini" style="flex:0 0 auto"><label>type</label>
+          <select data-rf="t">${(g?GROWTYPES:ROWTYPES).map(t=>`<option${r.t===t?' selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="mini"><label>pt #</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
+        ${g?`<div class="mini"><label>time</label><input data-rf="time" value="${esc(r.time??'')}" class="mono"></div>`:''}
+        <div class="mini"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
+        <button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>
       </div>
-      <input data-rf="remark" class="rcomment" placeholder="comments" value="${esc(r.remark??'')}">
+      <div class="rline">
+        <div class="mini"><label>description</label><input data-rf="desc" value="${esc(r.desc??'')}" autocapitalize="characters"></div>
+        <div class="mini" style="flex:0 0 32%"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>
+      </div>
+      <div class="mini"><label>comments</label><input data-rf="remark" class="rcomment" value="${esc(r.remark??'')}"></div>
     </div>`).join('');
 }
 $('s-rows').addEventListener('input',e=>{
@@ -585,16 +600,31 @@ $('s-rows').addEventListener('click',e=>{
   if(r.committed){r.struck=!r.struck;}else{page.rows.splice(+b.dataset.rs,1);}
   renderRows();touch();
 });
-$('b-add-row').onclick=()=>{page.rows.push({t:page.type==='gps'?'OBS':'TIE',pt:'',code:'',time:'',ht:'',remark:'',struck:false,committed:false});renderRows();touch();};
+$('b-add-row').onclick=()=>{page.rows.push({t:page.type==='gps'?'OBS':'TIE',pt:'',desc:'',code:'',time:'',ht:'',remark:'',struck:false,committed:false});renderRows();touch();};
+function setupBlank(p){
+  if(Object.keys(p.committed||{}).length)return false;
+  const core=p.type==='gps'?['bpt','bht']:['st','bs','hi','dh','dv'];
+  if(core.some(f=>(p[f]||'').trim()))return false;
+  if(p.rows.some(r=>r.pt||r.pts||r.desc||r.code||r.time||r.ht||r.remark||r.committed))return false;
+  return true;
+}
+function dropIfBlank(){
+  if(!setupBlank(page))return false;
+  const i=note.pages.indexOf(page);
+  if(i>-1)note.pages.splice(i,1);
+  touch();toast('Empty setup removed');
+  return true;
+}
 function commitSetup(){
   (page.type==='gps'?GPSF:SETF).forEach(([f])=>{if((page[f]||'').trim())page.committed[f]=page[f].trim();});
-  page.rows=page.rows.filter(r=>r.pt||r.pts||r.code||r.time||r.ht||r.remark||r.committed);
+  page.rows=page.rows.filter(r=>r.pt||r.pts||r.desc||r.code||r.time||r.ht||r.remark||r.committed);
   page.rows.forEach(r=>r.committed=true);
   touch();
 }
-$('b-setup-done').onclick=()=>{commitSetup();renderPages();show('v-note');};
+$('b-setup-done').onclick=()=>{if(!dropIfBlank())commitSetup();renderPages();show('v-note');};
 $('b-back-note').onclick=()=>$('b-setup-done').onclick();
 $('b-setup-add').onclick=()=>{
+  if(setupBlank(page)){toast('Fill this setup in first — it’s still empty.');return;}
   commitSetup();
   const idx=note.pages.indexOf(page), t=page.type, prev=page;
   page = t==='gps'
@@ -968,6 +998,7 @@ function setupH(p){
   let h=76;
   if(p.hi||p.ht)h+=64;
   if(p.dh||p.dv)h+=64;
+  if(p.rows.length)h+=44;
   return h+30+p.rows.length*56;
 }
 function gpsH(p){
@@ -1007,11 +1038,18 @@ function renderSetupBlock(ctx,p,y){
   if(p.hi||p.ht)pair('HI','hi','HT','ht');
   if(p.dh||p.dv)pair('ΔH','dh','ΔV','dv');
   y+=30;
+  if(p.rows.length){
+    ctx.font=mono(20);ctx.fillStyle='#5E9478';
+    ctx.fillText('PT#',x0+160,y);ctx.fillText('DESC',x0+290,y);
+    ctx.fillText('CODE',x0+570,y);ctx.fillText('HT',x0+720,y);
+    ctx.fillText('COMMENTS',x0+840,y);
+    y+=44;
+  }
   p.rows.forEach(r=>{
     if(y>EH-EM-20)return;
-    ctx.font=mono(26);ctx.fillStyle=r.struck?'#8A5A50':'#24312B';
-    const cells=[[0,r.t],[120,(r.pt!==undefined?r.pt:r.pts)||''],[280,r.code||''],
-      [470,r.ht?('HT '+r.ht):''],[680,r.remark||'']];
+    ctx.font=mono(24);ctx.fillStyle=r.struck?'#8A5A50':'#24312B';
+    const cells=[[0,r.t],[120,(r.pt!==undefined?r.pt:r.pts)||''],[250,r.desc||''],
+      [530,r.code||''],[680,r.ht||''],[800,r.remark||'']];
     let end=x0+40;
     cells.forEach(([dx,v])=>{if(!v)return;
       ctx.fillText(v,x0+40+dx,y);
@@ -1063,8 +1101,9 @@ function renderGpsBlock(ctx,p,y){
     ctx.font=mono(26);ctx.fillStyle=r.struck?'#8A5A50':'#24312B';
     const tShow=r.time||(pvT&&'〃'), hShow=r.ht||(pvH&&'〃');
     if(r.time)pvT=r.time; if(r.ht)pvH=r.ht;
+    const dsc=[r.desc,r.code&&'('+r.code+')'].filter(Boolean).join(' ');
     const cells=[[0,r.t==='OBS'?'':r.t],[160,(r.pt!==undefined?r.pt:r.pts)||''],
-      [300,r.code||''],[510,tShow||''],[700,hShow||''],[820,r.remark||'']];
+      [300,dsc],[510,tShow||''],[700,hShow||''],[820,r.remark||'']];
     let end=x0+40;
     cells.forEach(([dx,v])=>{if(!v)return;
       ctx.fillText(v,x0+40+dx,y);
@@ -1123,16 +1162,42 @@ async function buildPdf(){
   const stamp=`${d.toLocaleDateString('en-US',{month:'short'})}_${d.getDate()}__${d.getFullYear()}`;
   return {blob:pdf.output('blob'),name:`${note.job}_Field_Notes_${stamp}.pdf`,stamp};
 }
-async function shareFile(blob,name,type){
-  const file=new File([blob],name,{type});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
-    await navigator.share({files:[file],title:name}).catch(()=>{});
-    return;
-  }
+let pendingFile=null;
+function dlFile(blob,name){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  if(window.self!==window.top)toast('Preview can’t save files — built '+name+' OK. Export works once the app is hosted and installed.');
+  if(window.self!==window.top)toast('Preview can’t save files — built '+name+' OK. Works once installed.');
   else toast('Saved '+name);
+}
+function offerFile(blob,name,type,desc){
+  pendingFile={blob,name,type};
+  $('mr-title').textContent=name;
+  $('mr-sub').textContent=desc;
+  $('m-ready').classList.add('on');
+}
+$('mr-share').onclick=async()=>{
+  $('m-ready').classList.remove('on');
+  if(!pendingFile)return;
+  const f=new File([pendingFile.blob],pendingFile.name,{type:pendingFile.type});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],title:pendingFile.name});}
+    catch(e){if(e&&e.name!=='AbortError')dlFile(pendingFile.blob,pendingFile.name);}
+  }else dlFile(pendingFile.blob,pendingFile.name);
+};
+$('mr-save').onclick=()=>{
+  $('m-ready').classList.remove('on');
+  if(pendingFile)dlFile(pendingFile.blob,pendingFile.name);
+};
+async function shareFile(blob,name,type,desc){
+  const file=new File([blob],name,{type});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:name});return;}
+    catch(e){
+      if(e&&e.name==='AbortError')return;           // user closed the sheet
+      offerFile(blob,name,type,desc||'');return;    // activation expired — offer a fresh tap
+    }
+  }
+  offerFile(blob,name,type,desc||'');
 }
 function toast(msg){
   let t=$('toast');
@@ -1154,7 +1219,7 @@ $('m-export').addEventListener('click',async e=>{
   if(k==='cancel')return;
   if(k==='pdf'){
     busy(true);
-    try{const p=await buildPdf();await shareFile(p.blob,p.name,'application/pdf');}
+    try{const p=await buildPdf();await shareFile(p.blob,p.name,'application/pdf',`Field notes · ${(p.blob.size/1048576).toFixed(1)} MB`);}
     catch(err){toast(err.message||'Export failed.');}
     busy(false);return;
   }
@@ -1171,7 +1236,8 @@ $('file-zip').addEventListener('change',async e=>{
     const STORE=/\.(jpe?g|png|heic|mp4|mov|3gp|zip|gz)$/i;
     files.forEach(f=>zip.file(f.name,f,{compression:STORE.test(f.name)?'STORE':'DEFLATE'}));
     const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-    await shareFile(blob,`${note.job}_Field_Package_${p.stamp}.zip`,'application/zip');
+    offerFile(blob,`${note.job}_Field_Package_${p.stamp}.zip`,'application/zip',
+      `Field notes PDF + ${files.length} file${files.length===1?'':'s'} · ${(blob.size/1048576).toFixed(1)} MB`);
   }catch(err){toast(err.message||'ZIP export failed. Very large videos may not fit — send those separately.');}
   busy(false);
 });
