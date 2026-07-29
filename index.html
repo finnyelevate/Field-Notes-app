@@ -217,7 +217,10 @@ input,select,textarea{font:inherit;color:var(--ink)}
       <div class="card-sub" style="margin-top:8px">Once saved, lines can’t be deleted — strike them instead (⊘). Struck lines stay visible on the PDF. On GPS pages, leave time/HT blank to repeat the value above (prints as 〃).</div>
     </div>
   </div>
-  <button class="btn fab" id="b-setup-done">Save setup</button>
+  <div class="fab" style="display:flex;gap:10px;box-shadow:none">
+    <button class="btn ghost" id="b-setup-add" style="flex:1">＋ Add another</button>
+    <button class="btn" id="b-setup-done" style="flex:1">Save setup</button>
+  </div>
 </div>
 
 <!-- ============ CANVAS ============ -->
@@ -254,7 +257,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 </div></div>
 
 <div class="mback" id="m-dim"><div class="modal">
-  <h2>Dimension line</h2>
+  <h2 id="md-title">Dimension line</h2>
   <div class="frow">
     <div class="field"><label>Distance (m)</label><input id="md-dist" class="mono" inputmode="decimal" placeholder="1.45"></div>
     <div class="field" style="max-width:38%"><label>Azimuth °</label><input id="md-ang" class="mono" inputmode="numeric" value="0"></div>
@@ -262,7 +265,9 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <div class="field"><label>Direction</label><div class="chips" id="md-dirs"></div></div>
   <div class="field" style="margin-top:12px"><label>Page scale (fits about this size)</label><div class="chips" id="md-scale"></div></div>
   <div class="card-sub" style="margin-top:8px">Next line starts where this one ends — tap near any line end to continue from it.</div>
-  <div class="mrow"><button class="btn ghost" id="md-cancel">Cancel</button><button class="btn" id="md-ok">Draw</button></div>
+  <div class="mrow"><button class="btn ghost" id="md-cancel">Cancel</button>
+  <button class="btn ghost" id="md-del" style="background:var(--danger);color:#fff;display:none">Delete</button>
+  <button class="btn" id="md-ok">Draw</button></div>
 </div></div>
 
 <div class="mback" id="m-confirm"><div class="modal">
@@ -401,7 +406,7 @@ function confirmM(title,body,cb){
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build 10';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build 13';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -581,13 +586,25 @@ $('s-rows').addEventListener('click',e=>{
   renderRows();touch();
 });
 $('b-add-row').onclick=()=>{page.rows.push({t:page.type==='gps'?'OBS':'TIE',pt:'',code:'',time:'',ht:'',remark:'',struck:false,committed:false});renderRows();touch();};
-$('b-setup-done').onclick=()=>{
+function commitSetup(){
   (page.type==='gps'?GPSF:SETF).forEach(([f])=>{if((page[f]||'').trim())page.committed[f]=page[f].trim();});
   page.rows=page.rows.filter(r=>r.pt||r.pts||r.code||r.time||r.ht||r.remark||r.committed);
   page.rows.forEach(r=>r.committed=true);
-  touch();renderPages();show('v-note');
-};
+  touch();
+}
+$('b-setup-done').onclick=()=>{commitSetup();renderPages();show('v-note');};
 $('b-back-note').onclick=()=>$('b-setup-done').onclick();
+$('b-setup-add').onclick=()=>{
+  commitSetup();
+  const idx=note.pages.indexOf(page), t=page.type, prev=page;
+  page = t==='gps'
+    ? {id:uid(),type:'gps',mode:prev.mode||'rover',recv:prev.recv||'',rht:prev.rht||'',
+       bpt:'',bht:'',bcoord:'',brx:prev.brx||'',rows:[],hist:{},committed:{}}
+    : {id:uid(),type:'setup',st:'',bs:'',hi:'',ht:prev.ht||'',dh:'',dv:'',rows:[],hist:{},committed:{}};
+  note.pages.splice(idx+1,0,page);
+  touch();openSetup();
+  toast('Saved — new '+(t==='gps'?'GPS ':'')+'setup started');
+};
 
 /* ================= canvas engine ================= */
 let zoom=0.9, tool='pen', drawing=null, pend=null;
@@ -605,6 +622,7 @@ $('cv-tools').addEventListener('click',e=>{
   wrap.classList.toggle('drawing',k!=='move');
 });
 function openCanvas(){
+  lastDimEnd=null;editDim=null;dimStart=null;
   $('cv-title').firstChild.textContent=pgTitle(page);
   $('cv-sub').textContent=note.job||'';
   tool='pen';document.querySelectorAll('.tool').forEach(x=>x.classList.toggle('on',x.dataset.t==='pen'));
@@ -696,7 +714,13 @@ ink.addEventListener('pointerdown',e=>{
     drawing={k:'s',mode:tool==='erase'?'e':'p',w:tool==='erase'?34:(tool==='fat'?7:3.5),pts:[[x,y]]};
   }else if(tool==='arrow'){drawing={k:'a',x1:x,y1:y,x2:x,y2:y};}
   else if(tool==='north'){page.ops.push({k:'n',x,y});redraw();thumb();touch();}
-  else if(tool==='dim'){dimStart=nearestDimEnd(x,y)||[x,y];openDimModal();}
+  else if(tool==='dim'){
+    const snap=nearestDimEnd(x,y);
+    if(snap){dimStart=snap;editDim=null;openDimModal();}
+    else{const hit=hitDimLine(x,y);
+      if(hit){editDim=hit;openDimModal();}
+      else{dimStart=[x,y];editDim=null;openDimModal();}}
+  }
   else if(tool==='text'||tool==='circ'){pend=[x,y];openTextModal(tool==='circ');}
 });
 ink.addEventListener('pointermove',e=>{
@@ -731,18 +755,37 @@ $('b-back-note2').onclick=()=>{renderPages();show('v-note');};
 /* ---- dimension lines ---- */
 const DIRS=[['↑',0],['↗',45],['→',90],['↘',135],['↓',180],['↙',225],['←',270],['↖',315]];
 const SCALES=[['≤ 10 m',90],['≤ 20 m',45],['≤ 40 m',22]];
-let dimStart=null;
+let dimStart=null, editDim=null, lastDimEnd=null;
 function nearestDimEnd(x,y){
-  let best=null,bd=35;
+  if(lastDimEnd&&Math.hypot(lastDimEnd[0]-x,lastDimEnd[1]-y)<150)return lastDimEnd.slice();
+  let best=null,bd=60;
   page.ops.forEach(o=>{if(o.k!=='d')return;
     [[o.x1,o.y1],[o.x2,o.y2]].forEach(pt=>{
       const d=Math.hypot(pt[0]-x,pt[1]-y);
       if(d<bd){bd=d;best=pt;}});});
+  return best?best.slice():null;
+}
+function hitDimLine(x,y){
+  let best=null,bd=28;
+  page.ops.forEach(o=>{if(o.k!=='d')return;
+    const dx=o.x2-o.x1,dy=o.y2-o.y1,L2=dx*dx+dy*dy;
+    if(!L2)return;
+    let t=((x-o.x1)*dx+(y-o.y1)*dy)/L2;t=Math.max(0,Math.min(1,t));
+    const d=Math.hypot(o.x1+t*dx-x,o.y1+t*dy-y);
+    if(d<bd){bd=d;best=o;}});
   return best;
+}
+function azOf(o){
+  let a=Math.atan2(o.x2-o.x1,-(o.y2-o.y1))*180/Math.PI;
+  return Math.round(((a%360)+360)%360);
 }
 function openDimModal(){
   if(!page.scale)page.scale=45;
-  $('md-dist').value='';
+  $('md-title').textContent=editDim?'Edit line':'Dimension line';
+  $('md-ok').textContent=editDim?'Save':'Draw';
+  $('md-del').style.display=editDim?'flex':'none';
+  $('md-dist').value=editDim?(editDim.v||''):'';
+  if(editDim)$('md-ang').value=azOf(editDim);
   $('md-dirs').innerHTML=DIRS.map(([l,a])=>`<button class="chip${+$('md-ang').value===a?' on':''}" data-da="${a}">${l} ${a}°</button>`).join('');
   $('md-scale').innerHTML=SCALES.map(([l,v])=>`<button class="chip${page.scale===v?' on':''}" data-ds="${v}">${l}</button>`).join('');
   $('m-dim').classList.add('on');
@@ -758,16 +801,47 @@ $('md-scale').addEventListener('click',e=>{
   page.scale=+b.dataset.ds;touch();
   $('md-scale').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===b));
 });
-$('md-cancel').onclick=()=>{$('m-dim').classList.remove('on');dimStart=null;};
+$('md-cancel').onclick=()=>{$('m-dim').classList.remove('on');dimStart=null;editDim=null;};
+$('md-del').onclick=()=>{
+  $('m-dim').classList.remove('on');
+  if(!editDim)return;
+  const i=page.ops.indexOf(editDim);
+  if(i>-1)page.ops.splice(i,1);
+  if(lastDimEnd&&editDim.x2===lastDimEnd[0]&&editDim.y2===lastDimEnd[1])lastDimEnd=null;
+  editDim=null;redraw();thumb();touch();
+};
+function shiftChain(fromPt,delta,visited){
+  page.ops.forEach(o=>{
+    if(o.k!=='d'||visited.has(o))return;
+    if(Math.hypot(o.x1-fromPt[0],o.y1-fromPt[1])<1){
+      visited.add(o);
+      const oldEnd=[o.x2,o.y2];
+      o.x1+=delta[0];o.y1+=delta[1];o.x2+=delta[0];o.y2+=delta[1];
+      shiftChain(oldEnd,delta,visited);
+    }});
+}
 $('md-ok').onclick=()=>{
   const d=parseFloat($('md-dist').value), a=(parseFloat($('md-ang').value)||0)*Math.PI/180;
   $('m-dim').classList.remove('on');
-  if(!d||!dimStart)return;
   const sc=page.scale||45;
+  if(editDim){
+    if(d){
+      const oldEnd=[editDim.x2,editDim.y2];
+      editDim.x2=editDim.x1+Math.sin(a)*d*sc;
+      editDim.y2=editDim.y1-Math.cos(a)*d*sc;
+      editDim.v=$('md-dist').value.trim();
+      shiftChain(oldEnd,[editDim.x2-oldEnd[0],editDim.y2-oldEnd[1]],new Set([editDim]));
+      lastDimEnd=[editDim.x2,editDim.y2];
+    }
+    editDim=null;redraw();thumb();touch();return;
+  }
+  if(!d||!dimStart)return;
   const op={k:'d',x1:dimStart[0],y1:dimStart[1],
     x2:dimStart[0]+Math.sin(a)*d*sc, y2:dimStart[1]-Math.cos(a)*d*sc,
     v:$('md-dist').value.trim()};
-  page.ops.push(op);dimStart=null;
+  page.ops.push(op);
+  lastDimEnd=[op.x2,op.y2];
+  dimStart=null;
   redraw();thumb();touch();
 };
 
