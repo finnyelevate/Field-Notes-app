@@ -1,5 +1,30 @@
 # Elevate Field Notes — Changelog
 
+## Build 20 — 2026-07-31
+**Sketch / markup tools**
+- Offset: tap a polyline, line, or arc with the ∥ tool, type a width in metres —
+  a parallel (mitred/concentric) copy draws on the side you tapped
+- Arcs: 3-point arc tool (start, end, through-point) with endpoint snapping
+- Select (✥): tap symbols, text, circled labels, or the north arrow to drag them
+  to a new position; ✕ deletes the selected item
+- North arrow rotates: select it and tap ↻ (15° steps)
+- Writing colors: ink / red / blue / green / orange for pen strokes, text, and
+  circled labels (linework and monument symbols stay ink)
+- Pen and eraser sizes: S / M / L per tool
+**Inverts**
+- Tap a placed utility symbol (manholes, inspection chambers, catch basins) with
+  the ◉ tool to open its invert card: compass grid (N/E/S/W + diagonals + single
+  INV), multiple inverts allowed in the same direction, values stack outward on
+  the drawing with leader ticks
+- All labels (inverts, dimensions, text) print with a paper-coloured knockout so
+  linework never crosses the numbers
+- Works on sketches, PDF markups, and photo pages; inverts move with their symbol
+**Printed notes**
+- Every page header now shows JOB # (left), date · crew (centre), P x|y (right)
+**In-app**
+- "What's new" card shows automatically once per build; tap the build number on
+  the home screen to reopen it anytime
+
 ## Build 19 — 2026-07-30
 **Setups**
 - Resection setup type (toggle in instrument setup): computed station pt#, HI,
