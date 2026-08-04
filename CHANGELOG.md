@@ -1,5 +1,13 @@
 # Elevate Field Notes — Changelog
 
+## Build 20.1 — 2026-08-01 (fixes from Finny's demo)
+- Invert labels were rendering too small to read at the phone's default zoom —
+  now sized like dimension labels, with heavier leader ticks; clearly legible
+  without zooming in
+- Offset reworked: tap the line, enter the distance, then BOTH sides appear as
+  dashed previews — tap the one you want to keep (undo cancels the preview)
+- Lines/polylines/arcs are easier to grab for offset (wider tap zone)
+
 ## Build 20 — 2026-07-31
 **Sketch / markup tools**
 - Offset: tap a polyline, line, or arc with the ∥ tool, type a width in metres —

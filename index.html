@@ -363,7 +363,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <h2>Offset</h2>
   <div class="field"><label>Offset distance (m)</label>
     <input id="mo-dist" class="mono" inputmode="decimal" placeholder="0.30"></div>
-  <div class="card-sub" style="margin-top:8px">The copy is drawn on the side you tapped.</div>
+  <div class="card-sub" style="margin-top:8px">Next: both sides appear dashed — tap the one you want to keep.</div>
   <div class="mrow"><button class="btn ghost" id="mo-cancel">Cancel</button><button class="btn" id="mo-ok">Offset</button></div>
 </div></div>
 
@@ -570,7 +570,7 @@ function confirmM(title,body,cb){
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+' — tap for what’s new';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+'.1 — tap for what’s new';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -899,17 +899,28 @@ function segDist(px,py,x1,y1,x2,y2){
   let t=((px-x1)*dx+(py-y1)*dy)/L2;t=Math.max(0,Math.min(1,t));
   return Math.hypot(x1+t*dx-px,y1+t*dy-py);
 }
+let offPreview=null;
+function opDist(o,x,y){
+  if(o.k==='pl'){
+    let m2=1e9;
+    for(let j=0;j<o.pts.length-1;j++)
+      m2=Math.min(m2,segDist(x,y,o.pts[j][0],o.pts[j][1],o.pts[j+1][0],o.pts[j+1][1]));
+    return m2;
+  }
+  if(o.k==='arc'){const c2=circum(o.p);return c2?Math.abs(Math.hypot(x-c2.cx,y-c2.cy)-c2.r):1e9;}
+  return 1e9;
+}
 function hitOffTarget(x,y){
   for(let i=page.ops.length-1;i>=0;i--){
     const o=page.ops[i];
     if(o.k==='l'){
-      if(segDist(x,y,o.x1,o.y1,o.x2,o.y2)<26)return{o,pts:[[o.x1,o.y1],[o.x2,o.y2]]};
+      if(segDist(x,y,o.x1,o.y1,o.x2,o.y2)<38)return{o,pts:[[o.x1,o.y1],[o.x2,o.y2]]};
     }else if(o.k==='pl'){
       for(let j=0;j<o.pts.length-1;j++)
-        if(segDist(x,y,o.pts[j][0],o.pts[j][1],o.pts[j+1][0],o.pts[j+1][1])<26)return{o,pts:o.pts};
+        if(segDist(x,y,o.pts[j][0],o.pts[j][1],o.pts[j+1][0],o.pts[j+1][1])<38)return{o,pts:o.pts};
     }else if(o.k==='arc'){
       const c2=circum(o.p);
-      if(c2&&Math.abs(Math.hypot(x-c2.cx,y-c2.cy)-c2.r)<26)return{o,arc:c2};
+      if(c2&&Math.abs(Math.hypot(x-c2.cx,y-c2.cy)-c2.r)<38)return{o,arc:c2};
     }
   }
   return null;
@@ -959,7 +970,7 @@ $('cv-tools').addEventListener('click',e=>{
   const b=e.target.closest('[data-t]');if(!b)return;
   const k=b.dataset.t;
   if(k!=='poly')finalizePoly();
-  clearSel();arcPts=[];offTarget=null;
+  clearSel();arcPts=[];offTarget=null;offPreview=null;
   tool=k;updTools();redraw();
   if(k==='sym')openSymPicker();
 });
@@ -993,7 +1004,7 @@ $('f-rot').onclick=()=>{
 };
 function openCanvas(){
   lastDimEnd=null;editDim=null;dimStart=null;
-  polyDraft=null;gest=null;ptrs.clear();clearSel();arcPts=[];offTarget=null;
+  polyDraft=null;gest=null;ptrs.clear();clearSel();arcPts=[];offTarget=null;offPreview=null;
   $('f-polydone').style.display='none';
   $('f-ortho').classList.toggle('on',ortho);
   $('cv-title').firstChild.textContent=pgTitle(page);
@@ -1049,28 +1060,28 @@ function drawOp(ctx,o){
   }else if(o.k==='y'){
     drawSym(ctx,o.id,o.x,o.y,o.s||26);
     if(o.inv&&UTIL.has(o.id)){
-      const r=(o.s||26);
-      ctx.font='700 22px ui-monospace,Menlo,monospace';
+      const r=(o.s||26), FS=30, LH2=38;
+      ctx.font='700 '+FS+'px ui-monospace,Menlo,monospace';
       Object.keys(o.inv).forEach(d2=>{
         const dv=IDV[d2];if(!dv)return;
         const [dx,dy]=dv, vals=o.inv[d2];
-        ctx.strokeStyle='#24312B';ctx.lineWidth=2;
+        ctx.strokeStyle='#24312B';ctx.lineWidth=3;
         ctx.beginPath();
         ctx.moveTo(o.x+dx*(r+4),o.y+dy*(r+4));
-        ctx.lineTo(o.x+dx*(r+16),o.y+dy*(r+16));
+        ctx.lineTo(o.x+dx*(r+24),o.y+dy*(r+24));
         ctx.stroke();
         vals.forEach((v,i)=>{
           const label=(d2==='INV'?'INV ':d2+' ')+v;
           const w2=ctx.measureText(label).width;
-          let tx=o.x+dx*(r+26), ty;
-          if(dy<0)ty=o.y+dy*(r+30)-i*26;
-          else if(dy>0)ty=o.y+dy*(r+30)+i*26+14;
-          else ty=o.y+8+(i-(vals.length-1)/2)*26;
+          let tx=o.x+dx*(r+36), ty;
+          if(dy<0)ty=o.y+dy*(r+42)-i*LH2;
+          else if(dy>0)ty=o.y+dy*(r+42)+i*LH2+FS*0.6;
+          else ty=o.y+FS*0.35+(i-(vals.length-1)/2)*LH2;
           let x0;
           if(dx>0)x0=tx;
           else if(dx<0)x0=tx-w2;
           else x0=tx-w2/2;
-          ctx.fillStyle='#FBFAF5';ctx.fillRect(x0-5,ty-20,w2+10,26);
+          ctx.fillStyle='#FBFAF5';ctx.fillRect(x0-6,ty-FS*0.92,w2+12,FS*1.22);
           ctx.fillStyle='#24312B';ctx.fillText(label,x0,ty);
         });
       });
@@ -1137,6 +1148,13 @@ function redraw(){
     ctx.setLineDash([]);
     polyDraft.pts.forEach(p2=>{ctx.beginPath();ctx.arc(p2[0],p2[1],5,0,7);ctx.fill();});
   }
+  if(offPreview){
+    ctx.strokeStyle='#F26A1B';ctx.setLineDash([10,8]);
+    if(offPreview.a)drawOp(ctx,offPreview.a);
+    ctx.strokeStyle='#F26A1B';
+    if(offPreview.b)drawOp(ctx,offPreview.b);
+    ctx.setLineDash([]);ctx.strokeStyle='#24312B';
+  }
   if(arcPts.length){
     ctx.fillStyle='#24312B';
     arcPts.forEach(p2=>{ctx.beginPath();ctx.arc(p2[0],p2[1],5,0,7);ctx.fill();});
@@ -1167,6 +1185,15 @@ ink.addEventListener('pointerdown',e=>{
   if(gest)return;
   e.preventDefault();ink.setPointerCapture(e.pointerId);
   const [x,y]=evPos(e);
+  if(offPreview){
+    const da=offPreview.a?opDist(offPreview.a,x,y):1e9;
+    const db=offPreview.b?opDist(offPreview.b,x,y):1e9;
+    const pick=da<=db?offPreview.a:offPreview.b;
+    offPreview=null;
+    if(pick)page.ops.push(pick);
+    redraw();thumb();touch();
+    return;
+  }
   if(tool==='move'){gest={pan:[e.clientX,e.clientY]};return;}
   if(tool==='sel'){
     const hit=hitPointObj(x,y);
@@ -1297,6 +1324,7 @@ ink.addEventListener('pointermove',e=>{
   drawing=null;redraw();thumb();touch();
 }));
 $('b-undo').onclick=()=>{
+  if(offPreview){offPreview=null;redraw();return;}
   if(polyDraft){
     polyDraft.pts.pop();
     if(!polyDraft.pts.length){polyDraft=null;$('f-polydone').style.display='none';}
@@ -1369,18 +1397,19 @@ $('mo-ok').onclick=()=>{
   const dm=parseFloat($('mo-dist').value);
   $('m-off').classList.remove('on');
   if(!dm||!offTarget)return;
-  const d=dm*(page.scale||45), t=offTarget.tap, h=offTarget.hit;
+  const d=dm*(page.scale||45), h=offTarget.hit;
   if(h.arc){
-    const sign=Math.hypot(t[0]-h.arc.cx,t[1]-h.arc.cy)>h.arc.r?1:-1;
-    const k2=(h.arc.r+sign*d)/h.arc.r;
-    if(k2>0.05)page.ops.push({k:'arc',p:h.o.p.map(pt=>[h.arc.cx+(pt[0]-h.arc.cx)*k2,h.arc.cy+(pt[1]-h.arc.cy)*k2])});
+    const kO=(h.arc.r+d)/h.arc.r, kI=(h.arc.r-d)/h.arc.r;
+    offPreview={
+      a:{k:'arc',p:h.o.p.map(pt=>[h.arc.cx+(pt[0]-h.arc.cx)*kO,h.arc.cy+(pt[1]-h.arc.cy)*kO])},
+      b:kI>0.05?{k:'arc',p:h.o.p.map(pt=>[h.arc.cx+(pt[0]-h.arc.cx)*kI,h.arc.cy+(pt[1]-h.arc.cy)*kI])}:null
+    };
   }else{
-    const A=offsetPts(h.pts,d), B=offsetPts(h.pts,-d);
-    const mid=pts=>{const m2=pts[Math.floor(pts.length/2)];return Math.hypot(m2[0]-t[0],m2[1]-t[1]);};
-    page.ops.push({k:'pl',pts:mid(A)<=mid(B)?A:B});
+    offPreview={a:{k:'pl',pts:offsetPts(h.pts,d)},b:{k:'pl',pts:offsetPts(h.pts,-d)}};
   }
   offTarget=null;
-  redraw();thumb();touch();
+  toast('Both sides shown dashed — tap the one to keep.');
+  redraw();
 };
 $('md-cancel').onclick=()=>{$('m-dim').classList.remove('on');dimStart=null;editDim=null;};
 $('md-del').onclick=()=>{
