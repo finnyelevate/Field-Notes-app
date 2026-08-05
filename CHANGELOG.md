@@ -1,5 +1,18 @@
 # Elevate Field — Changelog
 
+## Build 22 — 2026-08-04 (fixes from first field use of 21)
+- Disto photos rebuilt to survive Android closing the app during the camera:
+  📷 now sits on the add row (photo + value + Add in one motion, or photo
+  auto-adds if the value's already typed); the note force-saves before the
+  camera opens; the picker also allows choosing from the gallery — the safest
+  habit is snap with the camera app, then attach from gallery; if the app does
+  get closed mid-photo, it tells you on restart instead of silently losing it
+- Structure labels now print as "PT# 5133" so IDs can't be misread as inverts
+  (Measurement Record captions match)
+- Walk mode: tap any wall while walking to edit its distance/azimuth or delete
+  it — everything after it shifts to stay connected, and the walk continues
+  from the corrected corner; ↩ still steps back one reading
+
 ## Build 21 — 2026-08-04
 **The app is now "Elevate Field"** — notes plus field resources in one place.
 **Resources tab (home screen)**

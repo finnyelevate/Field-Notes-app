@@ -370,7 +370,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 21</h2>
+  <h2>What’s new — builds 21 + 22</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -387,12 +387,14 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <div class="invgrid" id="mi-grid"></div>
   <div class="frow" style="margin-top:12px;align-items:flex-end">
     <div class="field"><label>Invert (m)</label><input id="mi-val" class="mono" inputmode="decimal" placeholder="2.31"></div>
+    <button class="btn ghost sm" id="mi-cam" style="white-space:nowrap;min-height:48px">📷</button>
     <button class="btn" id="mi-add" style="white-space:nowrap">Add INV</button>
   </div>
+  <div class="card-sub" id="mi-camstate" style="display:none;color:var(--grid2)">📷 photo ready — it attaches with Add</div>
   <div id="mi-list" style="margin-top:8px"></div>
   <div class="mrow"><button class="btn" id="mi-done">Done</button></div>
 </div></div>
-<input type="file" id="file-invphoto" accept="image/*" capture="environment" hidden>
+<input type="file" id="file-invphoto" accept="image/*" hidden>
 
 <div class="mback" id="m-off"><div class="modal">
   <h2>Offset</h2>
@@ -465,8 +467,9 @@ input,select,textarea{font:inherit;color:var(--ink)}
 const LW=1000, LH=1294;                 // logical canvas size (letter ratio)
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=21;
+const BUILD=22;
 const NEWS=[
+ ['🛠','Fixes from your first reports','Disto photos now survive Android closing the app (📷 sits beside Add; take the photo, type, Add — or pick from gallery). Structure labels read PT# 5133. Tap any wall while walking to edit or delete it.'],
  ['📚','This app is now Elevate Field','New Resources tab on the home screen: field guidelines, code list, Leica & MetroVan guides, and tap-to-call office contacts. ★ saves a doc for offline.'],
  ['📏','Disto walk mode','New 📏 tool: tap the point of commencement, then feed Disto distance + direction — walls draw themselves. It tells you when you close.'],
  ['📷','Disto photos on inverts','Each invert can carry a photo of the Disto display — they print on a Measurement Record page, captioned with the point number and direction.'],
@@ -967,7 +970,14 @@ function nearestEnd(x,y,rad=30){
   return best?best.slice():null;
 }
 let arcPts=[], offTarget=null;
-let walkPOC=null, walkPt=null, walkStack=null;
+let walkPOC=null, walkPt=null, walkStack=null, walkOps=null;
+function walkResync(){
+  if(!walkPOC||!walkOps)return;
+  walkOps=walkOps.filter(o=>page.ops.includes(o));
+  walkStack=[walkPOC.slice(),...walkOps.map(o=>[o.x2,o.y2])];
+  walkPt=walkStack[walkStack.length-1].slice();
+  redraw();
+}
 function walkSeg(az,dist){
   if(!walkPt)return;
   const sc=page.scale||45, a=az*Math.PI/180;
@@ -976,19 +986,19 @@ function walkSeg(az,dist){
   // closing onto the POC?
   if(walkStack.length>=2&&Math.hypot(end[0]-walkPOC[0],end[1]-walkPOC[1])<14){
     op.x2=walkPOC[0];op.y2=walkPOC[1];
-    page.ops.push(op);
+    page.ops.push(op);walkOps.push(op);
     redraw();thumb();touch();
     toast('Closed on the point of commencement.');
     endWalk();return;
   }
-  page.ops.push(op);
+  page.ops.push(op);walkOps.push(op);
   walkPt=end;walkStack.push(end);
   $('wk-dist').value='';
   redraw();thumb();touch();
   setTimeout(()=>$('wk-dist').focus(),40);
 }
 function endWalk(){
-  walkPOC=null;walkPt=null;walkStack=null;
+  walkPOC=null;walkPt=null;walkStack=null;walkOps=null;
   $('walkbar').style.display='none';
   redraw();
 }
@@ -1009,10 +1019,11 @@ $('wk-go').onclick=()=>{
   walkSeg(az,dist);
 };
 $('wk-undo').onclick=()=>{
-  if(!walkStack||walkStack.length<2)return;
-  page.ops.pop();walkStack.pop();
-  walkPt=walkStack[walkStack.length-1].slice();
-  redraw();thumb();touch();
+  if(!walkOps||!walkOps.length)return;
+  const o=walkOps.pop();
+  const i=page.ops.indexOf(o);
+  if(i>-1)page.ops.splice(i,1);
+  walkResync();thumb();touch();
 };
 $('wk-close').onclick=()=>{
   if(!walkPOC||!walkPt)return;
@@ -1258,12 +1269,12 @@ function drawOp(ctx,o){
       ctx.fillStyle=ctx.strokeStyle='#24312B';
     }
     if(o.pid&&UTIL.has(o.id)){
-      const r=(o.s||26);
+      const r=(o.s||26), ptxt='PT# '+o.pid;
       ctx.font='700 26px ui-monospace,Menlo,monospace';
-      const pw=ctx.measureText(o.pid).width;
+      const pw=ctx.measureText(ptxt).width;
       const px2=o.x-r-10-pw, py2=o.y-r-2;
       ctx.fillStyle='#FBFAF5';ctx.fillRect(px2-5,py2-24,pw+10,30);
-      ctx.fillStyle='#24312B';ctx.fillText(o.pid,px2,py2);
+      ctx.fillStyle='#24312B';ctx.fillText(ptxt,px2,py2);
     }
   }else if(o.k==='l'){
     ctx.lineWidth=3.5;
@@ -1409,10 +1420,15 @@ ink.addEventListener('pointerdown',e=>{
     redraw();
   }
   else if(tool==='walk'){
+    if(walkPOC){
+      const hit=hitDimLine(x,y);
+      if(hit){editDim=hit;openDimModal();}
+      return;
+    }
     if(!walkPOC){
       initWalkDirs();
       walkPOC=nearestEnd(x,y)||[x,y];
-      walkPt=walkPOC.slice();walkStack=[walkPOC.slice()];
+      walkPt=walkPOC.slice();walkStack=[walkPOC.slice()];walkOps=[];
       $('walkbar').style.display='flex';
       redraw();
       toast('Point of commencement set — enter Disto distance, tap a direction.');
@@ -1625,7 +1641,7 @@ $('md-del').onclick=()=>{
   const i=page.ops.indexOf(editDim);
   if(i>-1)page.ops.splice(i,1);
   if(lastDimEnd&&editDim.x2===lastDimEnd[0]&&editDim.y2===lastDimEnd[1])lastDimEnd=null;
-  editDim=null;redraw();thumb();touch();
+  editDim=null;walkResync();redraw();thumb();touch();
 };
 function shiftChain(fromPt,delta,visited){
   page.ops.forEach(o=>{
@@ -1651,7 +1667,7 @@ $('md-ok').onclick=()=>{
       shiftChain(oldEnd,[editDim.x2-oldEnd[0],editDim.y2-oldEnd[1]],new Set([editDim]));
       lastDimEnd=[editDim.x2,editDim.y2];
     }
-    editDim=null;redraw();thumb();touch();return;
+    editDim=null;walkResync();redraw();thumb();touch();return;
   }
   if(!d||!dimStart)return;
   const op={k:'d',x1:dimStart[0],y1:dimStart[1],
@@ -1696,11 +1712,17 @@ let curSym=null, symPend=null;
 const UTIL=new Set(['mhs','mhd','ics','icd','ic','cbt','cbs','cbr']);
 const IDIRS=['NW','N','NE','W','INV','E','SW','S','SE'];
 const IDV={N:[0,-1],S:[0,1],E:[1,0],W:[-1,0],NE:[.71,-.71],NW:[-.71,-.71],SE:[.71,.71],SW:[-.71,.71],INV:[0,1]};
-let invOp=null, invDir='INV', invPh=null, swapFor=null;
+let invOp=null, invDir='INV', invPh=null, swapFor=null, pendPh=null;
+function stashPh(){
+  try{localStorage.setItem('efn-pendph',JSON.stringify({
+    job:note&&note.job, dir:invDir, val:$('mi-val').value, ts:Date.now()}));}catch(e){}
+}
+function clearStash(){try{localStorage.removeItem('efn-pendph');}catch(e){}}
 const IV=x=>typeof x==='string'?{v:x}:x;   // build-20 values were plain strings
 function nextUid(){note.uidSeq=(note.uidSeq||0)+1;return String(note.uidSeq);}
 function openInvCard(op){
   invOp=op;invOp.inv=invOp.inv||{};invDir='INV';
+  pendPh=null;$('mi-camstate').style.display='none';
   if(!op.pid)op.pid=nextUid();
   $('mi-pid').value=op.pid;
   $('mi-title').textContent=(SYMMAP[op.id]?SYMMAP[op.id][1]:'Symbol')+' — inverts';
@@ -1744,16 +1766,33 @@ $('mi-list').addEventListener('click',e=>{
   if(bp){invPh=bp.dataset.iph;$('file-invphoto').value='';$('file-invphoto').click();return;}
 });
 $('file-invphoto').addEventListener('change',e=>{
-  const f=e.target.files[0];if(!f||!invPh||!invOp)return;
+  const f=e.target.files[0];if(!f||!invOp)return;
   const im=new Image();
   im.onload=()=>{
     const r=Math.min(1,1200/Math.max(im.width,im.height));
     const c=document.createElement('canvas');c.width=im.width*r;c.height=im.height*r;
     c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-    const [d2,i]=invPh.split('|');
-    const x=IV(invOp.inv[d2][i]);x.ph=c.toDataURL('image/jpeg',0.72);x.d=true;
-    invOp.inv[d2][i]=x;invPh=null;
-    renderInvCard();redraw();thumb();touch();
+    const ph=c.toDataURL('image/jpeg',0.72);
+    if(invPh){                       // attach to an existing list entry
+      const [d2,i]=invPh.split('|');
+      const x=IV(invOp.inv[d2][i]);x.ph=ph;x.d=true;
+      invOp.inv[d2][i]=x;invPh=null;
+      renderInvCard();
+    }else{                           // main add-row flow
+      const v=$('mi-val').value.trim();
+      if(v){                         // value already typed: attach + add in one go
+        (invOp.inv[invDir]=invOp.inv[invDir]||[]).push({v,ph,d:true});
+        $('mi-val').value='';
+        renderInvCard();
+        toast('Added '+invDir+' '+v+' with photo.');
+      }else{
+        pendPh=ph;
+        $('mi-camstate').style.display='block';
+        toast('Photo ready — type the invert and Add.');
+      }
+    }
+    clearStash();
+    redraw();thumb();touch();
     URL.revokeObjectURL(im.src);
   };
   im.src=URL.createObjectURL(f);
@@ -1766,9 +1805,17 @@ $('mi-grid').addEventListener('click',e=>{
 $('mi-add').onclick=()=>{
   const v=$('mi-val').value.trim();
   if(!v||!invOp)return;
-  (invOp.inv[invDir]=invOp.inv[invDir]||[]).push({v});
-  $('mi-val').value='';
+  const entry={v};
+  if(pendPh){entry.ph=pendPh;entry.d=true;pendPh=null;$('mi-camstate').style.display='none';}
+  (invOp.inv[invDir]=invOp.inv[invDir]||[]).push(entry);
+  $('mi-val').value='';clearStash();
   renderInvCard();redraw();thumb();touch();
+};
+$('mi-cam').onclick=async()=>{
+  if(!invOp)return;
+  // force-save + stash before the camera can kill the app
+  clearTimeout(saveT);await store.put(note);stashPh();
+  invPh=null;$('file-invphoto').value='';$('file-invphoto').click();
 };
 $('mi-list').addEventListener('click',e=>{
   const b=e.target.closest('[data-irm]');if(!b)return;
@@ -2041,7 +2088,7 @@ function exportPlan(n=note){
     if(o.k!=='y'||!o.inv)return;
     IDIRS.forEach(d2=>(o.inv[d2]||[]).forEach(raw=>{
       const x=IV(raw);
-      if(x.ph)phs.push({ph:x.ph,cap:'Pt '+(o.pid||'?')+' · '+d2+' '+x.v+(x.d?' D':'')});
+      if(x.ph)phs.push({ph:x.ph,cap:'PT# '+(o.pid||'?')+' · '+d2+' '+x.v+(x.d?' D':'')});
     }));
   });});
   for(let i=0;i<phs.length;i+=4)segs.push({kind:'m',items:phs.slice(i,i+4)});
@@ -2410,6 +2457,15 @@ $('file-zip').addEventListener('change',async e=>{
     if(!standalone&&window.self===window.top)$('install-banner').style.display='block';
   }catch(e){}
   await renderHome();
+  try{
+    const st=localStorage.getItem('efn-pendph');
+    if(st){
+      const p=JSON.parse(st);
+      if(Date.now()-p.ts<12*3600*1000)
+        toast('A photo attach was interrupted'+(p.job?' on job '+p.job:'')+' — the phone closed the app during the camera. Open the note, tap the symbol, and attach the photo from your gallery.');
+      localStorage.removeItem('efn-pendph');
+    }
+  }catch(e){}
   try{
     let seen=null;
     try{seen=localStorage.getItem('efn-build');}catch(e){}
