@@ -370,7 +370,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — builds 21 + 22</h2>
+  <h2>What’s new — build 23</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -387,7 +387,8 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <div class="invgrid" id="mi-grid"></div>
   <div class="frow" style="margin-top:12px;align-items:flex-end">
     <div class="field"><label>Invert (m)</label><input id="mi-val" class="mono" inputmode="decimal" placeholder="2.31"></div>
-    <button class="btn ghost sm" id="mi-cam" style="white-space:nowrap;min-height:48px">📷</button>
+    <button class="btn ghost sm" id="mi-cam" style="white-space:nowrap;min-height:48px" title="Camera">📷</button>
+    <button class="btn ghost sm" id="mi-gal" style="white-space:nowrap;min-height:48px" title="From gallery">🖼</button>
     <button class="btn" id="mi-add" style="white-space:nowrap">Add INV</button>
   </div>
   <div class="card-sub" id="mi-camstate" style="display:none;color:var(--grid2)">📷 photo ready — it attaches with Add</div>
@@ -395,6 +396,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <div class="mrow"><button class="btn" id="mi-done">Done</button></div>
 </div></div>
 <input type="file" id="file-invphoto" accept="image/*" hidden>
+<input type="file" id="file-invcam" accept="image/*" capture="environment" hidden>
 
 <div class="mback" id="m-off"><div class="modal">
   <h2>Offset</h2>
@@ -467,17 +469,15 @@ input,select,textarea{font:inherit;color:var(--ink)}
 const LW=1000, LH=1294;                 // logical canvas size (letter ratio)
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=22;
-const NEWS=[
- ['🛠','Fixes from your first reports','Disto photos now survive Android closing the app (📷 sits beside Add; take the photo, type, Add — or pick from gallery). Structure labels read PT# 5133. Tap any wall while walking to edit or delete it.'],
- ['📚','This app is now Elevate Field','New Resources tab on the home screen: field guidelines, code list, Leica & MetroVan guides, and tap-to-call office contacts. ★ saves a doc for offline.'],
- ['📏','Disto walk mode','New 📏 tool: tap the point of commencement, then feed Disto distance + direction — walls draw themselves. It tells you when you close.'],
- ['📷','Disto photos on inverts','Each invert can carry a photo of the Disto display — they print on a Measurement Record page, captioned with the point number and direction.'],
- ['#','Structure IDs','Every manhole / IC / CB gets a number automatically (or type your collector pt #) — printed beside the symbol, used in photo captions.'],
- ['ᴰ','Disto tags','Laser-measured dimensions and inverts show a small D. Toggle it on the dim card or invert list.'],
- ['⇄','Change symbol','On the invert card: swap sanitary ↔ storm etc. without losing inverts.'],
- ['✂','Simpler rows','The description column is gone — pt #, code, HT, comments only. Old descriptions print with comments.']
+const BUILD=23;
+const NEWS23=[
+ ['◉','Inverts, two taps','Tap the ◉ tool, then tap the manhole — its invert card opens directly. The symbol library only appears when you tap ◉ twice (to change symbols). In ✥ Select, tapping a selected utility opens the card too.'],
+ ['📷','Camera is back','On the invert card: 📷 opens the camera directly, 🖼 picks from your gallery. Both attach the photo to the invert you\'re adding.'],
+ ['📦','Misclosure boxes','Walk a closed figure and every wall is held exactly as you measured it — the app prints a MISC. ΔN / ΔE note inside the box instead of nudging your last wall. One note per box; drag it with ✥ if it\'s in the way.'],
+ ['🏷','Labels stay clear','PT# labels automatically move to a free side of the symbol, diagonal inverts sit further out, and dims on short walls step aside from the line.'],
+ ['🔭','Prism column','Instrument setup rows now have a prism dropdown — RND / 360 / MINI / RL — and each new row keeps the last prism you picked. Prints in its own column.']
 ];
+const NEWS=NEWS23;
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -678,7 +678,7 @@ $('res-list').addEventListener('click',async e=>{
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+'.1 — tap for what’s new';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+' — tap for what’s new';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -866,6 +866,8 @@ function renderRows(){
         <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>
         ${g?`<div class="mini"><label>time</label><input data-rf="time" value="${esc(r.time??'')}" class="mono"></div>`:''}
         <div class="mini"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
+        ${g?'':`<div class="mini" style="flex:0 0 auto"><label>prism</label>
+          <select data-rf="pr"><option value=""${!r.pr?' selected':''}></option>${['RND','360','MINI','RL'].map(p2=>`<option${r.pr===p2?' selected':''}>${p2}</option>`).join('')}</select></div>`}
         <button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>
       </div>
       <div class="mini"><label>comments</label><input data-rf="remark" class="rcomment" value="${esc(r.remark??'')}"></div>
@@ -881,7 +883,11 @@ $('s-rows').addEventListener('click',e=>{
   if(r.committed){r.struck=!r.struck;}else{page.rows.splice(+b.dataset.rs,1);}
   renderRows();touch();
 });
-$('b-add-row').onclick=()=>{page.rows.push({t:page.type==='gps'?'OBS':'TIE',pt:'',code:'',time:'',ht:'',remark:'',struck:false,committed:false});renderRows();touch();};
+$('b-add-row').onclick=()=>{
+  const pv=(page.type!=='gps'&&page.rows.length)?(page.rows[page.rows.length-1].pr||''):'';
+  page.rows.push({t:page.type==='gps'?'OBS':'TIE',pt:'',code:'',time:'',ht:'',pr:pv,remark:'',struck:false,committed:false});
+  renderRows();touch();
+};
 function setupBlank(p){
   if(Object.keys(p.committed||{}).length)return false;
   const core=p.type==='gps'?['bpt','bht']:['st','bs','hi','dh','dv','qual'];
@@ -937,11 +943,11 @@ $('b-back-note3').onclick=()=>$('b-text-done').onclick();
 /* ================= canvas engine ================= */
 let zoom=0.9, tool='pen', drawing=null, pend=null;
 let ortho=false, polyDraft=null, gest=null, selOp=null, dragSel=null;
-function selRad(o){return o.k==='y'?(o.s||26)+16:o.k==='c'?o.r+10:o.k==='n'?42:52;}
+function selRad(o){return o.k==='y'?(o.s||26)+16:o.k==='c'?o.r+10:o.k==='n'?42:o.k==='misc'?95:52;}
 function hitPointObj(x,y){
   for(let i=page.ops.length-1;i>=0;i--){
     const o=page.ops[i];
-    if(!['y','t','c','n'].includes(o.k))continue;
+    if(!['y','t','c','n','misc'].includes(o.k))continue;
     if(Math.hypot(o.x-x,o.y-y)<=selRad(o))return o;
   }
   return null;
@@ -983,13 +989,11 @@ function walkSeg(az,dist){
   const sc=page.scale||45, a=az*Math.PI/180;
   const end=[walkPt[0]+Math.sin(a)*dist*sc, walkPt[1]-Math.cos(a)*dist*sc];
   const op={k:'d',x1:walkPt[0],y1:walkPt[1],x2:end[0],y2:end[1],v:String(dist),d:true};
-  // closing onto the POC?
+  // arriving back at the POC? hold the wall as measured and report misclosure
   if(walkStack.length>=2&&Math.hypot(end[0]-walkPOC[0],end[1]-walkPOC[1])<14){
-    op.x2=walkPOC[0];op.y2=walkPOC[1];
     page.ops.push(op);walkOps.push(op);
-    redraw();thumb();touch();
-    toast('Closed on the point of commencement.');
-    endWalk();return;
+    finishBox(end);
+    return;
   }
   page.ops.push(op);walkOps.push(op);
   walkPt=end;walkStack.push(end);
@@ -1025,15 +1029,21 @@ $('wk-undo').onclick=()=>{
   if(i>-1)page.ops.splice(i,1);
   walkResync();thumb();touch();
 };
+function finishBox(end){
+  const sc=page.scale||45;
+  const dn=(walkPOC[1]-end[1])/sc, de=(end[0]-walkPOC[0])/sc;
+  const cxm=walkStack.reduce((a,p2)=>a+p2[0],0)/walkStack.length;
+  const cym=walkStack.reduce((a,p2)=>a+p2[1],0)/walkStack.length;
+  page.ops.push({k:'misc',x:cxm,y:cym,dn:+dn.toFixed(2),de:+de.toFixed(2)});
+  redraw();thumb();touch();
+  const f=v=>(v>=0?'+':'')+v.toFixed(2);
+  toast('Box closed — MISC. ΔN '+f(dn)+' · ΔE '+f(de)+' (held as measured).');
+  endWalk();
+}
 $('wk-close').onclick=()=>{
   if(!walkPOC||!walkPt)return;
-  const gapPx=Math.hypot(walkPt[0]-walkPOC[0],walkPt[1]-walkPOC[1]);
-  if(gapPx<2){endWalk();return;}
-  const sc=page.scale||45, len=gapPx/sc;
-  page.ops.push({k:'d',x1:walkPt[0],y1:walkPt[1],x2:walkPOC[0],y2:walkPOC[1],v:len.toFixed(2)});
-  redraw();thumb();touch();
-  toast('Closed — computed '+len.toFixed(2)+' m. Check it against your last Disto reading.');
-  endWalk();
+  if(walkOps&&walkOps.length>=2)finishBox(walkPt);
+  else endWalk();
 };
 $('wk-done').onclick=()=>endWalk();
 function circum(p){
@@ -1139,12 +1149,12 @@ function updTools(){
 }
 $('cv-tools').addEventListener('click',e=>{
   const b=e.target.closest('[data-t]');if(!b)return;
-  const k=b.dataset.t;
+  const k=b.dataset.t, prev=tool;
   if(k!=='poly')finalizePoly();
   clearSel();arcPts=[];offTarget=null;offPreview=null;
   if(k!=='walk')endWalk();
   tool=k;updTools();redraw();
-  if(k==='sym')openSymPicker();
+  if(k==='sym'&&prev==='sym')openSymPicker();   // library only on second tap
 });
 function applyZoom(nz,cx,cy){
   nz=Math.min(3,Math.max(0.3,nz));
@@ -1230,6 +1240,22 @@ function drawOp(ctx,o){
     ctx.font=`700 ${o.r*1.1}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,7);ctx.stroke();ctx.fillText(o.v,o.x,o.y+1);
     ctx.textAlign='start';ctx.fillStyle=ctx.strokeStyle='#24312B';
+  }else if(o.k==='misc'){
+    const f=v=>(v>=0?'+':'')+v.toFixed(2);
+    const l2='ΔN '+f(o.dn)+'  ΔE '+f(o.de);
+    ctx.font='700 24px ui-monospace,Menlo,monospace';
+    const w2=Math.max(ctx.measureText(l2).width,90);
+    const bx2=o.x-w2/2-14,by2=o.y-38,bw2=w2+28,bh2=76;
+    ctx.fillStyle='#FBFAF5';ctx.fillRect(bx2,by2,bw2,bh2);
+    ctx.strokeStyle='#5E9478';ctx.lineWidth=2.5;
+    ctx.strokeRect(bx2,by2,bw2,bh2);
+    ctx.fillStyle='#5E9478';ctx.textAlign='center';
+    ctx.font='700 22px ui-monospace,Menlo,monospace';
+    ctx.fillText('MISC.',o.x,o.y-10);
+    ctx.fillStyle='#24312B';
+    ctx.font='700 24px ui-monospace,Menlo,monospace';
+    ctx.fillText(l2,o.x,o.y+22);
+    ctx.textAlign='start';ctx.strokeStyle=ctx.fillStyle='#24312B';
   }else if(o.k==='y'){
     drawSym(ctx,o.id,o.x,o.y,o.s||26);
     if(o.inv&&UTIL.has(o.id)){
@@ -1249,9 +1275,10 @@ function drawOp(ctx,o){
           ctx.font='700 '+FS+'px ui-monospace,Menlo,monospace';
           const w2=ctx.measureText(label).width;
           const dW=xv.d?FS*0.5:0;
-          let tx=o.x+dx*(r+36), ty;
-          if(dy<0)ty=o.y+dy*(r+42)-i*LH2;
-          else if(dy>0)ty=o.y+dy*(r+42)+i*LH2+FS*0.6;
+          const RO=(dx&&dy)?(r+52):(r+36), RV=(dx&&dy)?(r+58):(r+42);
+          let tx=o.x+dx*RO, ty;
+          if(dy<0)ty=o.y+dy*RV-i*LH2;
+          else if(dy>0)ty=o.y+dy*RV+i*LH2+FS*0.6;
           else ty=o.y+FS*0.35+(i-(vals.length-1)/2)*LH2;
           let x0;
           if(dx>0)x0=tx;
@@ -1272,9 +1299,21 @@ function drawOp(ctx,o){
       const r=(o.s||26), ptxt='PT# '+o.pid;
       ctx.font='700 26px ui-monospace,Menlo,monospace';
       const pw=ctx.measureText(ptxt).width;
-      const px2=o.x-r-10-pw, py2=o.y-r-2;
-      ctx.fillStyle='#FBFAF5';ctx.fillRect(px2-5,py2-24,pw+10,30);
-      ctx.fillStyle='#24312B';ctx.fillText(ptxt,px2,py2);
+      const cand=['NW','NE','SW','SE','W','E','N','S'];
+      const inv=o.inv||{};
+      let dir=cand.find(d3=>!(inv[d3]&&inv[d3].length));
+      let extra=0;
+      if(!dir){                       // every direction busy: push past NW's stack
+        dir='NW';
+        extra=(inv.NW?inv.NW.length:0)*38+30;
+      }
+      const [dx,dy]=IDV[dir];
+      const off=r+((dx&&dy)?46:34)+extra;
+      let tx=o.x+dx*off, ty=o.y+dy*off+(dy>0?22:dy<0?-6:9);
+      let x0;
+      if(dx>0)x0=tx; else if(dx<0)x0=tx-pw; else x0=tx-pw/2;
+      ctx.fillStyle='#FBFAF5';ctx.fillRect(x0-5,ty-24,pw+10,30);
+      ctx.fillStyle='#24312B';ctx.fillText(ptxt,x0,ty);
     }
   }else if(o.k==='l'){
     ctx.lineWidth=3.5;
@@ -1308,6 +1347,8 @@ function drawOp(ctx,o){
     ctx.font='600 26px "Segoe Print","Bradley Hand","Comic Sans MS",cursive';
     ctx.textAlign='center';ctx.textBaseline='middle';
     const dw=ctx.measureText(o.v).width, dW=o.d?15:0;
+    const segLen=Math.hypot(o.x2-o.x1,o.y2-o.y1);
+    if(segLen<dw+dW+30)ctx.translate(0,-32);
     ctx.fillStyle='#FBFAF5';ctx.fillRect(-(dw+dW)/2-5,-15,dw+dW+10,30);
     ctx.fillStyle='#24312B';ctx.fillText(o.v,-dW/2,0);
     if(o.d){ctx.font='600 16px "Segoe Print","Comic Sans MS",cursive';
@@ -1396,6 +1437,7 @@ ink.addEventListener('pointerdown',e=>{
   if(tool==='move'){gest={pan:[e.clientX,e.clientY]};return;}
   if(tool==='sel'){
     const hit=hitPointObj(x,y);
+    if(hit&&hit===selOp&&hit.k==='y'&&UTIL.has(hit.id)){openInvCard(hit);return;}
     selOp=hit;
     dragSel=hit?[x-hit.x,y-hit.y]:null;
     updSelUI();redraw();
@@ -1763,9 +1805,15 @@ $('mi-list').addEventListener('click',e=>{
     renderInvCard();redraw();thumb();touch();return;
   }
   const bp=e.target.closest('[data-iph]');
-  if(bp){invPh=bp.dataset.iph;$('file-invphoto').value='';$('file-invphoto').click();return;}
+  if(bp){
+    (async()=>{
+      clearTimeout(saveT);await store.put(note);stashPh();
+      invPh=bp.dataset.iph;$('file-invcam').value='';$('file-invcam').click();
+    })();
+    return;
+  }
 });
-$('file-invphoto').addEventListener('change',e=>{
+function onInvPhotoFile(e){
   const f=e.target.files[0];if(!f||!invOp)return;
   const im=new Image();
   im.onload=()=>{
@@ -1796,7 +1844,9 @@ $('file-invphoto').addEventListener('change',e=>{
     URL.revokeObjectURL(im.src);
   };
   im.src=URL.createObjectURL(f);
-});
+}
+$('file-invphoto').addEventListener('change',onInvPhotoFile);
+$('file-invcam').addEventListener('change',onInvPhotoFile);
 $('mi-grid').addEventListener('click',e=>{
   const b=e.target.closest('[data-idir]');if(!b)return;
   invDir=b.dataset.idir;renderInvCard();
@@ -1811,12 +1861,14 @@ $('mi-add').onclick=()=>{
   $('mi-val').value='';clearStash();
   renderInvCard();redraw();thumb();touch();
 };
-$('mi-cam').onclick=async()=>{
+async function launchInvPhoto(inputId){
   if(!invOp)return;
   // force-save + stash before the camera can kill the app
   clearTimeout(saveT);await store.put(note);stashPh();
-  invPh=null;$('file-invphoto').value='';$('file-invphoto').click();
-};
+  invPh=null;$(inputId).value='';$(inputId).click();
+}
+$('mi-cam').onclick=()=>launchInvPhoto('file-invcam');
+$('mi-gal').onclick=()=>launchInvPhoto('file-invphoto');
 $('mi-list').addEventListener('click',e=>{
   const b=e.target.closest('[data-irm]');if(!b)return;
   const [d2,i]=b.dataset.irm.split('|');
@@ -2021,8 +2073,8 @@ function rowRemark(r){return [r.desc,r.remark].map(x=>(x||'').trim()).filter(Boo
 function rowLines(r,gps){
   const c=rowRemark(r);
   if(!c)return{n:1,mode:0};
-  const hasF=(r.pt||r.pts||r.code||r.time||r.ht);
-  const FW=gps?825:865, CW=gps?355:345;
+  const hasF=(r.pt||r.pts||r.code||r.time||r.ht||r.pr);
+  const FW=gps?825:865, CW=gps?355:235;
   if(!hasF){const L=wrapLines(c,RFONT,FW);return{n:Math.max(1,L.length),mode:1,L};}
   MCTX.font=RFONT;
   if(MCTX.measureText(c).width<=CW)return{n:1,mode:0};
@@ -2168,7 +2220,8 @@ function renderSetupBlock(ctx,p,y){
   if(p.rows.length){
     ctx.font=mono(20);ctx.fillStyle='#5E9478';
     ctx.fillText('PT#',x0+160,y);ctx.fillText('CODE',x0+320,y);
-    ctx.fillText('HT',x0+510,y);ctx.fillText('COMMENTS',x0+680,y);
+    ctx.fillText('HT',x0+510,y);ctx.fillText('PRISM',x0+630,y);
+    ctx.fillText('COMMENTS',x0+790,y);
     y+=44;
   }
   const bx=x0+40;
@@ -2190,8 +2243,8 @@ function renderSetupBlock(ctx,p,y){
       return;
     }
     const cells=[[0,r.t],[120,(r.pt!==undefined?r.pt:r.pts)||''],[280,r.code||''],
-      [470,r.ht||'']];
-    if(rl.mode===0)cells.push([640,rowRemark(r)]);
+      [470,r.ht||''],[590,r.pr||'']];
+    if(rl.mode===0)cells.push([750,rowRemark(r)]);
     let end=bx;
     cells.forEach(([dx,v])=>{if(!v)return;
       ctx.fillText(v,bx+dx,y);
