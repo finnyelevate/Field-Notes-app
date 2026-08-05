@@ -1,0 +1,91 @@
+{
+ "contacts": [
+  {
+   "name": "Selene Philip",
+   "role": "Admin",
+   "tel": "+16043855669",
+   "telShow": "604-385-5669"
+  },
+  {
+   "name": "Finny Philip",
+   "role": "BCLS \u00b7 Project Manager",
+   "tel": "+16043855668",
+   "telShow": "604-385-5668"
+  },
+  {
+   "name": "Tyler Case",
+   "role": "Office",
+   "tel": "+16043855775",
+   "telShow": "604-385-5775"
+  },
+  {
+   "name": "Vipul Goyal",
+   "role": "Office",
+   "tel": "+16043855670",
+   "telShow": "604-385-5670"
+  },
+  {
+   "name": "Nick Nootebos",
+   "role": "Office",
+   "tel": "+16043855507",
+   "telShow": "604-385-5507"
+  }
+ ],
+ "sections": [
+  {
+   "title": "Elevate procedures",
+   "docs": [
+    {
+     "name": "Field Survey Guidelines",
+     "file": "resources/field_survey_guidelines_2024.pdf",
+     "note": "Company field procedures \u2014 keep offline"
+    },
+    {
+     "name": "Code List (2026)",
+     "file": "resources/codelist-UPDATED_2026.pdf",
+     "note": "Point coding \u2014 keep offline"
+    },
+    {
+     "name": "Job Requirements Sample",
+     "file": "resources/Job_requirements_sample.pdf",
+     "note": "What a job PDF looks like"
+    }
+   ]
+  },
+  {
+   "title": "Leica Captivate",
+   "docs": [
+    {
+     "name": "Complete Software Reset (CS20/TS)",
+     "file": "resources/Leica_Captivate_software_reset.pdf",
+     "note": "When the controller misbehaves"
+    },
+    {
+     "name": "Captivate Technical Reference",
+     "file": "resources/Leica_Captivate_TechRef_v5.pdf",
+     "note": "42 MB \u2014 best left online-only"
+    },
+    {
+     "name": "Coordinate Systems",
+     "file": "resources/coordinate_system.pdf",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "title": "MetroVan GNSS",
+   "docs": [
+    {
+     "name": "Network Connection Quickguide",
+     "file": "resources/MetroVAN_Network_Connection.pdf",
+     "note": "RTK rover setup \u2014 keep offline"
+    },
+    {
+     "name": "Source Table Selection",
+     "file": "resources/MetroVAN_Source_Table_Selection.pdf",
+     "note": "IMAX vs NEAR"
+    }
+   ]
+  }
+ ]
+}

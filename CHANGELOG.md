@@ -1,4 +1,29 @@
-# Elevate Field Notes — Changelog
+# Elevate Field — Changelog
+
+## Build 21 — 2026-08-04
+**The app is now "Elevate Field"** — notes plus field resources in one place.
+**Resources tab (home screen)**
+- Office contacts with tap-to-call (Selene = Admin)
+- Documents: Field Survey Guidelines, Code List 2026, Job Requirements sample,
+  Leica Captivate reset guide + Technical Reference, Coordinate Systems,
+  MetroVan network + source-table quickguides
+- ★ on any doc saves it for offline; managed via resources.json in the repo
+**Disto workflow**
+- 📏 Disto walk mode: tap the point of commencement, enter distance + direction,
+  walls draw themselves; auto-detects and snaps closure onto the POC; Close
+  button computes the final leg for checking against the last reading
+- 📷 per-invert Disto photos → printed on Measurement Record pages, captioned
+  "Pt 5133 · SW 1.96 D"
+- Structure IDs: every utility symbol auto-numbers across the note (1, 2, 3…),
+  overridable with the collector pt # on the invert card; printed beside the
+  symbol
+- ᴰ tag on laser-measured dimensions and inverts (auto via walk mode or photo,
+  toggleable on the dim card and invert list); page footnote defines it
+**Other**
+- Change symbol on the invert card (sanitary ↔ storm etc.) keeping inverts + ID
+- Description column removed from setup rows — pt # / code / HT / comments;
+  old descriptions print merged into comments
+- Fixed a startup crash introduced by the walk bar (caught in testing)
 
 ## Build 20.1 — 2026-08-01 (fixes from Finny's demo)
 - Invert labels were rendering too small to read at the phone's default zoom —

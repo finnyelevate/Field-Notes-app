@@ -1,6 +1,6 @@
 {
-  "name": "Elevate Field Notes",
-  "short_name": "Field Notes",
+  "name": "Elevate Field",
+  "short_name": "Elevate Field",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#161D19",
