@@ -1,5 +1,33 @@
 # Elevate Field — Changelog
 
+## Build 23.1 — 2026-08-05
+- Misclosure note now clash-detects before placing itself: it checks every
+  dimension label, wall, symbol, and text box on the page, tries the box
+  centre first, and slides below/above/beside the figure when the box is too
+  small to hold it — so it never covers your dimensions. (Notes already placed
+  by 23 can just be dragged clear with ✥.)
+
+## Build 23 — 2026-08-05
+**Inverts & symbols**
+- Two-tap inverts: ◉ then tap the manhole — the card opens directly; the symbol
+  library only opens on a second tap of the ◉ button. In ✥ Select, tapping an
+  already-selected utility symbol opens its card too
+- 📷 opens the camera directly again; new 🖼 button picks from the gallery
+  (both on the add row and per invert entry; force-save safety net unchanged)
+- Labels keep clear of each other: PT# automatically takes a side with no
+  inverts (and pushes further out if all eight are busy), diagonal invert
+  stacks sit wider, and dimension labels on short walls step off the line
+**Walk mode**
+- Closure rework: every wall is held exactly as measured — nothing snaps.
+  Closing a box (auto-detected at the POC, or the Close button) prints a
+  MISC. ΔN / ΔE note inside the figure (page-up = north, per the field-book
+  convention; crews declare true orientation with the north arrow). One note
+  per box; movable with ✥, deletable
+**Setups**
+- Prism column on instrument setups: RND / 360 / MINI / RL dropdown per row,
+  new rows inherit the previous prism; prints between HT and comments
+  (per the Field Survey Guidelines requirement)
+
 ## Build 22 — 2026-08-04 (fixes from first field use of 21)
 - Disto photos rebuilt to survive Android closing the app during the camera:
   📷 now sits on the add row (photo + value + Add in one motion, or photo

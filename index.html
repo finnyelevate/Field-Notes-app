@@ -678,7 +678,7 @@ $('res-list').addEventListener('click',async e=>{
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+' — tap for what’s new';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+'.1 — tap for what’s new';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -1029,14 +1029,61 @@ $('wk-undo').onclick=()=>{
   if(i>-1)page.ops.splice(i,1);
   walkResync();thumb();touch();
 };
+function labelRects(){
+  // approximate boxes of everything already carrying a label, to keep clear of
+  const R=[];
+  MCTX.font='600 26px "Segoe Print","Bradley Hand","Comic Sans MS",cursive';
+  page.ops.forEach(o=>{
+    if(o.k==='d'||o.k==='l'){
+      if(o.k==='d'&&o.v!==undefined){
+        const lw=MCTX.measureText(o.v).width+(o.d?15:0)+26;
+        const mx=(o.x1+o.x2)/2,my=(o.y1+o.y2)/2;
+        const horiz=Math.abs(o.x2-o.x1)>=Math.abs(o.y2-o.y1);
+        R.push(horiz?{x:mx-lw/2,y:my-52,w:lw,h:78}:{x:mx-52,y:my-lw/2,w:78,h:lw});
+      }
+      // the linework itself
+      R.push({x:Math.min(o.x1,o.x2)-8,y:Math.min(o.y1,o.y2)-8,
+              w:Math.abs(o.x2-o.x1)+16,h:Math.abs(o.y2-o.y1)+16});
+    }else if(o.k==='y'){
+      const r2=(o.s||26)+150;
+      R.push({x:o.x-r2,y:o.y-r2,w:2*r2,h:2*r2});
+    }else if(o.k==='t'||o.k==='c'||o.k==='misc'){
+      R.push({x:o.x-120,y:o.y-60,w:240,h:120});
+    }
+  });
+  return R;
+}
+function rectOverlap(a,b){
+  const w=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x);
+  const h=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+  return (w>0&&h>0)?w*h:0;
+}
 function finishBox(end){
   const sc=page.scale||45;
   const dn=(walkPOC[1]-end[1])/sc, de=(end[0]-walkPOC[0])/sc;
-  const cxm=walkStack.reduce((a,p2)=>a+p2[0],0)/walkStack.length;
-  const cym=walkStack.reduce((a,p2)=>a+p2[1],0)/walkStack.length;
-  page.ops.push({k:'misc',x:cxm,y:cym,dn:+dn.toFixed(2),de:+de.toFixed(2)});
-  redraw();thumb();touch();
   const f=v=>(v>=0?'+':'')+v.toFixed(2);
+  MCTX.font='700 24px ui-monospace,Menlo,monospace';
+  const bw=Math.max(MCTX.measureText('ΔN '+f(dn)+'  ΔE '+f(de)).width,90)+28, bh=76;
+  const xs=walkStack.map(p2=>p2[0]), ys=walkStack.map(p2=>p2[1]);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const cxm=(minX+maxX)/2, cym=(minY+maxY)/2;
+  const avoid=labelRects();
+  const cands=[
+    [cxm,cym],[cxm,cym+80],[cxm,cym-80],
+    [cxm,maxY+86],[cxm,minY-86],
+    [maxX+bw/2+56,cym],[minX-bw/2-56,cym]
+  ];
+  let best=null,bestA=Infinity;
+  cands.forEach(([px,py])=>{
+    px=Math.min(Math.max(px,bw/2+14),LW-bw/2-14);
+    py=Math.min(Math.max(py,52),LH-52);
+    const rect={x:px-bw/2,y:py-38,w:bw,h:bh};
+    let area=0;
+    avoid.forEach(r2=>area+=rectOverlap(rect,r2));
+    if(area<bestA){bestA=area;best=[px,py];}
+    });
+  page.ops.push({k:'misc',x:best[0],y:best[1],dn:+dn.toFixed(2),de:+de.toFixed(2)});
+  redraw();thumb();touch();
   toast('Box closed — MISC. ΔN '+f(dn)+' · ΔE '+f(de)+' (held as measured).');
   endWalk();
 }
