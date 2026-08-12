@@ -1,5 +1,34 @@
 # Elevate Field — Changelog
 
+## Build 24 — 2026-08-11
+**Photos everywhere**
+- Every tie/set/check row (TS and GPS) has a 📷 — photograph pins, tags, TBMs;
+  the ⊼ station and BS points (and GPS base point) get cameras too, so control
+  locations are documented for future recovery
+- All shot photos print on the Measurement Record pages with matching captions
+  ("⊼ @ 100 · SETUP", "PT# 102 · OCN"), alongside the invert photos
+- In-app photo viewer: tap any 📷 marker to see the photo immediately —
+  Replace (camera or gallery), Rotate, or Remove on the spot; no more finding a
+  blurry shot only after export
+**Export reminder**
+- If work from the last session never got exported, a banner says so — once,
+  on the first open of the day. "Don't remind for these" mutes test/demo notes
+  permanently; a passive "unexported" tag stays on note cards. Today's active
+  work is never flagged
+**Editor**
+- Rod height carries to the next row automatically (both setup types), like
+  prism; NOTE rows now show just the type + full-width comment box
+- Ⓓ Circled tool retired (symbols + PT# IDs replaced it); existing circled
+  labels still render and move
+**Canvas**
+- Quick-tools cluster on the left edge: ✏️ pen · Ａ text · ◉ symbol · ✥ select,
+  synced with the bottom toolbar; navigation stays on the right
+**Resources & security**
+- Job Maps link — the live Google My Maps job map, opens in the Maps app
+- PDF/ZIP libraries are now hosted inside the app's own repo instead of a
+  third-party CDN — no outside code source to trust, and exports load faster
+  and more reliably offline
+
 ## Build 23.1 — 2026-08-05
 - Misclosure note now clash-detects before placing itself: it checks every
   dimension label, wall, symbol, and text box on the page, tries the box

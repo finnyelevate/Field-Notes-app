@@ -33,6 +33,16 @@
  ],
  "sections": [
   {
+   "title": "Maps",
+   "docs": [
+    {
+     "name": "Job Maps",
+     "file": "https://www.google.com/maps/d/viewer?mid=1b2eNsbiIgDsWLYNYHdewCsDMLCDKmQ8&ll=49.12856620078672,-122.6866269404676&z=13",
+     "note": "Live map of current jobs \u2014 opens in Google Maps"
+    }
+   ]
+  },
+  {
    "title": "Elevate procedures",
    "docs": [
     {

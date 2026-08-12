@@ -1,9 +1,9 @@
-const CACHE='efn-v5';
+const CACHE='efn-v6';
 const ASSETS=['./','index.html','manifest.json','icon-192.png','icon-512.png',
- 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
- 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
- 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
- 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'];
+ 'lib/jspdf.umd.min.js',
+ 'lib/jszip.min.js',
+ 'lib/pdf.min.js',
+ 'lib/pdf.worker.min.js'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });

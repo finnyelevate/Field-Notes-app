@@ -95,6 +95,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 #v-canvas{position:relative}
 #cv-wrap{flex:1;overflow:auto;background:#0F1512;touch-action:none}
 .fcluster{position:absolute;right:10px;top:40%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:8}
+.fcluster.fleft{right:auto;left:10px}
 .fbtn{width:48px;height:48px;border-radius:12px;background:rgba(35,46,39,.9);color:#EDF2EE;font-size:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .fbtn.on{background:var(--accent)}
 .stylebar{position:absolute;left:10px;bottom:calc(env(safe-area-inset-bottom) + 96px);z-index:8;
@@ -122,6 +123,10 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .invb small{display:block;font-family:var(--mono);font-weight:700;font-size:11px;color:var(--muted);min-height:14px;margin-top:2px}
 .invb.on{border-color:var(--accent);border-width:2.5px}
 .inv-entry{display:flex;justify-content:space-between;align-items:center;padding:4px 2px;border-bottom:1px dashed var(--line);font-family:var(--mono);font-weight:700}
+.rstrike.on-ph{color:var(--accent)}
+#ms-grid img{width:100%;height:84px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line)}
+.sp-btn{font-size:13px;font-weight:800;padding:10px 12px;border-radius:10px;background:#F1EEE4;border:1.5px solid var(--line)}
+.sp-btn.on-ph{border-color:var(--accent);color:var(--accent)}
 #cv-stack{position:relative;margin:14px auto;box-shadow:0 4px 18px rgba(0,0,0,.5);border-radius:6px;overflow:hidden}
 #cv-bg,#cv-ink{position:absolute;inset:0}
 #cv-ink{touch-action:inherit}
@@ -161,6 +166,14 @@ input,select,textarea{font:inherit;color:var(--ink)}
   </div>
   <div class="banner" id="storage-banner" style="display:none">Storage unavailable on this device — export your notes before closing.</div>
   <div class="banner" id="install-banner" style="display:none;background:#6B1F1F;color:#F5C6C6">⚠ Your notes are NOT safe in this browser. Open this link in Chrome/Safari and use “Add to Home screen”, then open the app from its icon.</div>
+  <div class="banner" id="export-banner" style="display:none;background:#5A3A16;color:#F5D9B8;text-align:left">
+    <span id="eb-text"></span>
+    <div style="display:flex;gap:8px;margin-top:8px;justify-content:center">
+      <button class="btn sm" id="eb-open" style="padding:8px 14px">Open</button>
+      <button class="btn ghost sm" id="eb-mute" style="padding:8px 14px;color:#F5D9B8;border-color:#8a6a3f">Don’t remind for these</button>
+      <button class="btn ghost sm" id="eb-x" style="padding:8px 14px;color:#F5D9B8;border-color:#8a6a3f">Later</button>
+    </div>
+  </div>
   <div class="hometabs">
     <button class="htab on" data-ht="notes">📓 Notes</button>
     <button class="htab" data-ht="res">📚 Resources</button>
@@ -270,6 +283,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
     <div class="paper">
       <div class="eyebrow">Checks · ties · sets</div>
       <div id="s-rows"></div>
+      <div class="frow" style="margin:2px 0 8px" id="setup-ph-row"></div>
       <button class="btn ghost sm" id="b-add-row" style="width:100%">＋ Add line</button>
       <div class="card-sub" style="margin-top:8px">Once saved, lines can’t be deleted — strike them instead (⊘). Struck lines stay visible on the PDF. On GPS pages, leave time/HT blank to repeat the value above (prints as 〃).</div>
     </div>
@@ -317,6 +331,12 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <div class="stylebar" id="stylebar" style="display:none">
     <div class="swatches" id="swatches"></div>
     <div class="sizechips" id="sizechips"></div>
+  </div>
+  <div class="fcluster fleft">
+    <button class="fbtn" data-qt="pen">✏️</button>
+    <button class="fbtn" data-qt="text">Ａ</button>
+    <button class="fbtn" data-qt="sym">◉</button>
+    <button class="fbtn" data-qt="sel">✥</button>
   </div>
   <div class="fcluster">
     <button class="fbtn" id="f-polydone" style="display:none">✓</button>
@@ -370,7 +390,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 23</h2>
+  <h2>What’s new — build 24</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -397,6 +417,29 @@ input,select,textarea{font:inherit;color:var(--ink)}
 </div></div>
 <input type="file" id="file-invphoto" accept="image/*" hidden>
 <input type="file" id="file-invcam" accept="image/*" capture="environment" hidden>
+<input type="file" id="file-shot" accept="image/*" hidden>
+<input type="file" id="file-shotcam" accept="image/*" capture="environment" hidden>
+
+<div class="mback" id="m-shot"><div class="modal">
+  <h2 id="ms-title">Photos</h2>
+  <div id="ms-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0"></div>
+  <div class="frow">
+    <button class="btn ghost" id="ms-cam" style="flex:1">📷 Camera</button>
+    <button class="btn ghost" id="ms-gal" style="flex:1">🖼 Gallery</button>
+  </div>
+  <div class="mrow"><button class="btn" id="ms-done">Done</button></div>
+</div></div>
+
+<div class="mback" id="m-view"><div class="modal" style="max-height:88vh">
+  <img id="mv-img" style="width:100%;max-height:56vh;object-fit:contain;border-radius:12px;border:1.5px solid var(--line);background:#111">
+  <div class="frow" style="margin-top:12px;flex-wrap:wrap;gap:8px">
+    <button class="btn ghost sm" id="mv-cam">📷 Replace</button>
+    <button class="btn ghost sm" id="mv-gal">🖼 Replace</button>
+    <button class="btn ghost sm" id="mv-rot">↻ Rotate</button>
+    <button class="btn ghost sm" id="mv-del" style="color:var(--danger)">✕ Remove</button>
+  </div>
+  <div class="mrow"><button class="btn" id="mv-done">Done</button></div>
+</div></div>
 
 <div class="mback" id="m-off"><div class="modal">
   <h2>Offset</h2>
@@ -469,15 +512,15 @@ input,select,textarea{font:inherit;color:var(--ink)}
 const LW=1000, LH=1294;                 // logical canvas size (letter ratio)
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=23;
-const NEWS23=[
- ['◉','Inverts, two taps','Tap the ◉ tool, then tap the manhole — its invert card opens directly. The symbol library only appears when you tap ◉ twice (to change symbols). In ✥ Select, tapping a selected utility opens the card too.'],
- ['📷','Camera is back','On the invert card: 📷 opens the camera directly, 🖼 picks from your gallery. Both attach the photo to the invert you\'re adding.'],
- ['📦','Misclosure boxes','Walk a closed figure and every wall is held exactly as you measured it — the app prints a MISC. ΔN / ΔE note inside the box instead of nudging your last wall. One note per box; drag it with ✥ if it\'s in the way.'],
- ['🏷','Labels stay clear','PT# labels automatically move to a free side of the symbol, diagonal inverts sit further out, and dims on short walls step aside from the line.'],
- ['🔭','Prism column','Instrument setup rows now have a prism dropdown — RND / 360 / MINI / RL — and each new row keeps the last prism you picked. Prints in its own column.']
+const BUILD=24;
+const NEWS=[
+ ['📷','Photos on any shot','Every tie/set/check row has a 📷 — photograph the pin, tag, or TBM. The ⊼ station and BS get cameras too, so future crews can find the control. All print on the Measurement Record pages.'],
+ ['🖼','See your photos','Tap any 📷 marker to view the photo in the app — Replace, Rotate, or Remove it on the spot. No more waiting for the export to find out it was blurry.'],
+ ['⏰','Export reminder','If last session\'s work never got exported, the app tells you once, next morning. Mute any note you don\'t care about.'],
+ ['🧰','Quick tools on the left','✏️ pen, Ａ text, ◉ symbol, ✥ select now float on the left edge of sketches. Navigation stays on the right. (Circled labels retired — symbols + PT#s replaced them.)'],
+ ['📏','Less typing','Rod height carries to the next row automatically, like prism type. NOTE rows now show just the comment box.'],
+ ['🗺','Job Maps','Resources tab now has the live job map — tap to open in Google Maps.']
 ];
-const NEWS=NEWS23;
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -538,6 +581,7 @@ function setSave(t){const e=$('save-state');if(e)e.textContent=t;}
 function nowT(){return new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}
 function touch(){
   if(!note)return;
+  note.mod=Date.now();
   setSave('Saving…');
   clearTimeout(saveT);
   saveT=setTimeout(async()=>{await store.put(note);setSave('Saved ✓ '+nowT());},400);
@@ -641,13 +685,15 @@ async function loadResources(){
   }
   (resData.sections||[]).forEach(sec=>{
     h+=`<div class="eyebrow" style="color:#9DB3A6;margin:16px 4px 8px">${esc(sec.title)}</div>`;
-    h+=sec.docs.map(d2=>`
+    h+=sec.docs.map(d2=>{
+      const isLink=/^https?:/.test(d2.file);
+      return `
       <div class="paper resrow" data-doc="${esc(d2.file)}">
-        <div class="pgthumb" style="font-size:20px">📄</div>
+        <div class="pgthumb" style="font-size:20px">${isLink?'🗺':'📄'}</div>
         <div class="pgbody"><div class="card-main" style="font-size:15px">${esc(d2.name)}</div>
         <div class="card-sub">${esc(d2.note||'')}</div></div>
-        <button class="keep" data-keep="${esc(d2.file)}">☆</button>
-      </div>`).join('');
+        ${isLink?'<div class="pgx">↗</div>':`<button class="keep" data-keep="${esc(d2.file)}">☆</button>`}
+      </div>`;}).join('');
   });
   h+='<div class="empty" style="padding:24px 20px;font-size:13px">★ = saved for offline. Docs open in the browser; big manuals are best kept online-only.</div>';
   el.innerHTML=h;
@@ -678,7 +724,7 @@ $('res-list').addEventListener('click',async e=>{
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+'.1 — tap for what’s new';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+' — tap for what’s new';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -687,7 +733,7 @@ async function renderHome(){
       <div class="pgbody">
         <div class="card-main">${esc(n.job||'No job #')}</div>
         <div class="card-sub">${esc(n.addr||'')}${n.addr&&n.city?', ':''}${esc(n.city||'')}</div>
-        <div class="card-meta"><span>${fmtDate(n.date)}</span><span>${1+exportPlan(n).length} pg</span><span>${esc(n.crew||'')}</span></div>
+        <div class="card-meta"><span>${fmtDate(n.date)}</span><span>${1+exportPlan(n).length} pg</span><span>${esc(n.crew||'')}</span>${(n.mod&&(!n.exported||n.exported<n.mod))?'<span style="color:#D2691E;font-weight:800">unexported</span>':''}</div>
       </div><div class="pgx">›</div>
     </div>`).join('');
 }
@@ -811,6 +857,7 @@ function openSetup(){
   $('setup-h1').firstChild.textContent=g?'GPS setup':'Instrument setup';
   if(g){GPSF.forEach(([f])=>$('g-'+f).value=page[f]||'');syncGps();}
   else{SETF.forEach(([f])=>$('s-'+f).value=page[f]||'');syncTsVar();}
+  syncSetupPh();
   renderHist(); renderRows();
   $('setup-sub').textContent=note.job||'';
   show('v-setup');
@@ -848,6 +895,7 @@ function syncTsVar(){
   $('lb-bs').textContent=res?'Check BS point':'BS point';
 }
 function syncGps(){
+  syncSetupPh();
   $('g-loc').classList.toggle('on',!!page.loc);
   $('g-mode').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.gm===page.mode));
   $('g-bcoord').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.gc===page.bcoord));
@@ -862,12 +910,14 @@ function renderRows(){
       <div class="rline">
         <div class="mini" style="flex:0 0 auto"><label>type</label>
           <select data-rf="t">${(g?GROWTYPES:ROWTYPES).map(t=>`<option${r.t===t?' selected':''}>${t}</option>`).join('')}</select></div>
+        ${r.t==='NOTE'?'':`
         <div class="mini"><label>pt #</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
         <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>
         ${g?`<div class="mini"><label>time</label><input data-rf="time" value="${esc(r.time??'')}" class="mono"></div>`:''}
         <div class="mini"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
         ${g?'':`<div class="mini" style="flex:0 0 auto"><label>prism</label>
           <select data-rf="pr"><option value=""${!r.pr?' selected':''}></option>${['RND','360','MINI','RL'].map(p2=>`<option${r.pr===p2?' selected':''}>${p2}</option>`).join('')}</select></div>`}
+        <button class="rstrike${(r.ph&&r.ph.length)?' on-ph':''}" data-rph="${i}" style="align-self:flex-end">📷${(r.ph&&r.ph.length)?r.ph.length:''}</button>`}
         <button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>
       </div>
       <div class="mini"><label>comments</label><input data-rf="remark" class="rcomment" value="${esc(r.remark??'')}"></div>
@@ -876,16 +926,25 @@ function renderRows(){
 $('s-rows').addEventListener('input',e=>{
   const w=e.target.closest('[data-i]');if(!w)return;
   page.rows[+w.dataset.i][e.target.dataset.rf]=e.target.value;touch();
+  if(e.target.dataset.rf==='t')renderRows();
 });
 $('s-rows').addEventListener('click',e=>{
+  const bp=e.target.closest('[data-rph]');
+  if(bp){
+    const r=page.rows[+bp.dataset.rph];
+    openShotMgr(r,'ph','PT# '+(r.pt||'?')+(r.code?' · '+r.code:''));
+    return;
+  }
   const b=e.target.closest('[data-rs]');if(!b)return;
   const r=page.rows[+b.dataset.rs];
   if(r.committed){r.struck=!r.struck;}else{page.rows.splice(+b.dataset.rs,1);}
   renderRows();touch();
 });
 $('b-add-row').onclick=()=>{
-  const pv=(page.type!=='gps'&&page.rows.length)?(page.rows[page.rows.length-1].pr||''):'';
-  page.rows.push({t:page.type==='gps'?'OBS':'TIE',pt:'',code:'',time:'',ht:'',pr:pv,remark:'',struck:false,committed:false});
+  const prev=page.rows.length?page.rows[page.rows.length-1]:null;
+  const pv=(page.type!=='gps'&&prev)?(prev.pr||''):'';
+  const hv=prev?(prev.ht||''):'';
+  page.rows.push({t:page.type==='gps'?'OBS':'TIE',pt:'',code:'',time:'',ht:hv,pr:pv,remark:'',struck:false,committed:false});
   renderRows();touch();
 };
 function setupBlank(p){
@@ -1164,7 +1223,7 @@ const bg=$('cv-bg'), ink=$('cv-ink'), wrap=$('cv-wrap'), stack=$('cv-stack');
 const TOOLS=[['sel','✥','Select'],['pen','✏️','Pen'],['fat','🖊️','Thick'],['erase','⌫','Erase'],
   ['line','╱','Line'],['poly','〰','Poly'],['arc','⌒','Arc'],['off','∥','Offset'],
   ['dim','📐','Dim'],['walk','📏','Disto'],['arrow','→','Arrow'],
-  ['text','Ａ','Text'],['circ','Ⓓ','Circled'],['sym','◉','Symbol'],['north','🧭','North']];
+  ['text','Ａ','Text'],['sym','◉','Symbol'],['north','🧭','North']];
 const COLORS=[['#24312B','Ink'],['#B3402E','Red'],['#2B5B8E','Blue'],['#2E7D46','Green'],['#D2691E','Orange']];
 const SIZESETS={pen:{S:2.2,M:3.5,L:5.5},fat:{S:6,M:9,L:13},erase:{S:16,M:34,L:60}};
 let curColor='#24312B', curSizes={pen:'M',fat:'M',erase:'M'};
@@ -1191,9 +1250,19 @@ $('sizechips').addEventListener('click',e=>{
 });
 function updTools(){
   document.querySelectorAll('.tool').forEach(x=>x.classList.toggle('on',x.dataset.t===tool));
+  document.querySelectorAll('[data-qt]').forEach(x=>x.classList.toggle('on',x.dataset.qt===tool));
   $('f-hand').classList.toggle('on',tool==='move');
   updStylebar();
 }
+document.querySelector('.fcluster.fleft').addEventListener('click',e=>{
+  const b=e.target.closest('[data-qt]');if(!b)return;
+  const k=b.dataset.qt, prev=tool;
+  if(k!=='poly')finalizePoly();
+  clearSel();arcPts=[];offTarget=null;offPreview=null;
+  endWalk();
+  tool=k;updTools();redraw();
+  if(k==='sym'&&prev==='sym')openSymPicker();
+});
 $('cv-tools').addEventListener('click',e=>{
   const b=e.target.closest('[data-t]');if(!b)return;
   const k=b.dataset.t, prev=tool;
@@ -1802,6 +1871,104 @@ const UTIL=new Set(['mhs','mhd','ics','icd','ic','cbt','cbs','cbr']);
 const IDIRS=['NW','N','NE','W','INV','E','SW','S','SE'];
 const IDV={N:[0,-1],S:[0,1],E:[1,0],W:[-1,0],NE:[.71,-.71],NW:[-.71,-.71],SE:[.71,.71],SW:[-.71,.71],INV:[0,1]};
 let invOp=null, invDir='INV', invPh=null, swapFor=null, pendPh=null;
+let shotCtx=null, viewCtx=null, shotReplace=false;
+function resizePhoto(f,cb){
+  const im=new Image();
+  im.onload=()=>{
+    const r=Math.min(1,1200/Math.max(im.width,im.height));
+    const c=document.createElement('canvas');c.width=im.width*r;c.height=im.height*r;
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    cb(c.toDataURL('image/jpeg',0.72));
+    URL.revokeObjectURL(im.src);
+  };
+  im.src=URL.createObjectURL(f);
+}
+function openShotMgr(obj,key,label){
+  shotCtx={obj,key,label};
+  $('ms-title').textContent=label+' — photos';
+  renderShotMgr();
+  $('m-shot').classList.add('on');
+}
+function renderShotMgr(){
+  if(!shotCtx)return;
+  const arr=shotCtx.obj[shotCtx.key]||[];
+  $('ms-grid').innerHTML=arr.map((p2,i)=>`<img src="${p2}" data-msv="${i}">`).join('')||
+    '<div class="card-sub" style="grid-column:1/-1">No photos yet.</div>';
+}
+async function launchShot(inputId){
+  clearTimeout(saveT);await store.put(note);
+  try{localStorage.setItem('efn-pendph',JSON.stringify({job:note&&note.job,ts:Date.now()}));}catch(e){}
+  $(inputId).value='';$(inputId).click();
+}
+$('ms-cam').onclick=()=>{shotReplace=false;launchShot('file-shotcam');};
+$('ms-gal').onclick=()=>{shotReplace=false;launchShot('file-shot');};
+$('ms-done').onclick=()=>{
+  $('m-shot').classList.remove('on');shotCtx=null;
+  if(page&&(page.type==='setup'||page.type==='gps')){renderRows();syncSetupPh();}
+};
+function onShotFile(e){
+  const f=e.target.files[0];if(!f)return;
+  resizePhoto(f,ph=>{
+    try{localStorage.removeItem('efn-pendph');}catch(err){}
+    if(shotReplace&&viewCtx){viewCtx.set(ph);$('mv-img').src=ph;shotReplace=false;touch();return;}
+    if(!shotCtx)return;
+    (shotCtx.obj[shotCtx.key]=shotCtx.obj[shotCtx.key]||[]).push(ph);
+    renderShotMgr();syncSetupPh();touch();
+  });
+}
+$('file-shot').addEventListener('change',onShotFile);
+$('file-shotcam').addEventListener('change',onShotFile);
+function syncSetupPh(){
+  const el=$('setup-ph-row');if(!el||!page)return;
+  if(page.type==='setup'){
+    el.innerHTML=`<button class="sp-btn${(page.stph&&page.stph.length)?' on-ph':''}" data-spph="stph">📷 ⊼ station${(page.stph&&page.stph.length)?' ('+page.stph.length+')':''}</button>
+      <button class="sp-btn${(page.bsph&&page.bsph.length)?' on-ph':''}" data-spph="bsph">📷 BS${(page.bsph&&page.bsph.length)?' ('+page.bsph.length+')':''}</button>`;
+  }else if(page.type==='gps'&&page.mode==='base'){
+    el.innerHTML=`<button class="sp-btn${(page.bpph&&page.bpph.length)?' on-ph':''}" data-spph="bpph">📷 Base pt${(page.bpph&&page.bpph.length)?' ('+page.bpph.length+')':''}</button>`;
+  }else el.innerHTML='';
+}
+$('setup-ph-row').addEventListener('click',e=>{
+  const b=e.target.closest('[data-spph]');if(!b)return;
+  const key=b.dataset.spph;
+  const label=key==='stph'?('⊼ @ '+(page.st||'station')):key==='bsph'?('BS '+(page.bs||'')):('Base '+(page.bpt||''));
+  openShotMgr(page,key,label);
+});
+$('ms-grid').addEventListener('click',e=>{
+  const im=e.target.closest('[data-msv]');if(!im||!shotCtx)return;
+  const i=+im.dataset.msv, c2=shotCtx;
+  openViewer({
+    get:()=>c2.obj[c2.key][i],
+    set:u=>{c2.obj[c2.key][i]=u;},
+    remove:()=>{c2.obj[c2.key].splice(i,1);renderShotMgr();syncSetupPh();}
+  });
+});
+function openViewer(ctx2){
+  viewCtx=ctx2;
+  $('mv-img').src=ctx2.get();
+  $('m-view').classList.add('on');
+}
+$('mv-done').onclick=()=>{$('m-view').classList.remove('on');viewCtx=null;renderInvCard&&invOp&&renderInvCard();};
+$('mv-cam').onclick=()=>{shotReplace=true;launchShot('file-shotcam');};
+$('mv-gal').onclick=()=>{shotReplace=true;launchShot('file-shot');};
+$('mv-rot').onclick=()=>{
+  if(!viewCtx)return;
+  const im=new Image();
+  im.onload=()=>{
+    const c=document.createElement('canvas');c.width=im.height;c.height=im.width;
+    const x=c.getContext('2d');
+    x.translate(c.width/2,c.height/2);x.rotate(Math.PI/2);
+    x.drawImage(im,-im.width/2,-im.height/2);
+    const u=c.toDataURL('image/jpeg',0.8);
+    viewCtx.set(u);$('mv-img').src=u;touch();
+  };
+  im.src=viewCtx.get();
+};
+$('mv-del').onclick=()=>{
+  if(!viewCtx)return;
+  viewCtx.remove();
+  $('m-view').classList.remove('on');viewCtx=null;touch();
+  if(invOp)renderInvCard();
+};
 function stashPh(){
   try{localStorage.setItem('efn-pendph',JSON.stringify({
     job:note&&note.job, dir:invDir, val:$('mi-val').value, ts:Date.now()}));}catch(e){}
@@ -1853,6 +2020,17 @@ $('mi-list').addEventListener('click',e=>{
   }
   const bp=e.target.closest('[data-iph]');
   if(bp){
+    const [d2,i]=bp.dataset.iph.split('|');
+    const x=IV(invOp.inv[d2][i]);
+    if(x.ph){
+      invOp.inv[d2][i]=x;
+      openViewer({
+        get:()=>x.ph,
+        set:u=>{x.ph=u;},
+        remove:()=>{delete x.ph;}
+      });
+      return;
+    }
     (async()=>{
       clearTimeout(saveT);await store.put(note);stashPh();
       invPh=bp.dataset.iph;$('file-invcam').value='';$('file-invcam').click();
@@ -2012,10 +2190,10 @@ function loadScript(src){return new Promise((res,rej)=>{
   if(document.querySelector(`script[src="${src}"]`))return res();
   const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Couldn’t load '+src+'. Check your connection.'));
   document.head.appendChild(s);});}
-const CDN='https://cdnjs.cloudflare.com/ajax/libs/';
+const CDN='lib/';
 async function pdfjs(){
-  await loadScript(CDN+'pdf.js/3.11.174/pdf.min.js');
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc=CDN+'pdf.js/3.11.174/pdf.worker.min.js';
+  await loadScript(CDN+'pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc=CDN+'pdf.worker.min.js';
   return window.pdfjsLib;
 }
 $('file-pdf').addEventListener('change',async e=>{
@@ -2183,13 +2361,20 @@ function exportPlan(n=note){
     }else segs.push({kind:'c',p});
   });
   const phs=[];
-  n.pages.forEach(p=>{(p.ops||[]).forEach(o=>{
-    if(o.k!=='y'||!o.inv)return;
-    IDIRS.forEach(d2=>(o.inv[d2]||[]).forEach(raw=>{
-      const x=IV(raw);
-      if(x.ph)phs.push({ph:x.ph,cap:'PT# '+(o.pid||'?')+' · '+d2+' '+x.v+(x.d?' D':'')});
-    }));
-  });});
+  n.pages.forEach(p=>{
+    (p.stph||[]).forEach(ph=>phs.push({ph,cap:'⊼ @ '+(p.st||'?')+' · SETUP'}));
+    (p.bsph||[]).forEach(ph=>phs.push({ph,cap:'BS '+(p.bs||'?')+' · SETUP'}));
+    (p.bpph||[]).forEach(ph=>phs.push({ph,cap:'BASE '+(p.bpt||'?')+' · SETUP'}));
+    (p.rows||[]).forEach(r=>(r.ph||[]).forEach(ph=>
+      phs.push({ph,cap:'PT# '+(r.pt||'?')+(r.code?' · '+r.code:'')})));
+    (p.ops||[]).forEach(o=>{
+      if(o.k!=='y'||!o.inv)return;
+      IDIRS.forEach(d2=>(o.inv[d2]||[]).forEach(raw=>{
+        const x=IV(raw);
+        if(x.ph)phs.push({ph:x.ph,cap:'PT# '+(o.pid||'?')+' · '+d2+' '+x.v+(x.d?' D':'')});
+      }));
+    });
+  });
   for(let i=0;i<phs.length;i+=4)segs.push({kind:'m',items:phs.slice(i,i+4)});
   const used=new Set();
   n.pages.forEach(p=>{(p.ops||[]).forEach(o=>{if(o.k==='y'&&SYMMAP[o.id])used.add(o.id);});});
@@ -2426,7 +2611,7 @@ async function renderCanvasPage(ctx,p,idx,total){
   }
 }
 async function buildPdf(){
-  await loadScript(CDN+'jspdf/2.5.1/jspdf.umd.min.js');
+  await loadScript(CDN+'jspdf.umd.min.js');
   const pdf=new window.jspdf.jsPDF({unit:'pt',format:'letter'});
   const segs=exportPlan();
   const total=1+segs.length;
@@ -2444,6 +2629,8 @@ async function buildPdf(){
   }
   const d=new Date((note.date||'')+'T12:00:00');
   const stamp=`${d.toLocaleDateString('en-US',{month:'short'})}_${d.getDate()}__${d.getFullYear()}`;
+  note.exported=Date.now();
+  store.put(note);
   return {blob:pdf.output('blob'),name:`${note.job}_Field_Notes_${stamp}.pdf`,stamp};
 }
 let pendingFile=null, pendingPkg=null;
@@ -2535,7 +2722,7 @@ $('file-zip').addEventListener('change',async e=>{
   const files=[...e.target.files];
   busy(true);
   try{
-    await loadScript(CDN+'jszip/3.10.1/jszip.min.js');
+    await loadScript(CDN+'jszip.min.js');
     const p=await buildPdf();
     const zip=new window.JSZip();
     zip.file(p.name,p.blob);
@@ -2549,6 +2736,41 @@ $('file-zip').addEventListener('change',async e=>{
 });
 
 /* ================= boot ================= */
+let remindNotes=[];
+async function checkExportReminder(){
+  try{
+    const today=new Date().toISOString().slice(0,10);
+    let lastday=localStorage.getItem('efn-lastday'), prevday=localStorage.getItem('efn-prevday');
+    if(lastday!==today){
+      prevday=lastday;
+      localStorage.setItem('efn-prevday',prevday||'');
+      localStorage.setItem('efn-lastday',today);
+    }
+    if(!prevday)return;
+    if(localStorage.getItem('efn-nag')===today)return;
+    const t0=new Date(prevday+'T00:00:00').getTime();
+    const t1=new Date(today+'T00:00:00').getTime();
+    remindNotes=notes.filter(n=>n.mod&&n.mod>=t0&&n.mod<t1&&
+      (!n.exported||n.exported<n.mod)&&!n.muteRemind&&(n.pages&&n.pages.length));
+    if(!remindNotes.length)return;
+    $('eb-text').textContent='⚠ Unexported work from last session: '+
+      remindNotes.map(n=>n.job||'(no job #)').join(', ')+'. Export before it’s needed.';
+    $('export-banner').style.display='block';
+    localStorage.setItem('efn-nag',today);
+  }catch(e){}
+}
+$('eb-x').onclick=()=>{$('export-banner').style.display='none';};
+$('eb-mute').onclick=async()=>{
+  for(const n of remindNotes){n.muteRemind=true;await store.put(n);}
+  $('export-banner').style.display='none';
+  toast('Muted — these notes won’t be flagged again.');
+};
+$('eb-open').onclick=()=>{
+  $('export-banner').style.display='none';
+  if(!remindNotes[0])return;
+  note=notes.find(n=>n.id===remindNotes[0].id)||remindNotes[0];
+  openNote();
+};
 (async()=>{
   await store.init();
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
@@ -2557,6 +2779,7 @@ $('file-zip').addEventListener('change',async e=>{
     if(!standalone&&window.self===window.top)$('install-banner').style.display='block';
   }catch(e){}
   await renderHome();
+  checkExportReminder();
   try{
     const st=localStorage.getItem('efn-pendph');
     if(st){
