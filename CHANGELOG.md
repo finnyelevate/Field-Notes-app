@@ -1,5 +1,19 @@
 # Elevate Field — Changelog
 
+## Build 24.1 — 2026-08-11
+- Real undo on sketches: ↩ now steps back through history — deletions, moves,
+  rotations, invert-card edits, anything — instead of only removing the last
+  drawn item. A deleted manhole comes back with its PT# and all its inverts.
+  ↩ also floats on the right cluster now, and 🧭 north joins the left one
+- Deleting a setup line shows an UNDO button for a few seconds
+- Moving utility symbols fixed: with ✥ Select, dragging a selected manhole now
+  moves it — the invert card only opens on a clean tap (no finger movement),
+  instead of hijacking every second touch
+- Setup rows re-laid on two lines — type · pt # · code on the first, HT ·
+  prism · 📷 · ✕ on the second — so the fields are full width and readable
+  again on phones (they'd gotten squeezed when prism and the camera joined
+  the row)
+
 ## Build 24 — 2026-08-11
 **Photos everywhere**
 - Every tie/set/check row (TS and GPS) has a 📷 — photograph pins, tags, TBMs;

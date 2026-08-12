@@ -337,11 +337,13 @@ input,select,textarea{font:inherit;color:var(--ink)}
     <button class="fbtn" data-qt="text">Ａ</button>
     <button class="fbtn" data-qt="sym">◉</button>
     <button class="fbtn" data-qt="sel">✥</button>
+    <button class="fbtn" data-qt="north">🧭</button>
   </div>
   <div class="fcluster">
     <button class="fbtn" id="f-polydone" style="display:none">✓</button>
     <button class="fbtn" id="f-del" style="display:none;background:var(--danger)">✕</button>
     <button class="fbtn" id="f-rot" style="display:none">↻</button>
+    <button class="fbtn" id="f-undo2">↩</button>
     <button class="fbtn" id="fz-in">＋</button>
     <button class="fbtn" id="fz-out">－</button>
     <button class="fbtn" id="f-hand">✋</button>
@@ -724,7 +726,7 @@ $('res-list').addEventListener('click',async e=>{
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+' — tap for what’s new';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+'.1 — tap for what’s new';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -912,14 +914,18 @@ function renderRows(){
           <select data-rf="t">${(g?GROWTYPES:ROWTYPES).map(t=>`<option${r.t===t?' selected':''}>${t}</option>`).join('')}</select></div>
         ${r.t==='NOTE'?'':`
         <div class="mini"><label>pt #</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
-        <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>
+        <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>`}
+        ${r.t==='NOTE'?`<button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>`:''}
+      </div>
+      ${r.t==='NOTE'?'':`
+      <div class="rline">
         ${g?`<div class="mini"><label>time</label><input data-rf="time" value="${esc(r.time??'')}" class="mono"></div>`:''}
         <div class="mini"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
         ${g?'':`<div class="mini" style="flex:0 0 auto"><label>prism</label>
           <select data-rf="pr"><option value=""${!r.pr?' selected':''}></option>${['RND','360','MINI','RL'].map(p2=>`<option${r.pr===p2?' selected':''}>${p2}</option>`).join('')}</select></div>`}
-        <button class="rstrike${(r.ph&&r.ph.length)?' on-ph':''}" data-rph="${i}" style="align-self:flex-end">📷${(r.ph&&r.ph.length)?r.ph.length:''}</button>`}
+        <button class="rstrike${(r.ph&&r.ph.length)?' on-ph':''}" data-rph="${i}" style="align-self:flex-end">📷${(r.ph&&r.ph.length)?r.ph.length:''}</button>
         <button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>
-      </div>
+      </div>`}
       <div class="mini"><label>comments</label><input data-rf="remark" class="rcomment" value="${esc(r.remark??'')}"></div>
     </div>`).join('');
 }
@@ -936,8 +942,12 @@ $('s-rows').addEventListener('click',e=>{
     return;
   }
   const b=e.target.closest('[data-rs]');if(!b)return;
-  const r=page.rows[+b.dataset.rs];
-  if(r.committed){r.struck=!r.struck;}else{page.rows.splice(+b.dataset.rs,1);}
+  const i=+b.dataset.rs, r=page.rows[i];
+  if(r.committed){r.struck=!r.struck;}
+  else{
+    page.rows.splice(i,1);
+    toastUndo('Line deleted.',()=>{page.rows.splice(i,0,r);renderRows();touch();});
+  }
   renderRows();touch();
 });
 $('b-add-row').onclick=()=>{
@@ -1001,7 +1011,23 @@ $('b-back-note3').onclick=()=>$('b-text-done').onclick();
 
 /* ================= canvas engine ================= */
 let zoom=0.9, tool='pen', drawing=null, pend=null;
-let ortho=false, polyDraft=null, gest=null, selOp=null, dragSel=null;
+let ortho=false, polyDraft=null, gest=null, selOp=null, dragSel=null, selTap=null;
+let hist=[];
+function snap(){
+  try{hist.push(JSON.stringify(page.ops));if(hist.length>30)hist.shift();}catch(e){}
+}
+function toastUndo(msg,cb){
+  let t=$('toastu');
+  if(!t){t=document.createElement('div');t.id='toastu';
+    t.style.cssText='position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 84px);background:#232E27;color:#EDF2EE;padding:12px 14px;border-radius:12px;font-size:14px;z-index:41;box-shadow:0 6px 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:space-between;gap:10px';
+    document.body.appendChild(t);}
+  t.innerHTML='<span></span><button style="background:var(--accent);color:#fff;border-radius:9px;padding:9px 16px;font-weight:800">UNDO</button>';
+  t.firstChild.textContent=msg;
+  t.style.display='flex';
+  t.lastChild.onclick=()=>{t.style.display='none';cb();};
+  clearTimeout(toastUndo.t);
+  toastUndo.t=setTimeout(()=>t.style.display='none',7000);
+}
 function selRad(o){return o.k==='y'?(o.s||26)+16:o.k==='c'?o.r+10:o.k==='n'?42:o.k==='misc'?95:52;}
 function hitPointObj(x,y){
   for(let i=page.ops.length-1;i>=0;i--){
@@ -1015,7 +1041,7 @@ function updSelUI(){
   $('f-del').style.display=selOp?'flex':'none';
   $('f-rot').style.display=(selOp&&selOp.k==='n')?'flex':'none';
 }
-function clearSel(){selOp=null;dragSel=null;updSelUI();}
+function clearSel(){selOp=null;dragSel=null;selTap=null;updSelUI();}
 const ptrs=new Map();
 function orthoSnap(x1,y1,x,y){
   const len=Math.hypot(x-x1,y-y1);
@@ -1214,7 +1240,7 @@ function hitOffTarget(x,y){
 }
 function finalizePoly(){
   if(!polyDraft)return;
-  if(polyDraft.pts.length>=2)page.ops.push({k:'pl',pts:polyDraft.pts});
+  if(polyDraft.pts.length>=2){snap();page.ops.push({k:'pl',pts:polyDraft.pts});}
   polyDraft=null;
   const b=$('f-polydone');if(b)b.style.display='none';
   redraw();thumb();touch();
@@ -1289,14 +1315,17 @@ $('fz-out').onclick=()=>applyZoom(zoom-0.3);
 $('f-hand').onclick=()=>{finalizePoly();clearSel();tool=tool==='move'?'pen':'move';updTools();redraw();};
 $('f-ortho').onclick=()=>{ortho=!ortho;$('f-ortho').classList.toggle('on',ortho);};
 $('f-polydone').onclick=()=>finalizePoly();
+$('f-undo2').onclick=()=>$('b-undo').onclick();
 $('f-del').onclick=()=>{
   if(!selOp)return;
+  snap();
   const i=page.ops.indexOf(selOp);
   if(i>-1)page.ops.splice(i,1);
   clearSel();redraw();thumb();touch();
 };
 $('f-rot').onclick=()=>{
   if(!selOp||selOp.k!=='n')return;
+  snap();
   selOp.a=((selOp.a||0)+15)%360;
   redraw();thumb();touch();
 };
@@ -1304,6 +1333,7 @@ function openCanvas(){
   lastDimEnd=null;editDim=null;dimStart=null;
   polyDraft=null;gest=null;ptrs.clear();clearSel();arcPts=[];offTarget=null;offPreview=null;
   walkPOC=null;walkPt=null;walkStack=null;$('walkbar').style.display='none';
+  hist=[];
   $('f-polydone').style.display='none';
   $('f-ortho').classList.toggle('on',ortho);
   $('cv-title').firstChild.textContent=pgTitle(page);
@@ -1546,14 +1576,15 @@ ink.addEventListener('pointerdown',e=>{
     const db=offPreview.b?opDist(offPreview.b,x,y):1e9;
     const pick=da<=db?offPreview.a:offPreview.b;
     offPreview=null;
-    if(pick)page.ops.push(pick);
+    if(pick){snap();page.ops.push(pick);}
     redraw();thumb();touch();
     return;
   }
   if(tool==='move'){gest={pan:[e.clientX,e.clientY]};return;}
   if(tool==='sel'){
     const hit=hitPointObj(x,y);
-    if(hit&&hit===selOp&&hit.k==='y'&&UTIL.has(hit.id)){openInvCard(hit);return;}
+    if(hit)snap();
+    selTap=(hit&&hit===selOp&&hit.k==='y'&&UTIL.has(hit.id))?[x,y]:null;
     selOp=hit;
     dragSel=hit?[x-hit.x,y-hit.y]:null;
     updSelUI();redraw();
@@ -1585,6 +1616,7 @@ ink.addEventListener('pointerdown',e=>{
     }
     if(!walkPOC){
       initWalkDirs();
+      snap();
       walkPOC=nearestEnd(x,y)||[x,y];
       walkPt=walkPOC.slice();walkStack=[walkPOC.slice()];walkOps=[];
       $('walkbar').style.display='flex';
@@ -1597,6 +1629,7 @@ ink.addEventListener('pointerdown',e=>{
     const pt=nearestEnd(x,y)||[x,y];
     arcPts.push(pt);
     if(arcPts.length===3){
+      snap();
       page.ops.push({k:'arc',p:arcPts});
       arcPts=[];redraw();thumb();touch();
     }else redraw();
@@ -1609,7 +1642,7 @@ ink.addEventListener('pointerdown',e=>{
     $('m-off').classList.add('on');
     setTimeout(()=>$('mo-dist').focus(),80);
   }
-  else if(tool==='north'){page.ops.push({k:'n',x,y});redraw();thumb();touch();}
+  else if(tool==='north'){snap();page.ops.push({k:'n',x,y});redraw();thumb();touch();}
   else if(tool==='sym'){
     const hit=hitPointObj(x,y);
     if(hit&&hit.k==='y'){
@@ -1618,6 +1651,7 @@ ink.addEventListener('pointerdown',e=>{
       return;
     }
     if(curSym){
+      snap();
       const op={k:'y',id:curSym,x,y,s:26};
       if(UTIL.has(curSym))op.pid=nextUid();
       page.ops.push(op);redraw();thumb();touch();
@@ -1660,6 +1694,7 @@ ink.addEventListener('pointermove',e=>{
   if(dragSel&&selOp){
     e.preventDefault();
     const [x,y]=evPos(e);
+    if(selTap&&Math.hypot(x-selTap[0],y-selTap[1])>8)selTap=null;   // it's a drag, not a tap
     selOp.x=x-dragSel[0];selOp.y=y-dragSel[1];
     redraw();return;
   }
@@ -1690,28 +1725,41 @@ ink.addEventListener('pointermove',e=>{
     else if(ptrs.size<2)gest=null;
     return;
   }
-  if(dragSel){dragSel=null;thumb();touch();return;}
+  if(dragSel){
+    dragSel=null;thumb();touch();
+    if(selTap){selTap=null;if(selOp)openInvCard(selOp);}
+    return;
+  }
   if(!drawing)return;
+  snap();
   if(drawing.k==='l'){
-    const snap=nearestEnd(drawing.x2,drawing.y2,24);
-    if(snap&&!(snap[0]===drawing.x1&&snap[1]===drawing.y1)){drawing.x2=snap[0];drawing.y2=snap[1];}
+    const sn=nearestEnd(drawing.x2,drawing.y2,24);
+    if(sn&&!(sn[0]===drawing.x1&&sn[1]===drawing.y1)){drawing.x2=sn[0];drawing.y2=sn[1];}
     if(Math.hypot(drawing.x2-drawing.x1,drawing.y2-drawing.y1)>4)page.ops.push(drawing);
   }
   else if(drawing.k!=='s'||drawing.pts.length>1)page.ops.push(drawing);
   drawing=null;redraw();thumb();touch();
 }));
 $('b-undo').onclick=()=>{
+  if(walkPOC){$('wk-undo').onclick();return;}
   if(offPreview){offPreview=null;redraw();return;}
   if(polyDraft){
     polyDraft.pts.pop();
     if(!polyDraft.pts.length){polyDraft=null;$('f-polydone').style.display='none';}
     redraw();return;
   }
-  page.ops.pop();redraw();thumb();touch();
+  if(hist.length){
+    try{page.ops=JSON.parse(hist.pop());}catch(e){return;}
+    clearSel();invOp=null;arcPts=[];offTarget=null;
+    redraw();thumb();touch();
+    return;
+  }
+  toast('Nothing to undo on this page.');
 };
 function thumb(){
   clearTimeout(thumb.t);
   thumb.t=setTimeout(()=>{
+    if(!page||!page.ops)return;   // left the canvas before the delayed render
     const c=document.createElement('canvas');c.width=104;c.height=132;
     const x=c.getContext('2d');drawBG(x,104/LW,true);
     page.ops.forEach(o=>drawOp(x,o));
@@ -1794,6 +1842,7 @@ $('mo-ok').onclick=()=>{
 $('md-dchip').onclick=()=>{mdD=!mdD;$('md-dchip').classList.toggle('on',mdD);};
 $('md-cancel').onclick=()=>{$('m-dim').classList.remove('on');dimStart=null;editDim=null;};
 $('md-del').onclick=()=>{
+  snap();
   $('m-dim').classList.remove('on');
   if(!editDim)return;
   const i=page.ops.indexOf(editDim);
@@ -1812,6 +1861,7 @@ function shiftChain(fromPt,delta,visited){
     }});
 }
 $('md-ok').onclick=()=>{
+  snap();
   const d=parseFloat($('md-dist').value), a=(parseFloat($('md-ang').value)||0)*Math.PI/180;
   $('m-dim').classList.remove('on');
   const sc=page.scale||45;
@@ -1977,6 +2027,7 @@ function clearStash(){try{localStorage.removeItem('efn-pendph');}catch(e){}}
 const IV=x=>typeof x==='string'?{v:x}:x;   // build-20 values were plain strings
 function nextUid(){note.uidSeq=(note.uidSeq||0)+1;return String(note.uidSeq);}
 function openInvCard(op){
+  snap();
   invOp=op;invOp.inv=invOp.inv||{};invDir='INV';
   pendPh=null;$('mi-camstate').style.display='none';
   if(!op.pid)op.pid=nextUid();
