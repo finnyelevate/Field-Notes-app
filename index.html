@@ -152,6 +152,19 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .resrow .pgbody{padding:2px 0}
 .keep{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--grid2)}
 .empty{color:#9DB3A6;text-align:center;padding:60px 20px;font-size:15px;line-height:1.6}
+.gcard{display:flex;align-items:center;gap:12px;padding:10px 4px;width:100%;text-align:left;border-bottom:1.5px solid var(--line)}
+.gcard:last-child{border-bottom:0}
+.gico{font-size:24px;min-width:36px;text-align:center}
+.gmain{font-size:15px;font-weight:800}
+.gsub{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.35}
+.gx{margin-left:auto;color:var(--grid2);font-size:20px}
+.why{background:#FFF3E8;border:1.5px solid #F0C9A6;border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.45;margin:10px 0}
+.why b{color:var(--accent-dn)}
+.gstep{display:flex;gap:10px;margin:10px 0;font-size:14px;line-height:1.45}
+.gnum{min-width:24px;height:24px;border-radius:50%;background:var(--grid2);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px}
+canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 4px;display:block;background:var(--paper)}
+.gcap{font-size:11.5px;color:var(--muted);text-align:center;margin-bottom:8px}
+.trainfoot{color:#9DB3A6;font-size:12.5px;text-align:center;padding:6px 20px 0;line-height:1.5}
 .spin{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -177,9 +190,11 @@ input,select,textarea{font:inherit;color:var(--ink)}
   <div class="hometabs">
     <button class="htab on" data-ht="notes">📓 Notes</button>
     <button class="htab" data-ht="res">📚 Resources</button>
+    <button class="htab" data-ht="train">🎓 Training</button>
   </div>
   <div class="scroll" id="home-list"></div>
   <div class="scroll" id="res-list" style="display:none"></div>
+  <div class="scroll" id="train-list" style="display:none"></div>
   <button class="btn fab" id="b-new">＋ New note</button>
 </div>
 
@@ -294,6 +309,15 @@ input,select,textarea{font:inherit;color:var(--ink)}
   </div>
 </div>
 
+<!-- ============ TRAINING GUIDE ============ -->
+<div class="view" id="v-guide">
+  <div class="bar">
+    <button class="bicon" id="b-back-train">‹</button>
+    <h1 id="guide-h1">Guide<span class="sub" id="guide-sub"></span></h1>
+  </div>
+  <div class="scroll"><div class="paper" id="guide-body"></div></div>
+</div>
+
 <!-- ============ FREE-FORM NOTES ============ -->
 <div class="view" id="v-text">
   <div class="bar">
@@ -392,7 +416,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 24</h2>
+  <h2>What’s new — build 25</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -514,14 +538,10 @@ input,select,textarea{font:inherit;color:var(--ink)}
 const LW=1000, LH=1294;                 // logical canvas size (letter ratio)
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=24;
+const BUILD=25;
 const NEWS=[
- ['📷','Photos on any shot','Every tie/set/check row has a 📷 — photograph the pin, tag, or TBM. The ⊼ station and BS get cameras too, so future crews can find the control. All print on the Measurement Record pages.'],
- ['🖼','See your photos','Tap any 📷 marker to view the photo in the app — Replace, Rotate, or Remove it on the spot. No more waiting for the export to find out it was blurry.'],
- ['⏰','Export reminder','If last session\'s work never got exported, the app tells you once, next morning. Mute any note you don\'t care about.'],
- ['🧰','Quick tools on the left','✏️ pen, Ａ text, ◉ symbol, ✥ select now float on the left edge of sketches. Navigation stays on the right. (Circled labels retired — symbols + PT#s replaced them.)'],
- ['📏','Less typing','Rod height carries to the next row automatically, like prism type. NOTE rows now show just the comment box.'],
- ['🗺','Job Maps','Resources tab now has the live job map — tap to open in Google Maps.']
+ ['🎓','Training tab','New tab on the home screen with how-to guides: point of commencement, booking inverts, and photos on control. Steps + diagrams, works fully offline. More guides coming.'],
+ ['🛰','GPS rover pages fixed','Rover-only GPS setups with just receiver + HT filled were treated as "empty" — ＋ Add another refused to work and Save could silently remove the page. Both fixed: what you type on a rover page now counts.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -626,6 +646,130 @@ $('news-ok').onclick=()=>{
 };
 $('home-sub').addEventListener('click',openNews);
 
+/* ================= training ================= */
+const GUIDES=[
+ {id:'poc',ico:'\u2b50',t:'Point of commencement',sub:'Where to start a walk \u2014 and why the misclosure depends on it',area:'sketches',
+  why:'<b>Why it matters:</b> the walk closes back to where it started. If the POC is a soft spot (grass, gravel edge), the misclosure \u0394N/\u0394E means nothing and the office can\u2019t trust the whole building tie.',
+  cap:'Start at a hard, re-findable corner \u2014 the walk closes back onto \u2b50',diag:diagPoc,steps:[
+  'Pick a <b>hard corner</b> of the building \u2014 face of foundation at a corner, not siding or a downspout.',
+  'Start the walk there. The app marks it \u2b50 \u2014 that\u2019s your POC.',
+  'Walk the perimeter with the Disto, one face at a time. Distances book as measured \u2014 <b>never rounded to close</b>.',
+  'Close back onto the same \u2b50 corner. The app prints <span class="mono">MISC. \u0394N/\u0394E</span> in a box \u2014 that\u2019s your proof the walk holds together.',
+  'Big misclosure? Don\u2019t fudge a distance \u2014 re-check the face you\u2019re least sure of and strike/correct the bad one (it stays visible, legal-book style).']},
+ {id:'inv',ico:'\u25c9',t:'Booking inverts',sub:'The invert card on manholes & CBs \u2014 depths, pipes, photos',area:'utilities',
+  why:'<b>Why it matters:</b> one photo per invert settles pipe size and material disputes months later, without a return trip. Drafters can\u2019t draw what wasn\u2019t booked.',
+  cap:'Clean tap on a placed manhole opens the invert card',diag:diagInv,steps:[
+  'Place the \u25c9 manhole / CB symbol on the sketch. It auto-numbers (<span class="mono">MH1</span>, <span class="mono">CB2</span>\u2026).',
+  'With \u2725 Select, <b>tap it once cleanly</b> (no drag) \u2014 the invert card opens.',
+  'Book the rim, then each invert: direction, pipe size, and <b>depth in metres</b> \u2014 always metres, even if the rim\u2019s in feet.',
+  'Tap \ud83d\udcf7 on each invert line \u2014 one photo down the barrel per pipe. The app saves your work before the camera opens, so nothing\u2019s lost if the phone hiccups.',
+  'Deduct the pipe size where you measured to the flow line \u2014 the invert calc in the card handles it.']},
+ {id:'pho',ico:'\ud83d\udcf7',t:'Photos on control & ties',sub:'Which \ud83d\udcf7 to use and what to point it at',area:'setups',
+  why:'<b>Why it matters:</b> the next crew (or you, in January) finds the pin in half the time. A tag photo also proves <i>which</i> monument you tied \u2014 no more \u201cwas that 9048 or 9046?\u201d',
+  cap:'Every setup and tie row has its own \ud83d\udcf7',diag:diagPho,steps:[
+  'On the setup page, the \u22bc station and BS point each have a \ud83d\udcf7 \u2014 and so does <b>every tie/set/check row</b>.',
+  'For monuments: two shots. Close-up of the <b>tag</b> (readable number), then a step-back <b>context</b> shot showing what it\u2019s beside.',
+  'For pins and TBMs: one context shot \u2014 fence line, hydrant, whatever finds it again.',
+  'Tap any \ud83d\udcf7 marker afterwards to check it in the app \u2014 <b>Replace it now if it\u2019s blurry</b>, not after export.',
+  'Photos print on the Measurement Record pages automatically \u2014 nothing extra to do at export.']}
+];
+function renderTraining(){
+  $('train-list').innerHTML=`<div class="paper" style="margin-top:12px"><div class="eyebrow">How-to guides</div>`+
+    GUIDES.map(g=>`<button class="gcard" data-g="${g.id}">
+      <div class="gico">${g.ico}</div>
+      <div><div class="gmain">${g.t}</div><div class="gsub">${g.sub}</div></div>
+      <div class="gx">\u203a</div></button>`).join('')+
+    `</div><div class="trainfoot">Guides work fully offline \u2014 they\u2019re part of the app.<br>More get added as features do.</div>`;
+}
+$('train-list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-g]');if(!b)return;
+  openGuide(GUIDES.find(g=>g.id===b.dataset.g));
+});
+function openGuide(g){
+  $('guide-h1').firstChild.textContent=g.t;
+  $('guide-sub').textContent='Training \u00b7 '+g.area;
+  $('guide-body').innerHTML=`<div class="why">${g.why}</div>
+    <canvas class="gdiag" id="gd-cv" width="640" height="${g.id==='inv'?440:g.id==='pho'?360:420}"></canvas>
+    <div class="gcap">${g.cap}</div>`+
+    g.steps.map((st,i)=>`<div class="gstep"><div class="gnum">${i+1}</div><div>${st}</div></div>`).join('');
+  const c=$('gd-cv').getContext('2d');
+  if(c)g.diag(c);
+  show('v-guide');
+}
+$('b-back-train').onclick=()=>{show('v-home');};
+/* ---- diagram helpers (field-book style) ---- */
+function gdGrid(c,w,h){c.fillStyle='#FBFAF5';c.fillRect(0,0,w,h);
+  c.strokeStyle='#B7D5C4';c.lineWidth=1;
+  for(let x=0;x<w;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();}
+  for(let y=0;y<h;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}
+  c.strokeStyle='#24312B';c.fillStyle='#24312B';c.lineWidth=3;}
+function gdArrow(c,x1,y1,x2,y2){c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+  const a=Math.atan2(y2-y1,x2-x1);c.beginPath();c.moveTo(x2,y2);
+  c.lineTo(x2-11*Math.cos(a-.4),y2-11*Math.sin(a-.4));
+  c.lineTo(x2-11*Math.cos(a+.4),y2-11*Math.sin(a+.4));c.closePath();c.fill();}
+function diagPoc(c){gdGrid(c,640,420);
+  c.strokeRect(140,110,340,220);
+  c.save();c.strokeStyle='#5E9478';c.fillStyle='#5E9478';c.lineWidth=2.5;
+  gdArrow(c,150,90,340,90);gdArrow(c,360,90,470,90);
+  gdArrow(c,500,120,500,230);gdArrow(c,500,250,500,320);
+  gdArrow(c,470,350,300,350);gdArrow(c,280,350,150,350);
+  gdArrow(c,120,320,120,150);c.restore();
+  c.save();c.fillStyle='#F26A1B';c.font='900 34px system-ui';c.fillText('\u2b50',118,124);c.restore();
+  c.font='800 20px '+'ui-monospace,Menlo,monospace';c.fillStyle='#24312B';
+  c.fillText('POC \u2014 hard corner',170,80);
+  c.font='700 17px ui-monospace,Menlo,monospace';
+  c.fillText('9.14',300,135);c.fillText('7.32',430,225);c.fillText('9.15',300,378);
+  c.save();c.lineWidth=2;c.strokeRect(155,150,230,58);
+  c.font='800 17px ui-monospace,Menlo,monospace';
+  c.fillText('MISC. \u0394N 0.01',170,175);c.fillText('      \u0394E 0.02',170,198);c.restore();
+  c.save();c.strokeStyle='#F26A1B';c.fillStyle='#F26A1B';c.lineWidth=3;
+  gdArrow(c,120,150,124,122);c.restore();}
+function diagInv(c){gdGrid(c,640,440);
+  c.beginPath();c.arc(150,120,34,0,7);c.stroke();
+  c.font='800 19px ui-monospace,Menlo,monospace';c.fillText('MH1',126,127);
+  c.save();c.strokeStyle='#F26A1B';c.lineWidth=3;
+  c.beginPath();c.arc(150,120,48,0,7);c.stroke();
+  c.font='800 16px system-ui';c.fillStyle='#F26A1B';c.fillText('tap once \u2014 no drag',210,100);c.restore();
+  c.save();c.strokeStyle='#5E9478';c.fillStyle='#5E9478';c.lineWidth=2.5;gdArrow(c,150,170,150,205);c.restore();
+  c.save();c.fillStyle='#fff';c.strokeStyle='#DDE4DE';c.lineWidth=2;
+  c.fillRect(70,215,500,190);c.strokeRect(70,215,500,190);
+  c.fillStyle='#5E9478';c.font='800 13px system-ui';c.fillText('INVERT CARD \u2014 MH1',90,242);
+  c.fillStyle='#24312B';c.font='700 18px ui-monospace,Menlo,monospace';
+  c.fillText('RIM  32.415',90,272);
+  c.fillText('N  200 PVC   1.84 m',90,306);
+  c.fillText('S  200 PVC   1.86 m',90,338);
+  c.fillText('E  150 PVC   1.42 m',90,370);
+  c.font='700 22px system-ui';
+  c.fillText('\ud83d\udcf7',480,306);c.fillText('\ud83d\udcf7',480,338);c.fillText('\ud83d\udcf7',480,370);
+  c.restore();
+  c.save();c.fillStyle='#F26A1B';c.font='800 15px system-ui';
+  c.fillText('depths always in METRES',330,430);
+  c.strokeStyle='#F26A1B';c.lineWidth=2.5;
+  c.beginPath();c.moveTo(380,418);c.lineTo(330,378);c.stroke();c.restore();}
+function diagPho(c){gdGrid(c,640,360);
+  c.save();c.fillStyle='#fff';c.strokeStyle='#DDE4DE';c.lineWidth=2;
+  c.fillRect(40,40,560,120);c.strokeRect(40,40,560,120);
+  c.fillStyle='#5E9478';c.font='800 13px system-ui';c.fillText('SETUP PAGE',60,66);
+  c.fillStyle='#24312B';c.font='700 19px ui-monospace,Menlo,monospace';
+  c.fillText('\u22bc @ 100 OCNT 7496',60,100);c.fillText('TIE 110  OCNT 9054',60,138);
+  c.font='700 24px system-ui';c.fillText('\ud83d\udcf7',540,100);c.fillText('\ud83d\udcf7',540,138);
+  c.restore();
+  c.save();c.strokeStyle='#F26A1B';c.lineWidth=3;
+  c.beginPath();c.arc(553,92,24,0,7);c.stroke();
+  c.beginPath();c.arc(553,130,24,0,7);c.stroke();c.restore();
+  c.save();c.fillStyle='#24312B';c.font='800 17px system-ui';
+  c.fillText('Monuments = 2 shots:',60,215);c.restore();
+  c.save();c.lineWidth=3;c.strokeRect(70,235,180,95);
+  c.font='700 15px ui-monospace,Menlo,monospace';c.fillText('TAG 9054',115,275);
+  c.beginPath();c.arc(160,300,14,0,7);c.stroke();
+  c.font='700 13px system-ui';c.fillText('close-up \u00b7 readable',80,348);c.restore();
+  c.save();c.lineWidth=3;c.strokeRect(330,235,240,95);
+  c.beginPath();c.arc(430,315,8,0,7);c.stroke();
+  c.beginPath();c.moveTo(350,320);c.lineTo(560,320);c.stroke();
+  c.beginPath();c.moveTo(500,320);c.lineTo(500,255);c.stroke();
+  c.beginPath();c.moveTo(530,320);c.lineTo(530,255);c.stroke();
+  c.font='700 13px system-ui';c.fillText('step back \u00b7 what it\u2019s beside',355,348);c.restore();}
+
 /* ================= speech ================= */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let recog=null, recBtn=null;
@@ -656,12 +800,14 @@ function confirmM(title,body,cb){
 let resData=null;
 document.querySelector('.hometabs').addEventListener('click',e=>{
   const b=e.target.closest('[data-ht]');if(!b)return;
-  const res=b.dataset.ht==='res';
+  const ht=b.dataset.ht;
   document.querySelectorAll('.htab').forEach(x=>x.classList.toggle('on',x===b));
-  $('home-list').style.display=res?'none':'block';
-  $('res-list').style.display=res?'block':'none';
-  $('b-new').style.display=res?'none':'flex';
-  if(res)loadResources();
+  $('home-list').style.display=ht==='notes'?'block':'none';
+  $('res-list').style.display=ht==='res'?'block':'none';
+  $('train-list').style.display=ht==='train'?'block':'none';
+  $('b-new').style.display=ht==='notes'?'flex':'none';
+  if(ht==='res')loadResources();
+  if(ht==='train')renderTraining();
 });
 async function loadResources(){
   const el=$('res-list');
@@ -726,7 +872,7 @@ $('res-list').addEventListener('click',async e=>{
 /* ================= home ================= */
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
-  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+'.1 — tap for what’s new';
+  $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+' — tap for what’s new';
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -959,8 +1105,9 @@ $('b-add-row').onclick=()=>{
 };
 function setupBlank(p){
   if(Object.keys(p.committed||{}).length)return false;
-  const core=p.type==='gps'?['bpt','bht']:['st','bs','hi','dh','dv','qual'];
-  if(core.some(f=>(p[f]||'').trim()))return false;
+  const inh=p.inh||{};
+  const core=p.type==='gps'?['recv','rht','bpt','bht','brx']:['st','bs','hi','dh','dv','qual'];
+  if(core.some(f=>{const v=(p[f]||'').trim();return v&&v!==(inh[f]||'').trim();}))return false;
   if(p.rows.some(r=>r.pt||r.pts||r.desc||r.code||r.time||r.ht||r.remark||r.committed))return false;
   return true;
 }
@@ -985,7 +1132,8 @@ $('b-setup-add').onclick=()=>{
   const idx=note.pages.indexOf(page), t=page.type, prev=page;
   page = t==='gps'
     ? {id:uid(),type:'gps',mode:prev.mode||'rover',recv:prev.recv||'',rht:prev.rht||'',
-       bpt:'',bht:'',bcoord:'',brx:prev.brx||'',rows:[],hist:{},committed:{}}
+       bpt:'',bht:'',bcoord:'',brx:prev.brx||'',rows:[],hist:{},committed:{},
+       inh:{recv:prev.recv||'',rht:prev.rht||'',brx:prev.brx||''}}
     : {id:uid(),type:'setup',st:'',bs:'',hi:'',ht:prev.ht||'',dh:'',dv:'',rows:[],hist:{},committed:{}};
   note.pages.splice(idx+1,0,page);
   touch();openSetup();

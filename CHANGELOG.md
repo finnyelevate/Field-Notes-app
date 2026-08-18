@@ -1,5 +1,20 @@
 # Elevate Field — Changelog
 
+## Build 25 — 2026-08-17
+- **🎓 Training tab** on the home screen (next to Notes and Resources):
+  offline how-to guides with numbered steps and field-book-style diagrams.
+  First three: Point of commencement, Booking inverts, Photos on control
+  & ties. Each opens with a "why it matters" line. Content is baked into
+  the app — no signal needed. More guides added as features get under-used.
+- **GPS rover pages fixed (data-loss bug).** Rover-only GPS setups were judged
+  "empty" by looking only at the base-station fields, so a page with receiver
+  and rover HT filled: (a) refused "＋ Add another" with a misleading
+  "still empty" toast, and (b) was silently deleted by Save setup / back.
+  Reported by GG on 26-3583. Blank/keep logic now counts receiver, rover HT
+  and receiver IDs — but values inherited from the previous GPS setup via
+  "＋ Add another" don't count, so an untouched chained page still cleans
+  itself up. (Build 24.2 folded into this build — never deployed separately.)
+
 ## Build 24.1 — 2026-08-11
 - Real undo on sketches: ↩ now steps back through history — deletions, moves,
   rotations, invert-card edits, anything — instead of only removing the last
