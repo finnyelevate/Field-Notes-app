@@ -152,6 +152,9 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .resrow .pgbody{padding:2px 0}
 .keep{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--grid2)}
 .empty{color:#9DB3A6;text-align:center;padding:60px 20px;font-size:15px;line-height:1.6}
+.row2.htx{border:2px solid var(--danger);border-radius:12px;background:#FDF3F1;padding:8px 8px 4px}
+.row2.htx .mini label{color:var(--danger)}
+.row2.htx input{border-color:#E4B3AA;color:var(--danger);font-weight:700}
 .gcard{display:flex;align-items:center;gap:12px;padding:10px 4px;width:100%;text-align:left;border-bottom:1.5px solid var(--line)}
 .gcard:last-child{border-bottom:0}
 .gico{font-size:24px;min-width:36px;text-align:center}
@@ -416,7 +419,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 25</h2>
+  <h2>What’s new — build 26</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -538,10 +541,14 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 const LW=1000, LH=1294;                 // logical canvas size (letter ratio)
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=25;
+const BUILD=26;
 const NEWS=[
- ['🎓','Training tab','New tab on the home screen with how-to guides: point of commencement, booking inverts, and photos on control. Steps + diagrams, works fully offline. More guides coming.'],
- ['🛰','GPS rover pages fixed','Rover-only GPS setups with just receiver + HT filled were treated as "empty" — ＋ Add another refused to work and Save could silently remove the page. Both fixed: what you type on a rover page now counts.']
+ ['⚠','Wrong HT rows','New HT✗ row type on TS and GPS setups: point(s), wrong HT, correct HT, comments. Prints boxed in red — and the front page gets a ⚠ HT CORRECTIONS box so drafters can\u2019t miss it.'],
+ ['🧲','Endpoint snap','Pen and line now grab nearby corners — a green square shows the endpoint you\u2019re about to snap onto, with a little buzz. Closed corners, no gaps. Snap beats ortho.'],
+ ['🔤','Block lettering','Sketch text, dimension labels and free-form note pages now render in block lettering — legal field book standard. Old sketches update automatically.'],
+ ['🛰','GPS: comments column','TIME column removed from GPS pages (the receiver logs it anyway). Comments in its place, same as TS rows. Old booked times still print, folded into comments.'],
+ ['🎓','Two new guides','Sketch tools (the full kit, with a screen map) and Wrong HT — in the 🎓 Training tab.'],
+ ['🖨','Cleaner printing','Long codes and GPS base info wrap instead of overprinting neighbouring columns.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -624,7 +631,7 @@ function drawNewsStrip(){
   c.font='700 15px ui-monospace,Menlo,monospace';c.lineWidth=2;
   c.beginPath();c.moveTo(330,71);c.lineTo(330,60);c.stroke();
   c.fillText('N 2.31',308,48);c.fillText('N 2.05',308,28);
-  c.fillStyle='#B3402E';c.font='600 20px "Segoe Print","Comic Sans MS",cursive';
+  c.fillStyle='#B3402E';c.font='700 20px ui-monospace,Menlo,monospace';
   c.fillText('DISTURBED',390,60);
   c.fillStyle='#2B5B8E';c.beginPath();c.arc(430,105,20,0,7);c.stroke();
   c.strokeStyle='#2B5B8E';c.stroke();c.fillText('205',415,112);
@@ -671,8 +678,102 @@ const GUIDES=[
   'For monuments: two shots. Close-up of the <b>tag</b> (readable number), then a step-back <b>context</b> shot showing what it\u2019s beside.',
   'For pins and TBMs: one context shot \u2014 fence line, hydrant, whatever finds it again.',
   'Tap any \ud83d\udcf7 marker afterwards to check it in the app \u2014 <b>Replace it now if it\u2019s blurry</b>, not after export.',
-  'Photos print on the Measurement Record pages automatically \u2014 nothing extra to do at export.']}
+  'Photos print on the Measurement Record pages automatically \u2014 nothing extra to do at export.']},
+ {id:'tools',ico:'\ud83e\uddf0',t:'Sketch tools',sub:'The full kit \u2014 ortho, Disto walk, symbols, snap',area:'sketches',h:470,
+  why:'<b>Why it matters:</b> the sketch is the legal record of what was found. Knowing the right tool means cleaner sketches in less time \u2014 and less office guesswork.',
+  cap:'Left edge: everyday tools \u00b7 right edge: view controls \u00b7 bottom: the full kit',diag:diagTools,steps:[
+  'Left edge = the everyday four: \u270f\ufe0f pen, \uff21 text, \u25c9 symbol, \u2725 select (plus \ud83e\udded north). The bottom bar holds the full kit.',
+  '\u2571 Line: drag corner to corner. A <b>green square</b> means you\u2019re snapping onto an existing endpoint \u2014 closed corners, no gaps. Pen ends snap too.',
+  'ORTHO (right edge) locks lines square \u2014 walls and fences. When snap and ortho both apply, <b>snap wins</b>.',
+  '\ud83d\udccf Disto: tap your POC, pick a direction, type the distance \u2014 the walk draws itself, booked as measured. (See the Point of commencement guide.)',
+  '\u25c9 Symbol: tap the sketch to place \u00b7 tap \u25c9 again to open the picker. MH/CB auto-number and hold invert cards.',
+  '\u2725 Select: drag to move \u00b7 one clean tap on a MH/CB opens its invert card \u00b7 \u2715 deletes (\u21a9 brings it back).',
+  '\u270b pans, pinch zooms, \u21a9 undoes anything \u2014 nothing is lost silently.']},
+ {id:'htx',ico:'\u26a0',t:'Wrong HT',sub:'Booked shots with the wrong pole height \u2014 flag it, don\u2019t fix it',area:'setups',h:430,
+  why:'<b>Why it matters:</b> measured values never get changed in the book. An HT\u2717 row tells the office exactly which points to correct \u2014 and the cover page makes sure they can\u2019t miss it.',
+  cap:'Red on the page, listed on the cover \u2014 impossible to draft past',diag:diagHtx,steps:[
+  'The moment you notice \u2014 add a line on the affected setup (TS or GPS) and set its type to <b>HT\u2717</b>.',
+  'PT# takes one point, a list, or a range: <span class="mono">207</span>, <span class="mono">205, 208</span>, <span class="mono">205\u2013212</span> all work.',
+  'Book the <b>wrong HT</b> and the <b>correct HT</b> side by side. Never re-strike the shots themselves.',
+  'Comments: say how it happened (pole clamp slipped, forgot after MH shots) \u2014 it helps the office trust the rest.',
+  'It prints boxed in red right in the shot sequence, and the front page gets a \u26a0 HT CORRECTIONS box listing every one with a page reference. Nothing to remember at export.']}
 ];
+function diagTools(c){
+  // phone-frame screen map with callouts
+  c.fillStyle='#FBFAF5';c.fillRect(0,0,640,470);
+  c.strokeStyle='#B7D5C4';c.lineWidth=1;
+  for(let x=0;x<640;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,470);c.stroke();}
+  for(let y=0;y<470;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(640,y);c.stroke();}
+  // frame
+  c.strokeStyle='#24312B';c.lineWidth=4;c.strokeRect(170,20,300,430);
+  c.fillStyle='#24312B';c.font='700 15px ui-monospace,Menlo,monospace';
+  c.fillText('SKETCH VIEW',245,45);
+  // left cluster
+  const lb=['✏️','Ａ','◉','✥','🧭'];
+  c.font='700 20px system-ui';
+  lb.forEach((g,i)=>{
+    c.fillStyle='#232E27';
+    c.beginPath();c.arc(198,90+i*52,18,0,7);c.fill();
+    c.fillStyle='#EDF2EE';c.fillText(g,187,97+i*52);
+  });
+  // right cluster
+  const rb=['↩','＋','－','✋'];
+  rb.forEach((g,i)=>{
+    c.fillStyle='#232E27';
+    c.beginPath();c.arc(442,90+i*52,18,0,7);c.fill();
+    c.fillStyle='#EDF2EE';c.fillText(g,432,97+i*52);
+  });
+  c.fillStyle='#232E27';
+  c.fillRect(418,286,48,26);
+  c.fillStyle='#EDF2EE';c.font='800 11px system-ui';c.fillText('ORTHO',424,303);
+  // bottom toolbar
+  c.fillStyle='#232E27';c.fillRect(174,394,292,52);
+  c.fillStyle='#EDF2EE';c.font='700 17px system-ui';
+  ['✥','✏️','⌫','╱','〰','⌒','📐','📏','Ａ','◉'].forEach((g,i)=>c.fillText(g,184+i*28,427));
+  // callouts
+  c.strokeStyle='#F26A1B';c.fillStyle='#F26A1B';c.lineWidth=2.5;
+  c.font='800 15px system-ui';
+  c.beginPath();c.moveTo(160,90);c.lineTo(120,70);c.stroke();
+  c.fillText('everyday four +', 8,58);c.fillText('north arrow',8,76);
+  c.beginPath();c.moveTo(480,120);c.lineTo(520,100);c.stroke();
+  c.fillText('undo · zoom ·',505,88);c.fillText('pan',505,106);
+  c.beginPath();c.moveTo(478,299);c.lineTo(520,299);c.stroke();
+  c.fillText('lock lines',505,285);c.fillText('square',505,303);
+  c.beginPath();c.moveTo(320,390);c.lineTo(320,370);c.stroke();
+  c.fillText('the full kit — swipe it',210,362);
+}
+function diagHtx(c){
+  c.fillStyle='#FBFAF5';c.fillRect(0,0,640,430);
+  c.strokeStyle='#B7D5C4';c.lineWidth=1;
+  for(let x=0;x<640;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,430);c.stroke();}
+  for(let y=0;y<430;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(640,y);c.stroke();}
+  // setup rows with an HT✗ row
+  c.fillStyle='#24312B';c.font='700 18px ui-monospace,Menlo,monospace';
+  c.fillText('TIE 204  OSPK      1.500',60,60);
+  c.fillStyle='#FDF3F1';c.fillRect(44,80,552,88);
+  c.strokeStyle='#B3402E';c.lineWidth=3.5;c.strokeRect(44,80,552,88);
+  c.fillStyle='#B3402E';c.font='800 18px ui-monospace,Menlo,monospace';
+  c.fillText('HT✗  205–212',60,112);
+  c.fillText('WRONG 1.500  → USE 1.300',60,146);
+  c.fillStyle='#24312B';c.font='700 18px ui-monospace,Menlo,monospace';
+  c.fillText('TIE 213  OIP       1.300',60,200);
+  // arrow down to cover box
+  c.strokeStyle='#5E9478';c.fillStyle='#5E9478';c.lineWidth=2.5;
+  c.beginPath();c.moveTo(320,225);c.lineTo(320,265);c.stroke();
+  c.beginPath();c.moveTo(320,265);c.lineTo(311,252);c.lineTo(329,252);c.closePath();c.fill();
+  c.font='800 14px system-ui';c.fillText('auto-added to the front page',340,252);
+  // cover box mini
+  c.fillStyle='#FDF3F1';c.fillRect(80,285,480,110);
+  c.strokeStyle='#B3402E';c.lineWidth=3.5;c.strokeRect(80,285,480,110);
+  c.fillStyle='#B3402E';c.fillRect(80,285,480,36);
+  c.fillStyle='#FBFAF5';c.font='800 15px ui-monospace,Menlo,monospace';
+  c.fillText('⚠ HT CORRECTIONS — FIX BEFORE DRAFTING',98,309);
+  c.fillStyle='#B3402E';c.font='800 16px ui-monospace,Menlo,monospace';
+  c.fillText('205–212   1.500 → 1.300',98,348);
+  c.fillStyle='#24312B';c.fillText('P 2 · ⊼ @ 110',390,348);
+  c.fillStyle='#B3402E';c.font='700 13px system-ui';
+  c.fillText('the shots themselves stay exactly as measured',98,380);
+}
 function renderTraining(){
   $('train-list').innerHTML=`<div class="paper" style="margin-top:12px"><div class="eyebrow">How-to guides</div>`+
     GUIDES.map(g=>`<button class="gcard" data-g="${g.id}">
@@ -689,7 +790,7 @@ function openGuide(g){
   $('guide-h1').firstChild.textContent=g.t;
   $('guide-sub').textContent='Training \u00b7 '+g.area;
   $('guide-body').innerHTML=`<div class="why">${g.why}</div>
-    <canvas class="gdiag" id="gd-cv" width="640" height="${g.id==='inv'?440:g.id==='pho'?360:420}"></canvas>
+    <canvas class="gdiag" id="gd-cv" width="640" height="${g.h||(g.id==='inv'?440:g.id==='pho'?360:420)}"></canvas>
     <div class="gcap">${g.cap}</div>`+
     g.steps.map((st,i)=>`<div class="gstep"><div class="gnum">${i+1}</div><div>${st}</div></div>`).join('');
   const c=$('gd-cv').getContext('2d');
@@ -1049,31 +1150,48 @@ function syncGps(){
   $('g-bcoord').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.gc===page.bcoord));
   $('g-base').style.display=page.mode==='base'?'block':'none';
 }
-const ROWTYPES=['CHK','TIE','SET','FND','NOTE'];
-const GROWTYPES=['OBS','LOC','CHK','TIE','SET','FND','NOTE'];
+const ROWTYPES=['CHK','TIE','SET','FND','HT✗','NOTE'];
+const GROWTYPES=['OBS','LOC','CHK','TIE','SET','FND','HT✗','NOTE'];
 function renderRows(){
   const g=page.type==='gps';
-  $('s-rows').innerHTML=page.rows.map((r,i)=>`
+  $('s-rows').innerHTML=page.rows.map((r,i)=>{
+    const tsel=`<div class="mini" style="flex:0 0 auto"><label>type</label>
+          <select data-rf="t">${(g?GROWTYPES:ROWTYPES).map(t=>`<option${r.t===t?' selected':''}>${t}</option>`).join('')}</select></div>`;
+    const strk=`<button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>`;
+    const com=`<div class="mini"><label>comments</label><input data-rf="remark" class="rcomment" value="${esc(r.remark??'')}"></div>`;
+    if(r.t==='NOTE')return `
     <div class="row2${r.struck?' struck':''}" data-i="${i}">
-      <div class="rline">
-        <div class="mini" style="flex:0 0 auto"><label>type</label>
-          <select data-rf="t">${(g?GROWTYPES:ROWTYPES).map(t=>`<option${r.t===t?' selected':''}>${t}</option>`).join('')}</select></div>
-        ${r.t==='NOTE'?'':`
-        <div class="mini"><label>pt #</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
-        <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>`}
-        ${r.t==='NOTE'?`<button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>`:''}
+      <div class="rline">${tsel}${strk}</div>
+      ${com}
+    </div>`;
+    if(r.t==='HT✗')return `
+    <div class="row2 htx${r.struck?' struck':''}" data-i="${i}">
+      <div class="rline">${tsel}
+        <div class="mini"><label>pt # — one / list / range</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
+        ${strk}
       </div>
-      ${r.t==='NOTE'?'':`
       <div class="rline">
-        ${g?`<div class="mini"><label>time</label><input data-rf="time" value="${esc(r.time??'')}" class="mono"></div>`:''}
+        <div class="mini"><label>wrong HT</label><input data-rf="wht" inputmode="decimal" value="${esc(r.wht??'')}" class="mono"></div>
+        <div class="mini"><label>correct HT</label><input data-rf="cht" inputmode="decimal" value="${esc(r.cht??'')}" class="mono"></div>
+      </div>
+      ${com}
+    </div>`;
+    return `
+    <div class="row2${r.struck?' struck':''}" data-i="${i}">
+      <div class="rline">${tsel}
+        <div class="mini"><label>pt #</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
+        <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>
+      </div>
+      <div class="rline">
         <div class="mini"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
         ${g?'':`<div class="mini" style="flex:0 0 auto"><label>prism</label>
           <select data-rf="pr"><option value=""${!r.pr?' selected':''}></option>${['RND','360','MINI','RL'].map(p2=>`<option${r.pr===p2?' selected':''}>${p2}</option>`).join('')}</select></div>`}
         <button class="rstrike${(r.ph&&r.ph.length)?' on-ph':''}" data-rph="${i}" style="align-self:flex-end">📷${(r.ph&&r.ph.length)?r.ph.length:''}</button>
-        <button class="rstrike" data-rs="${i}" style="align-self:flex-end">${r.committed?'⊘':'✕'}</button>
-      </div>`}
-      <div class="mini"><label>comments</label><input data-rf="remark" class="rcomment" value="${esc(r.remark??'')}"></div>
-    </div>`).join('');
+        ${strk}
+      </div>
+      ${com}
+    </div>`;
+  }).join('');
 }
 $('s-rows').addEventListener('input',e=>{
   const w=e.target.closest('[data-i]');if(!w)return;
@@ -1108,7 +1226,7 @@ function setupBlank(p){
   const inh=p.inh||{};
   const core=p.type==='gps'?['recv','rht','bpt','bht','brx']:['st','bs','hi','dh','dv','qual'];
   if(core.some(f=>{const v=(p[f]||'').trim();return v&&v!==(inh[f]||'').trim();}))return false;
-  if(p.rows.some(r=>r.pt||r.pts||r.desc||r.code||r.time||r.ht||r.remark||r.committed))return false;
+  if(p.rows.some(r=>r.pt||r.pts||r.desc||r.code||r.time||r.ht||r.wht||r.cht||r.remark||r.committed))return false;
   return true;
 }
 function dropIfBlank(){
@@ -1120,7 +1238,7 @@ function dropIfBlank(){
 }
 function commitSetup(){
   (page.type==='gps'?GPSF:SETF).forEach(([f])=>{if((page[f]||'').trim())page.committed[f]=page[f].trim();});
-  page.rows=page.rows.filter(r=>r.pt||r.pts||r.desc||r.code||r.time||r.ht||r.remark||r.committed);
+  page.rows=page.rows.filter(r=>r.pt||r.pts||r.desc||r.code||r.time||r.ht||r.wht||r.cht||r.remark||r.committed);
   page.rows.forEach(r=>r.committed=true);
   touch();
 }
@@ -1160,6 +1278,14 @@ $('b-back-note3').onclick=()=>$('b-text-done').onclick();
 /* ================= canvas engine ================= */
 let zoom=0.9, tool='pen', drawing=null, pend=null;
 let ortho=false, polyDraft=null, gest=null, selOp=null, dragSel=null, selTap=null;
+let snapMark=null, snapKey='';
+function snapR(){return 26/zoom;}
+function setSnap(pt){
+  const k=pt?pt[0].toFixed(1)+','+pt[1].toFixed(1):'';
+  if(k!==snapKey){snapKey=k;
+    if(pt&&navigator.vibrate){try{navigator.vibrate(10);}catch(e){}}}
+  snapMark=pt?pt.slice():null;
+}
 let hist=[];
 function snap(){
   try{hist.push(JSON.stringify(page.ops));if(hist.length>30)hist.shift();}catch(e){}
@@ -1265,7 +1391,7 @@ $('wk-undo').onclick=()=>{
 function labelRects(){
   // approximate boxes of everything already carrying a label, to keep clear of
   const R=[];
-  MCTX.font='600 26px "Segoe Print","Bradley Hand","Comic Sans MS",cursive';
+  MCTX.font='700 26px ui-monospace,Menlo,monospace';
   page.ops.forEach(o=>{
     if(o.k==='d'||o.k==='l'){
       if(o.k==='d'&&o.v!==undefined){
@@ -1523,7 +1649,7 @@ function drawOp(ctx,o){
   ctx.fillStyle=ctx.strokeStyle='#24312B';ctx.lineWidth=3;ctx.lineCap='round';
   if(o.k==='t'){
     ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.a*Math.PI/180);
-    ctx.font=`600 ${o.s}px "Segoe Print","Bradley Hand","Comic Sans MS",cursive`;ctx.textBaseline='middle';
+    ctx.font=`700 ${o.s}px ui-monospace,Menlo,monospace`;ctx.textBaseline='middle';
     const w2=ctx.measureText(o.v).width;
     ctx.fillStyle='#FBFAF5';ctx.fillRect(-5,-o.s*0.62,w2+10,o.s*1.24);
     ctx.fillStyle=o.c||'#24312B';
@@ -1638,14 +1764,14 @@ function drawOp(ctx,o){
     const mx=(o.x1+o.x2)/2+Math.cos(la-Math.PI/2)*18,
           my=(o.y1+o.y2)/2+Math.sin(la-Math.PI/2)*18;
     ctx.save();ctx.translate(mx,my);ctx.rotate(la);
-    ctx.font='600 26px "Segoe Print","Bradley Hand","Comic Sans MS",cursive';
+    ctx.font='700 26px ui-monospace,Menlo,monospace';
     ctx.textAlign='center';ctx.textBaseline='middle';
     const dw=ctx.measureText(o.v).width, dW=o.d?15:0;
     const segLen=Math.hypot(o.x2-o.x1,o.y2-o.y1);
     if(segLen<dw+dW+30)ctx.translate(0,-32);
     ctx.fillStyle='#FBFAF5';ctx.fillRect(-(dw+dW)/2-5,-15,dw+dW+10,30);
     ctx.fillStyle='#24312B';ctx.fillText(o.v,-dW/2,0);
-    if(o.d){ctx.font='600 16px "Segoe Print","Comic Sans MS",cursive';
+    if(o.d){ctx.font='700 16px ui-monospace,Menlo,monospace';
       ctx.fillText('D',dw/2-dW/2+9,-8);}
     ctx.restore();ctx.textAlign='start';ctx.textBaseline='alphabetic';
   }else if(o.k==='a'){
@@ -1703,6 +1829,12 @@ function redraw(){
     ctx.beginPath();ctx.arc(selOp.x,selOp.y,selRad(selOp),0,7);ctx.stroke();
     ctx.setLineDash([]);
   }
+  if(snapMark){
+    const hs=11/zoom;
+    ctx.strokeStyle='#2E9E5B';ctx.lineWidth=3/zoom;
+    ctx.strokeRect(snapMark[0]-hs,snapMark[1]-hs,hs*2,hs*2);
+    ctx.strokeStyle=ctx.fillStyle='#24312B';ctx.lineWidth=3;
+  }
 }
 function evPos(e){
   const r=ink.getBoundingClientRect();
@@ -1740,12 +1872,17 @@ ink.addEventListener('pointerdown',e=>{
   }
   if(tool==='pen'||tool==='fat'||tool==='erase'){
     drawing={k:'s',mode:tool==='erase'?'e':'p',w:toolW(tool),c:curColor,pts:[[x,y]]};
+    if(tool==='pen'){drawing.pen=1;
+      const snp=nearestEnd(x,y,snapR());
+      if(snp){drawing.pts[0]=snp.slice();setSnap(snp);}else setSnap(null);}
   }else if(tool==='arrow'){drawing={k:'a',x1:x,y1:y,x2:x,y2:y};}
   else if(tool==='line'){
-    const st=nearestEnd(x,y)||[x,y];
+    const sn0=nearestEnd(x,y,snapR());
+    const st=sn0||[x,y];setSnap(sn0);
     drawing={k:'l',x1:st[0],y1:st[1],x2:st[0],y2:st[1]};
   }else if(tool==='poly'){
-    let pt=nearestEnd(x,y)||[x,y];
+    const snp=nearestEnd(x,y,snapR());
+    let pt=snp||[x,y];setSnap(snp);
     if(polyDraft){
       const last=polyDraft.pts[polyDraft.pts.length-1];
       if(ortho)pt=orthoSnap(last[0],last[1],pt[0],pt[1]);
@@ -1765,7 +1902,7 @@ ink.addEventListener('pointerdown',e=>{
     if(!walkPOC){
       initWalkDirs();
       snap();
-      walkPOC=nearestEnd(x,y)||[x,y];
+      walkPOC=nearestEnd(x,y,snapR())||[x,y];
       walkPt=walkPOC.slice();walkStack=[walkPOC.slice()];walkOps=[];
       $('walkbar').style.display='flex';
       redraw();
@@ -1850,7 +1987,9 @@ ink.addEventListener('pointermove',e=>{
   const [x,y]=evPos(e);
   if(drawing.k==='l'){
     let ex=x,ey=y;
-    if(ortho){[ex,ey]=orthoSnap(drawing.x1,drawing.y1,x,y);}
+    const sn=nearestEnd(x,y,snapR());
+    if(sn&&!(sn[0]===drawing.x1&&sn[1]===drawing.y1)){ex=sn[0];ey=sn[1];setSnap(sn);}
+    else{setSnap(null);if(ortho){[ex,ey]=orthoSnap(drawing.x1,drawing.y1,x,y);}}
     drawing.x2=ex;drawing.y2=ey;
     redraw();
     const dpr=ink.width/(LW*zoom),ctx=ink.getContext('2d');
@@ -1881,12 +2020,21 @@ ink.addEventListener('pointermove',e=>{
   if(!drawing)return;
   snap();
   if(drawing.k==='l'){
-    const sn=nearestEnd(drawing.x2,drawing.y2,24);
+    const sn=nearestEnd(drawing.x2,drawing.y2,snapR());
     if(sn&&!(sn[0]===drawing.x1&&sn[1]===drawing.y1)){drawing.x2=sn[0];drawing.y2=sn[1];}
     if(Math.hypot(drawing.x2-drawing.x1,drawing.y2-drawing.y1)>4)page.ops.push(drawing);
   }
+  else if(drawing.k==='s'&&drawing.pen){
+    delete drawing.pen;
+    if(drawing.pts.length>1){
+      const lp=drawing.pts[drawing.pts.length-1];
+      const sn=nearestEnd(lp[0],lp[1],snapR());
+      if(sn)drawing.pts[drawing.pts.length-1]=sn.slice();
+      page.ops.push(drawing);
+    }
+  }
   else if(drawing.k!=='s'||drawing.pts.length>1)page.ops.push(drawing);
-  drawing=null;redraw();thumb();touch();
+  setSnap(null);drawing=null;redraw();thumb();touch();
 }));
 $('b-undo').onclick=()=>{
   if(walkPOC){$('wk-undo').onclick();return;}
@@ -2463,7 +2611,25 @@ function struckPair(ctx,x,y,hist,cur,font){
   });
   ctx.fillStyle='#24312B';ctx.fillText(cur||'',cx,y);
 }
-function renderHeaderPage(ctx,total){
+function collectHX(n,segs){
+  const out=[];
+  (n.pages||[]).forEach(p=>{
+    if(p.type!=='setup'&&p.type!=='gps')return;
+    (p.rows||[]).forEach(r=>{
+      if(r.t!=='HT✗'||r.struck)return;
+      const si=(segs||[]).findIndex(sg=>sg.kind==='s'&&sg.items.includes(p));
+      const pg=si>-1?'P '+(si+2):'';
+      const wh=p.type==='gps'
+        ?'GPS '+(p.mode==='base'?'BASE+ROVER':'ROVER')
+        :'⊼ @ '+String(p.st||'?').split(/\s+/)[0];
+      out.push({pt:String((r.pt!==undefined?r.pt:r.pts)||'?'),
+        w:(r.wht||'').trim()||'?',u:(r.cht||'').trim()||'?',
+        ref:(pg?pg+' · ':'')+wh});
+    });
+  });
+  return out;
+}
+function renderHeaderPage(ctx,total,segs){
   paperPage(ctx,1,total);gridArea(ctx);
   const cx=EW/2;let y=EH*0.27;
   ctx.textAlign='center';ctx.fillStyle='#24312B';
@@ -2490,20 +2656,140 @@ function renderHeaderPage(ctx,total){
       ctx.fillText(l,cx,y);y+=48;
     });
   }
+  const hx=collectHX(note,segs);
+  if(hx.length){
+    const bw=1000,bx2=(EW-bw)/2;
+    const maxR=Math.max(1,Math.floor((EH-26-y-48-132)/46));
+    const show=hx.slice(0,maxR), more=hx.length-show.length;
+    y+=48;
+    const bh=64+52+show.length*46+(more>0?46:0)+16;
+    ctx.fillStyle='#FDF3F1';ctx.fillRect(bx2,y,bw,bh);
+    ctx.strokeStyle='#B3402E';ctx.lineWidth=4;ctx.strokeRect(bx2,y,bw,bh);
+    ctx.fillStyle='#B3402E';ctx.fillRect(bx2,y,bw,64);
+    ctx.fillStyle='#FBFAF5';ctx.font='800 26px ui-monospace,Menlo,monospace';
+    ctx.textAlign='center';
+    ctx.fillText('⚠ HT CORRECTIONS — FIX BEFORE DRAFTING',EW/2,y+43);
+    let ry=y+64+40;
+    ctx.textAlign='start';ctx.font='800 18px ui-monospace,Menlo,monospace';
+    ctx.fillStyle='#B3402E';
+    ctx.fillText('PT#',bx2+30,ry);ctx.fillText('WRONG',bx2+360,ry);ctx.fillText('USE',bx2+540,ry);
+    ctx.textAlign='right';ctx.fillText('WHERE',bx2+bw-30,ry);
+    ry+=44;
+    ctx.font='800 24px ui-monospace,Menlo,monospace';
+    show.forEach(h=>{
+      ctx.textAlign='start';
+      let pt2=h.pt;MCTX.font='800 24px ui-monospace,Menlo,monospace';
+      while(pt2.length>1&&MCTX.measureText(pt2).width>300)pt2=pt2.slice(0,-1);
+      if(pt2!==h.pt)pt2=pt2.slice(0,-1)+'…';
+      ctx.fillText(pt2,bx2+30,ry);
+      ctx.fillText(h.w,bx2+360,ry);ctx.fillText(h.u,bx2+540,ry);
+      ctx.textAlign='right';ctx.fillStyle='#24312B';
+      ctx.fillText(h.ref,bx2+bw-30,ry);
+      ctx.fillStyle='#B3402E';
+      ry+=46;
+    });
+    if(more>0){ctx.textAlign='start';
+      ctx.fillText('+ '+more+' more — see pages',bx2+30,ry);}
+    y+=bh;
+  }
   ctx.textAlign='start';
 }
 const RIGHT=EW-EM-10, RFONT='700 24px ui-monospace,Menlo,monospace';
-function rowRemark(r){return [r.desc,r.remark].map(x=>(x||'').trim()).filter(Boolean).join(' — ');}
+const HXF='800 24px ui-monospace,Menlo,monospace';
+const TSOFF={pt:120,code:280,ht:470,pr:590,com:750,codeW:170,comW:235,cont:120,fw:865};
+const GPOFF={pt:160,code:300,ht:560,com:700,codeW:236,comW:285,cont:160,fw:825};
+function rowRemark(r,gps){
+  return [gps&&(r.time||'').trim()?'@ '+r.time.trim():'',r.desc,r.remark]
+    .map(x=>(x||'').trim()).filter(Boolean).join(' — ');
+}
 function rowLines(r,gps){
-  const c=rowRemark(r);
-  if(!c)return{n:1,mode:0};
+  const off=gps?GPOFF:TSOFF;
+  if(r.t==='HT✗'){
+    MCTX.font=HXF;
+    const ptL=wrapLines((r.pt!==undefined?r.pt:r.pts)||'',HXF,150).filter(Boolean);
+    const p1='WRONG '+((r.wht||'').trim()||'?'), p2='→ USE '+((r.cht||'').trim()||'?');
+    const spanW=off.com-off.code-30;
+    const stack=MCTX.measureText(p1).width+30+MCTX.measureText(p2).width>spanW;
+    const comL=wrapLines(rowRemark(r,gps),HXF,off.comW).filter(Boolean);
+    const n=Math.max(ptL.length||1,stack?2:1,comL.length||1);
+    return {n,hx:{ptL,p1,p2,stack,comL}};
+  }
+  const c=rowRemark(r,gps);
+  const CL=wrapLines(r.code||'',RFONT,off.codeW).filter(Boolean);
+  const cn=Math.max(1,CL.length);
+  if(!c)return{n:cn,mode:0,CL};
   const hasF=(r.pt||r.pts||r.code||r.time||r.ht||r.pr);
-  const FW=gps?825:865, CW=gps?355:235;
-  if(!hasF){const L=wrapLines(c,RFONT,FW);return{n:Math.max(1,L.length),mode:1,L};}
+  if(!hasF){const L=wrapLines(c,RFONT,off.fw);return{n:Math.max(1,L.length),mode:1,L};}
   MCTX.font=RFONT;
-  if(MCTX.measureText(c).width<=CW)return{n:1,mode:0};
-  const L=wrapLines(c,RFONT,FW);
-  return{n:1+L.length,mode:2,L};
+  if(MCTX.measureText(c).width<=off.comW)return{n:cn,mode:0,CL,com:c};
+  const L=wrapLines(c,RFONT,off.fw);
+  return{n:cn+L.length,mode:2,L,CL};
+}
+function drawRowBlock(ctx,p,y,gps){
+  const off=gps?GPOFF:TSOFF, x0=EM+60, bx=x0+40;
+  let pvH='';
+  p.rows.forEach(r=>{
+    if(y>EH-EM-20)return;
+    const rl=rowLines(r,gps), col=r.struck?'#8A5A50':'#24312B';
+    const strike=(sx,ex,yy)=>{ctx.strokeStyle='#8A5A50';ctx.lineWidth=2.4;
+      ctx.beginPath();ctx.moveTo(sx,(yy===undefined?y:yy)-9);ctx.lineTo(ex,(yy===undefined?y:yy)-9);ctx.stroke();};
+    if(rl.hx){
+      const n=rl.n, top=y-38, bh=(n-1)*56+52;
+      ctx.fillStyle='#FDF3F1';ctx.fillRect(bx-14,top,RIGHT-bx+22,bh);
+      ctx.strokeStyle='#B3402E';ctx.lineWidth=3.5;
+      ctx.strokeRect(bx-14,top,RIGHT-bx+22,bh);
+      ctx.font=HXF;ctx.fillStyle=r.struck?'#8A5A50':'#B3402E';
+      ctx.fillText('HT✗',bx,y);
+      (rl.hx.ptL.length?rl.hx.ptL:['']).forEach((l,i)=>ctx.fillText(l,bx+off.pt,y+i*56));
+      MCTX.font=HXF;
+      ctx.fillText(rl.hx.p1,bx+off.code,y);
+      if(rl.hx.stack)ctx.fillText(rl.hx.p2,bx+off.code,y+56);
+      else ctx.fillText(rl.hx.p2,bx+off.code+MCTX.measureText(rl.hx.p1).width+30,y);
+      rl.hx.comL.forEach((l,i)=>ctx.fillText(l,bx+off.com,y+i*56));
+      if(r.struck)for(let i=0;i<n;i++)strike(bx-4,RIGHT,y+i*56);
+      y+=n*56;
+      ctx.fillStyle='#24312B';ctx.strokeStyle='#24312B';ctx.lineWidth=3;
+      return;
+    }
+    ctx.font=RFONT;ctx.fillStyle=col;
+    if(rl.mode===1){
+      const L=rl.L.length?rl.L:[''];
+      L.forEach((ln,i)=>{
+        ctx.font=RFONT;ctx.fillStyle=col;
+        const tShow=gps?(r.t==='OBS'?'':r.t):r.t;
+        if(i===0&&tShow)ctx.fillText(tShow,bx,y);
+        ctx.fillText(ln,bx+off.cont,y);
+        if(r.struck)strike(bx-4,bx+off.cont+6+ctx.measureText(ln).width);
+        y+=56;
+      });
+      return;
+    }
+    let hVal=r.ht||'';
+    if(gps){hVal=r.ht||(pvH&&'〃');if(r.ht)pvH=r.ht;}
+    const tShow=gps?(r.t==='OBS'?'':r.t):r.t;
+    const cells=[[0,tShow],[off.pt,(r.pt!==undefined?r.pt:r.pts)||''],[off.ht,hVal||'']];
+    if(!gps)cells.push([off.pr,r.pr||'']);
+    if(rl.mode===0&&rl.com)cells.push([off.com,rl.com]);
+    let end=bx;
+    cells.forEach(([dx,v])=>{if(!v)return;
+      ctx.fillText(v,bx+dx,y);
+      end=Math.max(end,bx+dx+ctx.measureText(v).width);});
+    (rl.CL||[]).forEach((cl2,i)=>{
+      ctx.fillText(cl2,bx+off.code,y+i*56);
+      end=Math.max(end,bx+off.code+ctx.measureText(cl2).width);});
+    if(r.struck){
+      strike(bx-4,end+6);
+      (rl.CL||[]).slice(1).forEach((cl2,i)=>strike(bx+off.code-4,bx+off.code+6+ctx.measureText(cl2).width,y+(i+1)*56));
+    }
+    y+=56*Math.max(1,(rl.CL||[]).length||1);
+    if(rl.mode===2)rl.L.forEach(ln=>{
+      ctx.font=RFONT;ctx.fillStyle=col;
+      ctx.fillText(ln,bx+off.cont,y);
+      if(r.struck)strike(bx+off.cont-4,bx+off.cont+6+ctx.measureText(ln).width);
+      y+=56;
+    });
+  });
+  return y;
 }
 function rowsH(p,gps){let n=0;p.rows.forEach(r=>n+=rowLines(r,gps).n);return n*56;}
 function setupH(p){
@@ -2520,12 +2806,13 @@ function setupH(p){
 }
 function gpsH(p){
   let h=76+60;                       // title + HT/base line
+  if(gpsBaseOver(p))h+=60;           // base info wraps to 2nd line
   if(p.mode==='base'&&p.brx)h+=56;   // RX line
   return h+48+rowsH(p,true)+30;      // table header + rows
 }
 const AREA_TOP=EM+80, AREA_H=EH-EM-AREA_TOP;
 const MCTX=document.createElement('canvas').getContext('2d');
-const TFONT='600 28px "Segoe Print","Bradley Hand","Comic Sans MS",cursive';
+const TFONT='700 28px ui-monospace,Menlo,monospace';
 const TLINE=46, TWRAP=940;
 function wrapLines(text,font,maxW){
   MCTX.font=font;
@@ -2655,41 +2942,22 @@ function renderSetupBlock(ctx,p,y){
     ctx.fillText('COMMENTS',x0+790,y);
     y+=44;
   }
-  const bx=x0+40;
-  p.rows.forEach(r=>{
-    if(y>EH-EM-20)return;
-    const rl=rowLines(r,false), col=r.struck?'#8A5A50':'#24312B';
-    ctx.font=RFONT;ctx.fillStyle=col;
-    const strike=(sx,ex)=>{ctx.strokeStyle='#8A5A50';ctx.lineWidth=2.4;
-      ctx.beginPath();ctx.moveTo(sx,y-9);ctx.lineTo(ex,y-9);ctx.stroke();};
-    if(rl.mode===1){
-      const L=rl.L.length?rl.L:[''];
-      L.forEach((ln,i)=>{
-        ctx.font=RFONT;ctx.fillStyle=col;
-        if(i===0&&r.t)ctx.fillText(r.t,bx,y);
-        ctx.fillText(ln,bx+120,y);
-        if(r.struck)strike(bx-4,bx+126+ctx.measureText(ln).width);
-        y+=56;
-      });
-      return;
-    }
-    const cells=[[0,r.t],[120,(r.pt!==undefined?r.pt:r.pts)||''],[280,r.code||''],
-      [470,r.ht||''],[590,r.pr||'']];
-    if(rl.mode===0)cells.push([750,rowRemark(r)]);
-    let end=bx;
-    cells.forEach(([dx,v])=>{if(!v)return;
-      ctx.fillText(v,bx+dx,y);
-      end=Math.max(end,bx+dx+ctx.measureText(v).width);});
-    if(r.struck)strike(bx-4,end+6);
-    y+=56;
-    if(rl.mode===2)rl.L.forEach(ln=>{
-      ctx.font=RFONT;ctx.fillStyle=col;
-      ctx.fillText(ln,bx+120,y);
-      if(r.struck)strike(bx+116,bx+126+ctx.measureText(ln).width);
-      y+=56;
-    });
-  });
-  return y;
+  return drawRowBlock(ctx,p,y,false);
+}
+function pairWidth(hist,cur,font){
+  MCTX.font=font;let w=0;
+  (hist||[]).forEach(h=>{w+=MCTX.measureText(h.v).width+26;});
+  return w+MCTX.measureText(cur||'').width;
+}
+function gpsBaseOver(p){
+  if(p.mode!=='base')return false;
+  const x0=EM+60,f='700 30px ui-monospace,Menlo,monospace';
+  const bptEnd=x0+460+pairWidth(p.hist.bpt,p.bpt,f);
+  MCTX.font=f;
+  let need=MCTX.measureText('ANT').width+20+90+pairWidth(p.hist.bht,p.bht,f)-90;
+  const tag=p.bcoord?(p.bcoord==='known'?'(KNOWN PT)':'(AVERAGED)'):'';
+  if(tag){MCTX.font='700 24px ui-monospace,Menlo,monospace';need+=30+MCTX.measureText(tag).width;}
+  return Math.max(x0+700,bptEnd+50)+90+need>RIGHT;
 }
 function renderGpsBlock(ctx,p,y){
   const mono=s2=>'700 '+s2+'px ui-monospace,Menlo,monospace';
@@ -2707,11 +2975,17 @@ function renderGpsBlock(ctx,p,y){
     ctx.font=mono(30);ctx.fillStyle='#24312B';
     ctx.fillText('BASE @',x0+320,y);
     struckPair(ctx,x0+460,y,p.hist.bpt,p.bpt,mono(30));
+    const bptEnd=x0+460+pairWidth(p.hist.bpt,p.bpt,mono(30));
+    let ax=Math.max(x0+700,bptEnd+50);
+    if(gpsBaseOver(p)){y+=60;ax=x0+320;}
     ctx.font=mono(30);ctx.fillStyle='#24312B';
-    ctx.fillText('ANT',x0+700,y);
-    struckPair(ctx,x0+790,y,p.hist.bht,p.bht,mono(30));
-    if(p.bcoord){ctx.font=mono(24);ctx.fillStyle='#5E9478';
-      ctx.fillText(p.bcoord==='known'?'(KNOWN PT)':'(AVERAGED)',x0+930,y);}
+    ctx.fillText('ANT',ax,y);
+    struckPair(ctx,ax+90,y,p.hist.bht,p.bht,mono(30));
+    if(p.bcoord){
+      const ae=ax+90+pairWidth(p.hist.bht,p.bht,mono(30));
+      ctx.font=mono(24);ctx.fillStyle='#5E9478';
+      ctx.fillText(p.bcoord==='known'?'(KNOWN PT)':'(AVERAGED)',ae+30,y);
+    }
   }
   y+=60;
   if(p.mode==='base'&&p.brx){
@@ -2720,49 +2994,12 @@ function renderGpsBlock(ctx,p,y){
     struckPair(ctx,x0+120,y,p.hist.brx,p.brx,mono(28));
     y+=56;
   }
-  const COLS=[[0,'pt'],[160,'code'],[470,'time'],[660,'ht'],[820,'remark']];
   ctx.font=mono(22);ctx.fillStyle='#5E9478';
-  ctx.fillText('PT#',x0+40,y);ctx.fillText('CODE',x0+200,y);
-  ctx.fillText('TIME',x0+510,y);ctx.fillText('HT',x0+700,y);
+  ctx.fillText('PT#',x0+200,y);ctx.fillText('CODE',x0+340,y);
+  ctx.fillText('HT',x0+600,y);ctx.fillText('COMMENTS',x0+740,y);
+  ctx.fillStyle='#24312B';
   y+=48;
-  let pvT='',pvH='';
-  const bx=x0+40;
-  p.rows.forEach(r=>{
-    if(y>EH-EM-20)return;
-    const rl=rowLines(r,true), col=r.struck?'#8A5A50':'#24312B';
-    ctx.font=RFONT;ctx.fillStyle=col;
-    const strike=(sx,ex)=>{ctx.strokeStyle='#8A5A50';ctx.lineWidth=2.4;
-      ctx.beginPath();ctx.moveTo(sx,y-9);ctx.lineTo(ex,y-9);ctx.stroke();};
-    if(rl.mode===1){
-      const L=rl.L.length?rl.L:[''];
-      L.forEach((ln,i)=>{
-        ctx.font=RFONT;ctx.fillStyle=col;
-        if(i===0&&r.t&&r.t!=='OBS')ctx.fillText(r.t,bx,y);
-        ctx.fillText(ln,bx+160,y);
-        if(r.struck)strike(bx-4,bx+166+ctx.measureText(ln).width);
-        y+=56;
-      });
-      return;
-    }
-    const tShow=r.time||(pvT&&'〃'), hShow=r.ht||(pvH&&'〃');
-    if(r.time)pvT=r.time; if(r.ht)pvH=r.ht;
-    const cells=[[0,r.t==='OBS'?'':r.t],[160,(r.pt!==undefined?r.pt:r.pts)||''],
-      [300,r.code||''],[510,tShow||''],[700,hShow||'']];
-    if(rl.mode===0)cells.push([820,rowRemark(r)]);
-    let end=bx;
-    cells.forEach(([dx,v])=>{if(!v)return;
-      ctx.fillText(v,bx+dx,y);
-      end=Math.max(end,bx+dx+ctx.measureText(v).width);});
-    if(r.struck)strike(bx-4,end+6);
-    y+=56;
-    if(rl.mode===2)rl.L.forEach(ln=>{
-      ctx.font=RFONT;ctx.fillStyle=col;
-      ctx.fillText(ln,bx+160,y);
-      if(r.struck)strike(bx+156,bx+166+ctx.measureText(ln).width);
-      y+=56;
-    });
-  });
-  return y;
+  return drawRowBlock(ctx,p,y,true);
 }
 function renderTextBlock(ctx,p,y){
   ctx.fillStyle='#24312B';ctx.font=TFONT;
@@ -2818,7 +3055,7 @@ async function buildPdf(){
   const ctx=c.getContext('2d');
   for(let i=0;i<total;i++){
     if(i>0)pdf.addPage();
-    if(i===0)renderHeaderPage(ctx,total);
+    if(i===0)renderHeaderPage(ctx,total,segs);
     else{const s=segs[i-1];
       if(s.kind==='s')renderSetupsPage(ctx,s.items,i+1,total);
       else if(s.kind==='g')renderLegendPage(ctx,s.ids,i+1,total);
