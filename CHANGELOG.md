@@ -1,5 +1,20 @@
 # Elevate Field — Changelog
 
+## Build 27 — 2026-08-19
+- **Boxed invert blocks (auto)**: a pre-pass detects clashing utility clusters; any multi-invert symbol involved renders its inverts as a CAD-style stacked box (title: symbol · PT#, one line per direction in compass order, D markers kept) placed in the clearest of 8 spots around the symbol, single leader to the rim. PT# folds into the box title.
+- **Sketch label clash detection**: single-invert labels and PT# tags dodge each other and avoid covering symbols; PT# tags try all 8 directions before sliding. Per-label leader lines dropped (superseded by boxes). Fixes wiped-out numbers on tight IC/MH clusters.
+- **Tool rails auto-fade + tuck**: side clusters drop to 15% opacity while a pointer is down on the canvas; ‹ › edge tabs collapse either rail entirely (persisted per device).
+- **Landscape sketches**: ⤢ button on the sketch page flips page.orient; canvas, grid, thumbnails, clamps and label placement all follow; exports rotate 90° to fill the portrait sheet. Flipping is non-destructive.
+- **Misc manhole symbol (mh)**: plain circle with MH for type-undetermined manholes; full utility behaviour (inverts, PT# tag, invert card, clash dodging); legend prints MANHOLE - TYPE UNDETERMINED.
+
+## Build 26 — 2026-08-19
+- **Wrong HT rows (HT✗)** on TS and GPS setups: PT# (one / list / range), wrong HT, correct HT, comments. Prints boxed in red inline; cover page gets a ⚠ HT CORRECTIONS — FIX BEFORE DRAFTING box listing every correction with page reference. Struck HT✗ rows excluded from the cover box.
+- **Endpoint snap**: pen and line grab nearby endpoints (tight screen-based radius) — green square indicator + haptic tick. Snap overrides ortho. Poly and Disto POC use the same radius.
+- **Block lettering**: sketch text, dimension labels, 'D' markers and free-form note pages render in ui-monospace print — legal field book standard. Existing sketches update automatically. Case preserved as typed.
+- **GPS rows**: TIME column removed (receiver logs it); COMMENTS column in its place. Legacy booked times print folded into comments as "@ hh:mm".
+- **Print clash fixes**: long codes wrap within their column; GPS base line (BASE @ / ANT / KNOWN-AVERAGED tag) measures itself and flows to a second line instead of overprinting.
+- **Training**: two new guides — Sketch tools (annotated screen map) and Wrong HT. Standing policy: crew-facing features ship with their guide in the same build.
+
 ## Build 25 — 2026-08-17
 - **🎓 Training tab** on the home screen (next to Notes and Resources):
   offline how-to guides with numbered steps and field-book-style diagrams.
