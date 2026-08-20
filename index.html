@@ -848,7 +848,11 @@ function renderTraining(){
       <div class="gico">${g.ico}</div>
       <div><div class="gmain">${g.t}</div><div class="gsub">${g.sub}</div></div>
       <div class="gx">\u203a</div></button>`).join('')+
-    `</div><div class="trainfoot">Guides work fully offline \u2014 they\u2019re part of the app.<br>More get added as features do.</div>`;
+    `<a class="gcard" style="text-decoration:none" href="https://elevatelandsurveying.sharepoint.com/:f:/s/ElevateField/IgCedng7eMKKQIeK2b43Tx9OAVIPFnGiMYUv8UBtHCTq-2Y?e=ROpFZe" target="_blank" rel="noopener">
+      <div class="gico">\ud83d\udcf9</div>
+      <div><div class="gmain">Video library</div><div class="gsub">Every walkthrough video \u2014 new ones land here first. Opens SharePoint (company sign-in + signal).</div></div>
+      <div class="gx">\u2197</div></a>
+    </div><div class="trainfoot">Guides work fully offline \u2014 they\u2019re part of the app.<br>More get added as features do.</div>`;
 }
 $('train-list').addEventListener('click',e=>{
   const b=e.target.closest('[data-g]');if(!b)return;
