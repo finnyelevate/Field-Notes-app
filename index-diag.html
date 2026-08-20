@@ -3424,6 +3424,63 @@ $('eb-open').onclick=()=>{
     try{navigator.serviceWorker.register('sw.js');}catch(e){}
   }
 })();
+
+/* ===== DIAG build — tap tracer (not for crew deploy) ===== */
+(function(){
+  const dbg=document.createElement('div');
+  dbg.style.cssText='position:fixed;left:4px;top:4px;z-index:999;background:rgba(20,26,23,.94);color:#8FD3AD;font:700 11px ui-monospace,Menlo,monospace;padding:6px 8px;border-radius:8px;pointer-events:none;max-width:82vw;word-break:break-all;line-height:1.5';
+  dbg.textContent='DIAG ready — tap anything';
+  document.body.appendChild(dbg);
+  const idOf=el=>!el?'null':(el.id?'#'+el.id:el.tagName.toLowerCase()+(el.className?'.'+String(el.className).trim().split(/\s+/)[0]:''));
+  document.addEventListener('pointerdown',e=>{
+    const efp=document.elementFromPoint?document.elementFromPoint(e.clientX,e.clientY):null;
+    dbg.textContent='DOWN '+idOf(e.target)+' | top-el '+idOf(efp)+' @'+Math.round(e.clientX)+','+Math.round(e.clientY)+' vv:'+(window.visualViewport?Math.round(visualViewport.scale*100)/100:'-');
+  },true);
+  document.addEventListener('click',e=>{dbg.textContent+=' | CLICK '+idOf(e.target);},true);
+  // overlay watchdog: any fixed element that can intercept input must be known-interactive
+  setTimeout(()=>{
+    const okIds=new Set(['toastu']);      // interactive overlays by design
+    const bad=[];
+    document.querySelectorAll('body *').forEach(el=>{
+      const cs=el.style.cssText||'';
+      if(!/position:\s*fixed/.test(cs))return;
+      if(/pointer-events:\s*none/.test(cs))return;
+      if(okIds.has(el.id))return;
+      bad.push('#'+(el.id||el.className||el.tagName));
+    });
+    if(bad.length)dbg.textContent='⚠ OVERLAY WATCHDOG: '+bad.join(', ')+' can intercept taps';
+  },1200);
+  // AUDIT: real hit-test of every visible button on the current screen
+  const ab=document.createElement('button');
+  ab.textContent='AUDIT';
+  ab.style.cssText='position:fixed;right:4px;top:4px;z-index:999;background:#F26A1B;color:#fff;border:0;border-radius:8px;padding:6px 10px;font:800 11px ui-monospace,Menlo,monospace';
+  document.body.appendChild(ab);
+  ab.onclick=()=>{
+    if(!document.elementFromPoint){dbg.textContent='AUDIT: elementFromPoint unsupported here';return;}
+    const sel='button,.btn,.fbtn,.chip,.invb,.railtab,[data-add],[data-sym],[data-qt],[data-t],select';
+    const bad=[];let n=0;
+    document.querySelectorAll(sel).forEach(el=>{
+      if(el===ab)return;
+      const r=el.getBoundingClientRect();
+      if(!r.width||!r.height)return;
+      if(r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)return;
+      n++;
+      const cx=r.left+r.width/2, cy=r.top+r.height/2;
+      const hit=document.elementFromPoint(cx,cy);
+      if(hit&&hit!==el&&!el.contains(hit)&&!hit.contains(el)){
+        bad.push(idOf(el)+'⇐'+idOf(hit));
+      }
+    });
+    dbg.textContent=bad.length
+      ?'AUDIT: '+n+' checked — COVERED: '+bad.slice(0,8).join(' · ')+(bad.length>8?' +'+(bad.length-8):'')
+      :'AUDIT: ALL CLEAR — '+n+' buttons reachable on this screen';
+  };
+  setTimeout(()=>{['mi-add','b-add-page','mi-done'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const f=el.onclick;
+    el.onclick=function(ev){dbg.textContent+=' | '+id+' FIRED';return f&&f.call(this,ev);};
+  });},600);
+})();
 </script>
 </body>
 </html>

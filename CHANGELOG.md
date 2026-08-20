@@ -1,6 +1,8 @@
 # Elevate Field — Changelog
 
 ## Build 27 — 2026-08-19
+- **FIX — tuck tabs overlapped the tool rails**: the ‹ › collapse tabs anchored at the same 40% height as the clusters one z-layer up, shadowing the top of whichever button sat there (✋ on desktop). Tabs now sit below the clusters.
+- **FIX — invisible toast was eating taps**: the notification toast hid by fading to opacity 0 but stayed in the DOM at z-40 across the bottom band, silently swallowing clicks on + Add page, Add INV, Export and anything else it covered (worse in 25–27 as toast traffic grew). Toasts and the error banner are now pointer-events:none — informational strips can never intercept input again.
 - **Boxed invert blocks (auto)**: a pre-pass detects clashing utility clusters; any multi-invert symbol involved renders its inverts as a CAD-style stacked box (title: symbol · PT#, one line per direction in compass order, D markers kept) placed in the clearest of 8 spots around the symbol, single leader to the rim. PT# folds into the box title.
 - **Sketch label clash detection**: single-invert labels and PT# tags dodge each other and avoid covering symbols; PT# tags try all 8 directions before sliding. Per-label leader lines dropped (superseded by boxes). Fixes wiped-out numbers on tight IC/MH clusters.
 - **Tool rails auto-fade + tuck**: side clusters drop to 15% opacity while a pointer is down on the canvas; ‹ › edge tabs collapse either rail entirely (persisted per device).
