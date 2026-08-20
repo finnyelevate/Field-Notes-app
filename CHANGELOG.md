@@ -1,6 +1,16 @@
 # Elevate Field — Changelog
 
+## Build 28 — 2026-08-20
+- **Disto walk auto-refit**: a typed distance that would leave the page rescales the whole drawing uniformly to fit (60px headroom) — booked distances unchanged, symbols/text/labels keep their size, page scale follows so later legs stay consistent. Toast announces it. ⤢ fit button on the walk bar refits/centres on demand.
+- **Label & box page-edge detection**: page borders join the clash registry as obstacles; any invert label that would cross the edge boxes its symbol (boxes clamp on-page). Nothing auto-placed draws off-page.
+- **Boxed inverts toggle**: checkbox on the invert card forces the CAD-style block per symbol from the start (invBox flag); auto-boxing on crowding unchanged.
+- **Pipe size chips**: 100–300 chips on the invert card suffix the value (e.g. 2.05 200mm); free-typed sizes respected (mm/in/" detected, no double-suffix).
+- **Tap-to-edit text**: ✥ + clean tap on plain or circled text reopens the modal pre-filled (Save in place, size/rotation kept).
+- **Training**: new guide — When the sketch gets busy (boxes, edge fitting, tap-to-edit, landscape). Walkthrough videos wired: Disto walk incl. auto-fit (Point of commencement guide) and Legal sketch — monuments, lines, labels (Sketch tools guide).
+- Held for the next build: detail pages (live-view zoom regions).
+
 ## Build 27 — 2026-08-19
+- **Training videos**: guides can now carry a walkthrough video (repo /videos folder, streamed on demand, preload none). First one: Booking inverts (2 min). Offline: baked-in diagrams and steps remain the canonical content; the player politely notes it needs signal.
 - **FIX — tuck tabs overlapped the tool rails**: the ‹ › collapse tabs anchored at the same 40% height as the clusters one z-layer up, shadowing the top of whichever button sat there (✋ on desktop). Tabs now sit below the clusters.
 - **FIX — invisible toast was eating taps**: the notification toast hid by fading to opacity 0 but stayed in the DOM at z-40 across the bottom band, silently swallowing clicks on + Add page, Add INV, Export and anything else it covered (worse in 25–27 as toast traffic grew). Toasts and the error banner are now pointer-events:none — informational strips can never intercept input again.
 - **Boxed invert blocks (auto)**: a pre-pass detects clashing utility clusters; any multi-invert symbol involved renders its inverts as a CAD-style stacked box (title: symbol · PT#, one line per direction in compass order, D markers kept) placed in the clearest of 8 spots around the symbol, single leader to the rim. PT# folds into the box title.

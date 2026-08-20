@@ -171,6 +171,8 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .gstep{display:flex;gap:10px;margin:10px 0;font-size:14px;line-height:1.45}
 .gnum{min-width:24px;height:24px;border-radius:50%;background:var(--grid2);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px}
 canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 4px;display:block;background:var(--paper)}
+.gvid video{width:100%;border-radius:12px;border:1.5px solid var(--line);background:#000;display:block;margin:8px 0 2px}
+.gvidcap{color:#9DB3A6;font-size:12px;margin:2px 0 10px}
 .gcap{font-size:11.5px;color:var(--muted);text-align:center;margin-bottom:8px}
 .trainfoot{color:#9DB3A6;font-size:12.5px;text-align:center;padding:6px 20px 0;line-height:1.5}
 .spin{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp 0.8s linear infinite}
@@ -359,6 +361,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
     <input id="wk-az" class="mono" inputmode="numeric" placeholder="az°">
     <button class="wkb" id="wk-go">Go</button>
     <button class="wkb" id="wk-undo">↩</button>
+    <button class="wkb" id="wk-fit">⤢ fit</button>
     <button class="wkb" id="wk-close">Close</button>
     <button class="wkb on" id="wk-done">Done</button>
   </div>
@@ -427,7 +430,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 27</h2>
+  <h2>What’s new — build 28</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -448,8 +451,11 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
     <button class="btn ghost sm" id="mi-gal" style="white-space:nowrap;min-height:48px" title="From gallery">🖼</button>
     <button class="btn" id="mi-add" style="white-space:nowrap">Add INV</button>
   </div>
+  <div class="chips" id="mi-pipe" style="margin-top:8px"></div>
   <div class="card-sub" id="mi-camstate" style="display:none;color:var(--grid2)">📷 photo ready — it attaches with Add</div>
   <div id="mi-list" style="margin-top:8px"></div>
+  <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px">
+    <input type="checkbox" id="mi-box" style="width:20px;height:20px"> Boxed inverts (CAD-style block)</label>
   <div class="mrow"><button class="btn" id="mi-done">Done</button></div>
 </div></div>
 <input type="file" id="file-invphoto" accept="image/*" hidden>
@@ -562,12 +568,14 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=27;
+const BUILD=28;
 const NEWS=[
- ['🏷','Boxed inverts on busy clusters','When manholes crowd together, each multi-invert MH automatically prints its inverts as a stacked box (SMH · PT# 2001 / SW 2.31 / S 2.05…) with one leader to the rim — CAD style. Lone symbols and single inverts stay as plain labels, now clash-dodged. No more wiped-out numbers.'],
- ['🕳','Misc manhole symbol','New MH symbol (plain circle, MH inside) for manholes you can\u2019t call storm or sanitary in the field — takes inverts, PT# and auto-numbering like the rest. Legend prints TYPE UNDETERMINED.'],
- ['🫥','Tool rails stay out of the way','Side buttons fade while your pen is down, and the ‹ › edge tabs tuck either rail away completely. Full-size again the moment you lift or tap the tab.'],
- ['⤢','Landscape sketches','New ⤢ button on the sketch page flips the canvas landscape for wide lots and road runs — flip back anytime, nothing is lost. Prints turned 90° on the page, just turn the book.']
+ ['📏','Walks fit the page','Disto walk about to run off the edge? The drawing rescales itself to fit — booked distances never change, only the picture. ⤢ fit on the walk bar does it on demand.'],
+ ['📦','Boxed inverts on demand','New toggle on the invert card puts any MH\u2019s inverts in the CAD-style block from the start — crowded clusters still box automatically.'],
+ ['🚰','Pipe size chips','Tap 100–300 on the invert card and the size rides along with the depth (2.05 200mm). Free-typed sizes still work.'],
+ ['✏️','Tap to edit text','✥ select, one clean tap on any text (plain or circled) — the box reopens pre-filled. No more delete-and-retype.'],
+ ['🧱','Nothing draws off-page','Invert labels, PT# tags and boxes now treat the page edge like a wall — they dodge inward or box up instead of vanishing off the side.'],
+ ['🎓','New guide + video','When the sketch gets busy (boxes, fitting, tap-to-edit) — and the Booking inverts guide now carries a 2-minute walkthrough video.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -674,7 +682,7 @@ $('home-sub').addEventListener('click',openNews);
 
 /* ================= training ================= */
 const GUIDES=[
- {id:'poc',ico:'\u2b50',t:'Point of commencement',sub:'Where to start a walk \u2014 and why the misclosure depends on it',area:'sketches',
+ {id:'poc',ico:'\u2b50',vid:'videos/disto-walk-sketch.mp4',vlen:'2 min',t:'Point of commencement',sub:'Where to start a walk \u2014 and why the misclosure depends on it',area:'sketches',
   why:'<b>Why it matters:</b> the walk closes back to where it started. If the POC is a soft spot (grass, gravel edge), the misclosure \u0394N/\u0394E means nothing and the office can\u2019t trust the whole building tie.',
   cap:'Start at a hard, re-findable corner \u2014 the walk closes back onto \u2b50',diag:diagPoc,steps:[
   'Pick a <b>hard corner</b> of the building \u2014 face of foundation at a corner, not siding or a downspout.',
@@ -682,7 +690,7 @@ const GUIDES=[
   'Walk the perimeter with the Disto, one face at a time. Distances book as measured \u2014 <b>never rounded to close</b>.',
   'Close back onto the same \u2b50 corner. The app prints <span class="mono">MISC. \u0394N/\u0394E</span> in a box \u2014 that\u2019s your proof the walk holds together.',
   'Big misclosure? Don\u2019t fudge a distance \u2014 re-check the face you\u2019re least sure of and strike/correct the bad one (it stays visible, legal-book style).']},
- {id:'inv',ico:'\u25c9',t:'Booking inverts',sub:'The invert card on manholes & CBs \u2014 depths, pipes, photos',area:'utilities',
+ {id:'inv',ico:'\u25c9',vid:'videos/inverts-sketch.mp4',vlen:'2 min',t:'Booking inverts',sub:'The invert card on manholes & CBs \u2014 depths, pipes, photos',area:'utilities',
   why:'<b>Why it matters:</b> one photo per invert settles pipe size and material disputes months later, without a return trip. Drafters can\u2019t draw what wasn\u2019t booked.',
   cap:'Clean tap on a placed manhole opens the invert card',diag:diagInv,steps:[
   'Place the \u25c9 manhole / CB symbol on the sketch. It auto-numbers (<span class="mono">MH1</span>, <span class="mono">CB2</span>\u2026).',
@@ -698,7 +706,7 @@ const GUIDES=[
   'For pins and TBMs: one context shot \u2014 fence line, hydrant, whatever finds it again.',
   'Tap any \ud83d\udcf7 marker afterwards to check it in the app \u2014 <b>Replace it now if it\u2019s blurry</b>, not after export.',
   'Photos print on the Measurement Record pages automatically \u2014 nothing extra to do at export.']},
- {id:'tools',ico:'\ud83e\uddf0',t:'Sketch tools',sub:'The full kit \u2014 ortho, Disto walk, symbols, snap',area:'sketches',h:470,
+ {id:'tools',ico:'\ud83e\uddf0',vid:'videos/legal-sketch.mp4',vlen:'2 min',t:'Sketch tools',sub:'The full kit \u2014 ortho, Disto walk, symbols, snap',area:'sketches',h:470,
   why:'<b>Why it matters:</b> the sketch is the legal record of what was found. Knowing the right tool means cleaner sketches in less time \u2014 and less office guesswork.',
   cap:'Left edge: everyday tools \u00b7 right edge: view controls \u00b7 bottom: the full kit',diag:diagTools,steps:[
   'Left edge = the everyday four: \u270f\ufe0f pen, \uff21 text, \u25c9 symbol, \u2725 select (plus \ud83e\udded north). The bottom bar holds the full kit.',
@@ -716,7 +724,16 @@ const GUIDES=[
   'PT# takes one point, a list, or a range: <span class="mono">207</span>, <span class="mono">205, 208</span>, <span class="mono">205\u2013212</span> all work.',
   'Book the <b>wrong HT</b> and the <b>correct HT</b> side by side. Never re-strike the shots themselves.',
   'Comments: say how it happened (pole clamp slipped, forgot after MH shots) \u2014 it helps the office trust the rest.',
-  'It prints boxed in red right in the shot sequence, and the front page gets a \u26a0 HT CORRECTIONS box listing every one with a page reference. Nothing to remember at export.']}
+  'It prints boxed in red right in the shot sequence, and the front page gets a \u26a0 HT CORRECTIONS box listing every one with a page reference. Nothing to remember at export.']},
+ {id:'busy',ico:'\ud83d\udce6',t:'When the sketch gets busy',sub:'Boxed inverts, page fitting, fixing text in place',area:'sketches',h:430,
+  why:'<b>Why it matters:</b> dense corners are where books get misread. These tools keep every number owned and on the page \u2014 without changing anything as measured.',
+  cap:'One stacked box per MH \u00b7 one leader \u00b7 walks rescale to fit',diag:diagBusy,steps:[
+  'Crowded manholes box themselves: all of a MH\u2019s inverts collapse into one stacked block (like the office CAD blocks) with a single leader to the rim.',
+  'Want the block from the start? Open the invert card and tick <b>Boxed inverts</b>. Pipe sizes: tap a chip (100\u2013300) and it rides along as <span class="mono">2.05 200mm</span>.',
+  'Labels and boxes stay on the page \u2014 anything auto-placed dodges the page edge just like it dodges other labels.',
+  '\ud83d\udccf Disto walks fit themselves: if a distance would run off the page, the drawing rescales to fit \u2014 booked distances never change, only the picture. \u2924 fit on the walk bar does it on demand.',
+  'Wide site? \u2924 on the right rail flips the canvas landscape before you start.',
+  'Typo in a label? \u2725 select, one clean tap on the text \u2014 the box reopens with the wording ready to fix. Same for circled text.']}
 ];
 function diagTools(c){
   // phone-frame screen map with callouts
@@ -794,6 +811,37 @@ function diagHtx(c){
   c.fillStyle='#B3402E';c.font='700 13px system-ui';
   c.fillText('the shots themselves stay exactly as measured',98,380);
 }
+function diagBusy(c){
+  c.fillStyle='#FBFAF5';c.fillRect(0,0,640,430);
+  c.strokeStyle='#B7D5C4';c.lineWidth=1;
+  for(let x=0;x<640;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,430);c.stroke();}
+  for(let y=0;y<430;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(640,y);c.stroke();}
+  c.strokeStyle='#24312B';c.lineWidth=3;
+  c.beginPath();c.moveTo(30,180);c.lineTo(610,180);c.stroke();
+  c.beginPath();c.arc(240,180,18,0,7);c.stroke();
+  c.beginPath();c.arc(330,180,18,0,7);c.stroke();
+  c.font='700 15px ui-monospace,Menlo,monospace';c.fillStyle='#24312B';
+  c.fillText('S',235,186);c.fillText('S',325,186);
+  // one boxed block with single leader
+  c.fillStyle='#FBFAF5';c.fillRect(60,230,190,120);
+  c.strokeStyle='#24312B';c.lineWidth=2.5;c.strokeRect(60,230,190,120);
+  c.beginPath();c.moveTo(60,262);c.lineTo(250,262);c.stroke();
+  c.fillStyle='#24312B';c.font='700 15px ui-monospace,Menlo,monospace';
+  c.fillText('SMH · PT# 2001',72,252);
+  c.font='700 16px ui-monospace,Menlo,monospace';
+  c.fillText('SW 2.31',72,288);c.fillText('SE 2.28',72,314);c.fillText('S  2.05 200mm',72,340);
+  c.beginPath();c.moveTo(232,200);c.lineTo(200,230);c.stroke();
+  // fit arrows
+  c.strokeStyle='#F26A1B';c.fillStyle='#F26A1B';c.lineWidth=2.5;
+  c.strokeRect(400,236,200,140);
+  c.font='800 15px system-ui';
+  c.fillText('⤢ fit — walk rescales',402,404);
+  c.fillText('to stay on the page',402,422);
+  c.beginPath();c.moveTo(628,250);c.lineTo(606,250);c.stroke();
+  c.beginPath();c.moveTo(606,250);c.lineTo(616,244);c.lineTo(616,256);c.closePath();c.fill();
+  c.fillStyle='#5E9478';c.font='800 14px system-ui';
+  c.fillText('boxes: automatic when crowded · toggle on the invert card',60,66);
+}
 function renderTraining(){
   $('train-list').innerHTML=`<div class="paper" style="margin-top:12px"><div class="eyebrow">How-to guides</div>`+
     GUIDES.map(g=>`<button class="gcard" data-g="${g.id}">
@@ -811,6 +859,8 @@ function openGuide(g){
   $('guide-sub').textContent='Training \u00b7 '+g.area;
   $('guide-body').innerHTML=`<div class="why">${g.why}</div>
     <canvas class="gdiag" id="gd-cv" width="640" height="${g.h||(g.id==='inv'?440:g.id==='pho'?360:420)}"></canvas>
+    ${g.vid?`<div class="gvid"><video id="gd-vid" controls preload="none" playsinline src="${g.vid}"></video>
+      <div class="gvidcap">▶ Watch the walkthrough${g.vlen?' · '+g.vlen:''} — needs signal · the steps below work offline</div></div>`:''}
     <div class="gcap">${g.cap}</div>`+
     g.steps.map((st,i)=>`<div class="gstep"><div class="gnum">${i+1}</div><div>${st}</div></div>`).join('');
   const c=$('gd-cv').getContext('2d');
@@ -818,6 +868,8 @@ function openGuide(g){
   show('v-guide');
 }
 $('b-back-train').onclick=()=>{show('v-home');};
+  const gv=$('gd-vid');
+  if(gv)gv.addEventListener('error',()=>toast('Video needs signal — the steps below work offline.'),{once:true});
 /* ---- diagram helpers (field-book style) ---- */
 function gdGrid(c,w,h){c.fillStyle='#FBFAF5';c.fillRect(0,0,w,h);
   c.strokeStyle='#B7D5C4';c.lineWidth=1;
@@ -1363,10 +1415,48 @@ function walkResync(){
   walkPt=walkStack[walkStack.length-1].slice();
   redraw();
 }
+function fitSketch(extra){
+  const W=plw(),H=plh(),M=60;
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  const upd=(x,y)=>{if(x<minx)minx=x;if(x>maxx)maxx=x;if(y<miny)miny=y;if(y>maxy)maxy=y;};
+  page.ops.forEach(o=>{
+    if(o.k==='l'||o.k==='a'||o.k==='d'){upd(o.x1,o.y1);upd(o.x2,o.y2);}
+    else if(o.k==='s'||o.k==='pl')(o.pts||[]).forEach(p2=>upd(p2[0],p2[1]));
+    else if(o.k==='arc')(o.p||[]).forEach(p2=>upd(p2[0],p2[1]));
+    else if(o.x!==undefined)upd(o.x,o.y);
+  });
+  if(extra)upd(extra[0],extra[1]);
+  if(minx>maxx)return 1;
+  const f=Math.min(1,(W-2*M)/Math.max(1,maxx-minx),(H-2*M)/Math.max(1,maxy-miny));
+  const cx=(minx+maxx)/2, cy=(miny+maxy)/2;
+  const tx=W/2-cx*f, ty=H/2-cy*f;
+  const T=(x,y)=>[x*f+tx,y*f+ty];
+  page.ops.forEach(o=>{
+    if(o.k==='l'||o.k==='a'||o.k==='d'){[o.x1,o.y1]=T(o.x1,o.y1);[o.x2,o.y2]=T(o.x2,o.y2);}
+    else if(o.k==='s'||o.k==='pl'){o.pts=(o.pts||[]).map(p2=>T(p2[0],p2[1]));}
+    else if(o.k==='arc'){o.p=(o.p||[]).map(p2=>T(p2[0],p2[1]));}
+    else if(o.x!==undefined){const n2=T(o.x,o.y);o.x=n2[0];o.y=n2[1];}
+  });
+  page.scale=(page.scale||45)*f;
+  if(walkPOC)walkPOC=T(walkPOC[0],walkPOC[1]);
+  if(walkPt)walkPt=T(walkPt[0],walkPt[1]);
+  if(walkStack)walkStack=walkStack.map(p2=>T(p2[0],p2[1]));
+  redraw();thumb();touch();
+  return f;
+}
 function walkSeg(az,dist){
   if(!walkPt)return;
-  const sc=page.scale||45, a=az*Math.PI/180;
-  const end=[walkPt[0]+Math.sin(a)*dist*sc, walkPt[1]-Math.cos(a)*dist*sc];
+  let sc=page.scale||45; const a=az*Math.PI/180;
+  let end=[walkPt[0]+Math.sin(a)*dist*sc, walkPt[1]-Math.cos(a)*dist*sc];
+  const ME=24, PW=plw(), PH=plh();
+  if(end[0]<ME||end[1]<ME||end[0]>PW-ME||end[1]>PH-ME){
+    const f=fitSketch(end);
+    if(f<1){
+      sc=page.scale||45;
+      end=[walkPt[0]+Math.sin(a)*dist*sc, walkPt[1]-Math.cos(a)*dist*sc];
+      toast('Fitted to page — drawing rescaled, distances held as booked.');
+    }
+  }
   const op={k:'d',x1:walkPt[0],y1:walkPt[1],x2:end[0],y2:end[1],v:String(dist),d:true};
   // arriving back at the POC? hold the wall as measured and report misclosure
   if(walkStack.length>=2&&Math.hypot(end[0]-walkPOC[0],end[1]-walkPOC[1])<14){
@@ -1400,6 +1490,10 @@ $('wk-go').onclick=()=>{
   const dist=parseFloat($('wk-dist').value), az=parseFloat($('wk-az').value)||0;
   if(!dist){toast('Type the Disto distance first.');$('wk-dist').focus();return;}
   walkSeg(az,dist);
+};
+$('wk-fit').onclick=()=>{
+  const f=fitSketch();
+  toast(f<1?'Fitted to page.':'Centred on page.');
 };
 $('wk-undo').onclick=()=>{
   if(!walkOps||!walkOps.length)return;
@@ -1532,12 +1626,23 @@ function invCount(o){let n=0;Object.values(o.inv||{}).forEach(a=>n+=a.length);re
 function prepLabels(ops,p){
   geomPage=p||page;
   placedLabels.length=0;boxedInv=new Set();
+  const W2=plw(),H2=plh(),E2=16,B2=800;
+  placedLabels.push(
+    {x:-B2,y:-B2,w:W2+2*B2,h:B2+E2},
+    {x:-B2,y:H2-E2,w:W2+2*B2,h:B2+E2},
+    {x:-B2,y:E2,w:B2+E2,h:H2-2*E2},
+    {x:W2-E2,y:E2,w:B2+E2,h:H2-2*E2});
   const utils=ops.filter(o=>o.k==='y'&&UTIL.has(o.id));
+  utils.forEach(o=>{if(o.invBox&&invCount(o)>=1)boxedInv.add(o);});
   // symbols themselves are obstacles: labels and boxes must not cover them
   utils.forEach(o=>{const r=(o.s||26)+8;
     placedLabels.push({x:o.x-r,y:o.y-r,w:2*r,h:2*r});});
   const items=[];
   utils.forEach(o=>invLabelRects(o).forEach(L=>items.push({o,rect:L.rect})));
+  const borders=placedLabels.slice(0,4);
+  items.forEach(it=>{
+    if(borders.some(b3=>rectOverlap(it.rect,b3)>0))boxedInv.add(it.o);
+  });
   for(let i=0;i<items.length;i++)
     for(let j=i+1;j<items.length;j++){
       if(items[i].o===items[j].o)continue;
@@ -2037,7 +2142,7 @@ ink.addEventListener('pointerdown',e=>{
   if(tool==='sel'){
     const hit=hitPointObj(x,y);
     if(hit)snap();
-    selTap=(hit&&hit===selOp&&hit.k==='y'&&UTIL.has(hit.id))?[x,y]:null;
+    selTap=(hit&&hit===selOp&&((hit.k==='y'&&UTIL.has(hit.id))||hit.k==='t'||hit.k==='c'))?[x,y]:null;
     selOp=hit;
     dragSel=hit?[x-hit.x,y-hit.y]:null;
     updSelUI();redraw();
@@ -2187,7 +2292,11 @@ ink.addEventListener('pointermove',e=>{
   }
   if(dragSel){
     dragSel=null;thumb();touch();
-    if(selTap){selTap=null;if(selOp)openInvCard(selOp);}
+    if(selTap){selTap=null;
+      if(selOp){
+        if(selOp.k==='y')openInvCard(selOp);
+        else if(selOp.k==='t'||selOp.k==='c')openTextEdit(selOp);
+      }}
     return;
   }
   if(!drawing)return;
@@ -2370,17 +2479,30 @@ function openTextModal(circ){
   $('mt-sizewrap').style.display=circ?'none':'block';
   $('mt-angles').innerHTML=ANG.map(a=>`<button class="chip${a===0?' on':''}" data-a="${a}">${a}°</button>`).join('');
   $('mt-sizes').innerHTML=SZ.map(([l,v])=>`<button class="chip${v===30?' on':''}" data-s="${v}">${l}</button>`).join('');
-  $('mt-input').value='';$('m-text').classList.add('on');
+  $('mt-input').value='';editTxt=null;$('mt-ok').textContent='Place';$('m-text').classList.add('on');
   setTimeout(()=>$('mt-input').focus(),80);
 }
 $('mt-angles').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;
   mtA=+b.dataset.a;$('mt-angles').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));});
 $('mt-sizes').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;
   mtS=+b.dataset.s;$('mt-sizes').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));});
-$('mt-cancel').onclick=()=>{$('m-text').classList.remove('on');pend=null;};
+$('mt-cancel').onclick=()=>{$('m-text').classList.remove('on');pend=null;editTxt=null;$('mt-ok').textContent='Place';};
+let editTxt=null;
+function openTextEdit(op){
+  editTxt=op;pend=null;
+  $('mt-input').value=op.v||'';
+  $('mt-ok').textContent='Save';
+  $('m-text').classList.add('on');
+  setTimeout(()=>$('mt-input').focus(),40);
+}
 $('mt-ok').onclick=()=>{
   const v=$('mt-input').value.trim();
   $('m-text').classList.remove('on');
+  if(editTxt){
+    if(v)editTxt.v=v;
+    editTxt=null;$('mt-ok').textContent='Place';
+    redraw();thumb();touch();return;
+  }
   if(!v||!pend)return;
   if(mtCirc)page.ops.push({k:'c',x:pend[0],y:pend[1],r:Math.max(24,v.length*11),v,c:curColor});
   else page.ops.push({k:'t',x:pend[0],y:pend[1],a:mtA,s:mtS,v,c:curColor});
@@ -2506,6 +2628,8 @@ function openInvCard(op){
   $('mi-pid').value=op.pid;
   $('mi-title').textContent=(SYMMAP[op.id]?SYMMAP[op.id][1]:'Symbol')+' — inverts';
   renderInvCard();
+  $('mi-box').checked=!!op.invBox;
+  renderPipeChips();
   $('m-inv').classList.add('on');
   setTimeout(()=>$('mi-val').focus(),80);
 }
@@ -2575,7 +2699,8 @@ function onInvPhotoFile(e){
       invOp.inv[d2][i]=x;invPh=null;
       renderInvCard();
     }else{                           // main add-row flow
-      const v=$('mi-val').value.trim();
+      let v=$('mi-val').value.trim();
+      if(v&&invPipe&&!/\d\s*(mm|in|")/i.test(v))v+=' '+invPipe+'mm';
       if(v){                         // value already typed: attach + add in one go
         (invOp.inv[invDir]=invOp.inv[invDir]||[]).push({v,ph,d:true});
         $('mi-val').value='';
@@ -2601,8 +2726,9 @@ $('mi-grid').addEventListener('click',e=>{
   setTimeout(()=>$('mi-val').focus(),50);
 });
 $('mi-add').onclick=()=>{
-  const v=$('mi-val').value.trim();
+  let v=$('mi-val').value.trim();
   if(!v||!invOp)return;
+  if(invPipe&&!/\d\s*(mm|in|")/i.test(v))v+=' '+invPipe+'mm';
   const entry={v};
   if(pendPh){entry.ph=pendPh;entry.d=true;pendPh=null;$('mi-camstate').style.display='none';}
   (invOp.inv[invDir]=invOp.inv[invDir]||[]).push(entry);
@@ -2624,6 +2750,19 @@ $('mi-list').addEventListener('click',e=>{
   if(!invOp.inv[d2].length)delete invOp.inv[d2];
   renderInvCard();redraw();thumb();touch();
 });
+let invPipe='';
+function renderPipeChips(){
+  $('mi-pipe').innerHTML=['100','150','200','250','300'].map(p2=>
+    `<button class="chip${invPipe===p2?' on':''}" data-pipe="${p2}">${p2}</button>`).join('')
+    +`<button class="chip${invPipe===''?' on':''}" data-pipe="">no pipe</button>`;
+}
+$('mi-pipe').addEventListener('click',e=>{
+  const b=e.target.closest('[data-pipe]');if(!b)return;
+  invPipe=b.dataset.pipe;renderPipeChips();
+});
+$('mi-box').onchange=e=>{
+  if(invOp){invOp.invBox=e.target.checked?1:0;redraw();thumb();touch();}
+};
 $('mi-done').onclick=()=>{$('m-inv').classList.remove('on');invOp=null;};
 function _c(c,x,y,r,f){c.beginPath();c.arc(x,y,r,0,7);f?c.fill():c.stroke();}
 function _q(c,x,y,r,f){f?c.fillRect(x-r,y-r,2*r,2*r):c.strokeRect(x-r,y-r,2*r,2*r);}
