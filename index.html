@@ -1255,17 +1255,17 @@ function renderRows(){
     return `
     <div class="row2${r.struck?' struck':''}" data-i="${i}">
       <div class="rline">${tsel}
-        <div class="mini"><label>pt #</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
+        <div class="mini" style="flex:0 1 130px"><label>pt #</label><input data-rf="pt" inputmode="text" value="${esc(r.pt??r.pts??'')}" class="mono"></div>
         <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>
       </div>
-      <div class="rline">
-        <div class="mini"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
+      <div class="rline" style="flex-wrap:wrap">
+        <div class="mini" style="flex:0 1 120px"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
         ${g?'':`<div class="mini" style="flex:0 0 auto"><label>prism</label>
           <select data-rf="pr"><option value=""${!r.pr?' selected':''}></option>${['RND','360','MINI','RL'].map(p2=>`<option${r.pr===p2?' selected':''}>${p2}</option>`).join('')}</select></div>`}
         <button class="rstrike${(r.ph&&r.ph.length)?' on-ph':''}" data-rph="${i}" style="align-self:flex-end">📷${(r.ph&&r.ph.length)?r.ph.length:''}</button>
         ${strk}
+        <div class="mini" style="flex:1 1 220px"><label>comments</label><input data-rf="remark" class="rcomment" value="${esc(r.remark??'')}"></div>
       </div>
-      ${com}
     </div>`;
   }).join('');
 }
