@@ -267,14 +267,14 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
         </div></div>
       <div class="frow">
         <div class="field"><label>Receiver / system</label><input class="mono" id="g-recv" placeholder="EMLID" autocapitalize="characters"></div>
-        <div class="field" style="max-width:34%"><label>Rover HT</label><input class="mono" id="g-rht" inputmode="decimal" placeholder="2.00"></div>
+        <div class="field" style="max-width:34%"><label>Rover HT</label><input class="mono" id="g-rht" inputmode="decimal" maxlength="5" data-htr placeholder="2.00"></div>
       </div>
       <div class="field" style="margin-bottom:10px"><label>Localization</label>
         <div class="chips"><button class="chip" id="g-loc">Localized to control</button></div></div>
       <div id="g-base" style="display:none">
         <div class="frow">
           <div class="field"><label>Base pt #</label><input class="mono" id="g-bpt" placeholder="CN 8028" autocapitalize="characters"></div>
-          <div class="field" style="max-width:38%"><label>Base ant. ht</label><input class="mono" id="g-bht" inputmode="decimal"></div>
+          <div class="field" style="max-width:38%"><label>Base ant. ht</label><input class="mono" id="g-bht" inputmode="decimal" maxlength="5" data-htr></div>
         </div>
         <div class="field" style="margin-bottom:10px"><label>Base coords</label>
           <div class="chips" id="g-bcoord">
@@ -296,8 +296,8 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
       <div class="setgrid">
         <div class="field"><label id="lb-st">⊼ @ Station</label><input class="mono" id="s-st" placeholder="CN 8028 (100)"></div>
         <div class="field"><label id="lb-bs">BS point</label><input class="mono" id="s-bs" placeholder="CNT 8867"></div>
-        <div class="field"><label>HI</label><input class="mono" id="s-hi" inputmode="decimal" placeholder="1.659"></div>
-        <div class="field"><label>HT</label><input class="mono" id="s-ht" inputmode="decimal" placeholder="1.500"></div>
+        <div class="field"><label>HI</label><input class="mono" id="s-hi" inputmode="decimal" maxlength="5" data-htr placeholder="1.659"></div>
+        <div class="field"><label>HT</label><input class="mono" id="s-ht" inputmode="decimal" maxlength="5" data-htr placeholder="1.500"></div>
         <div class="field"><label>ΔH</label><input class="mono" id="s-dh" inputmode="decimal" placeholder="0.001"></div>
         <div class="field"><label>ΔV</label><input class="mono" id="s-dv" inputmode="decimal" placeholder="0.002"></div>
         <div class="field" id="s-qual-wrap" style="display:none"><label>Overall quality / RMS</label>
@@ -552,6 +552,24 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 <script>
 'use strict';
 /* ================= constants ================= */
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(!t||!t.matches||!t.matches('[data-htr]'))return;
+  const raw=t.value.trim();
+  if(!raw||!/^\d*\.?\d*$/.test(raw)||raw==='.')return;
+  const pad=(+raw).toFixed(3);
+  if(pad!==t.value){t.value=pad;
+    t.dispatchEvent(new Event('input',{bubbles:true}));}
+},true);
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(!t||!t.matches||!t.matches('[data-htr]'))return;
+  let v=t.value.replace(/[^\d.]/g,'');
+  const i=v.indexOf('.');
+  if(i>-1)v=v.slice(0,i+1)+v.slice(i+1).replace(/\./g,'').slice(0,3);
+  if(v.length>5)v=v.slice(0,5);
+  if(v!==t.value)t.value=v;
+},true);
 window.addEventListener('error',e=>{
   try{
     const t=document.createElement('div');
@@ -1247,8 +1265,8 @@ function renderRows(){
         ${strk}
       </div>
       <div class="rline">
-        <div class="mini"><label>wrong HT</label><input data-rf="wht" inputmode="decimal" value="${esc(r.wht??'')}" class="mono"></div>
-        <div class="mini"><label>correct HT</label><input data-rf="cht" inputmode="decimal" value="${esc(r.cht??'')}" class="mono"></div>
+        <div class="mini"><label>wrong HT</label><input data-rf="wht" inputmode="decimal" maxlength="5" data-htr value="${esc(r.wht??'')}" class="mono"></div>
+        <div class="mini"><label>correct HT</label><input data-rf="cht" inputmode="decimal" maxlength="5" data-htr value="${esc(r.cht??'')}" class="mono"></div>
       </div>
       ${com}
     </div>`;
@@ -1259,7 +1277,7 @@ function renderRows(){
         <div class="mini"><label>code</label><input data-rf="code" value="${esc(r.code??'')}" class="mono" autocapitalize="characters"></div>
       </div>
       <div class="rline" style="flex-wrap:wrap">
-        <div class="mini" style="flex:0 1 120px"><label>HT</label><input data-rf="ht" inputmode="decimal" value="${esc(r.ht??'')}" class="mono"></div>
+        <div class="mini" style="flex:0 1 120px"><label>HT</label><input data-rf="ht" inputmode="decimal" maxlength="5" data-htr value="${esc(r.ht??'')}" class="mono"></div>
         ${g?'':`<div class="mini" style="flex:0 0 auto"><label>prism</label>
           <select data-rf="pr"><option value=""${!r.pr?' selected':''}></option>${['RND','360','MINI','RL'].map(p2=>`<option${r.pr===p2?' selected':''}>${p2}</option>`).join('')}</select></div>`}
         <button class="rstrike${(r.ph&&r.ph.length)?' on-ph':''}" data-rph="${i}" style="align-self:flex-end">📷${(r.ph&&r.ph.length)?r.ph.length:''}</button>
@@ -3054,20 +3072,20 @@ function drawRowBlock(ctx,p,y,gps){
     const strike=(sx,ex,yy)=>{ctx.strokeStyle='#8A5A50';ctx.lineWidth=2.4;
       ctx.beginPath();ctx.moveTo(sx,(yy===undefined?y:yy)-9);ctx.lineTo(ex,(yy===undefined?y:yy)-9);ctx.stroke();};
     if(rl.hx){
-      const n=rl.n, top=y-38, bh=(n-1)*56+52;
+      const n=rl.n, top=y-44, bh=(n-1)*GB+58;
       ctx.fillStyle='#FDF3F1';ctx.fillRect(bx-14,top,RIGHT-bx+22,bh);
       ctx.strokeStyle='#B3402E';ctx.lineWidth=3.5;
       ctx.strokeRect(bx-14,top,RIGHT-bx+22,bh);
       ctx.font=HXF;ctx.fillStyle=r.struck?'#8A5A50':'#B3402E';
       ctx.fillText('HT✗',bx,y);
-      (rl.hx.ptL.length?rl.hx.ptL:['']).forEach((l,i)=>ctx.fillText(l,bx+off.pt,y+i*56));
+      (rl.hx.ptL.length?rl.hx.ptL:['']).forEach((l,i)=>ctx.fillText(l,bx+off.pt,y+i*GB));
       MCTX.font=HXF;
       ctx.fillText(rl.hx.p1,bx+off.code,y);
-      if(rl.hx.stack)ctx.fillText(rl.hx.p2,bx+off.code,y+56);
+      if(rl.hx.stack)ctx.fillText(rl.hx.p2,bx+off.code,y+GB);
       else ctx.fillText(rl.hx.p2,bx+off.code+MCTX.measureText(rl.hx.p1).width+30,y);
-      rl.hx.comL.forEach((l,i)=>ctx.fillText(l,bx+off.com,y+i*56));
-      if(r.struck)for(let i=0;i<n;i++)strike(bx-4,RIGHT,y+i*56);
-      y+=n*56;
+      rl.hx.comL.forEach((l,i)=>ctx.fillText(l,bx+off.com,y+i*GB));
+      if(r.struck)for(let i=0;i<n;i++)strike(bx-4,RIGHT,y+i*GB);
+      y+=n*GB;
       ctx.fillStyle='#24312B';ctx.strokeStyle='#24312B';ctx.lineWidth=3;
       return;
     }
@@ -3080,12 +3098,14 @@ function drawRowBlock(ctx,p,y,gps){
         if(i===0&&tShow)ctx.fillText(tShow,bx,y);
         ctx.fillText(ln,bx+off.cont,y);
         if(r.struck)strike(bx-4,bx+off.cont+6+ctx.measureText(ln).width);
-        y+=56;
+        y+=GB;
       });
       return;
     }
-    let hVal=r.ht||'';
-    if(gps){hVal=r.ht||(pvH&&'〃');if(r.ht)pvH=r.ht;}
+    const fmtH=v=>{const t2=String(v||'').trim();
+      return /^\d*\.?\d+$/.test(t2)?(+t2).toFixed(3):t2.slice(0,7);};
+    let hVal=r.ht?fmtH(r.ht):'';
+    if(gps){hVal=(r.ht?fmtH(r.ht):(pvH&&'〃'));if(r.ht)pvH=r.ht;}
     const tShow=gps?(r.t==='OBS'?'':r.t):r.t;
     const cells=[[0,tShow],[off.pt,(r.pt!==undefined?r.pt:r.pts)||''],[off.ht,hVal||'']];
     if(!gps)cells.push([off.pr,r.pr||'']);
@@ -3095,45 +3115,47 @@ function drawRowBlock(ctx,p,y,gps){
       ctx.fillText(v,bx+dx,y);
       end=Math.max(end,bx+dx+ctx.measureText(v).width);});
     (rl.CL||[]).forEach((cl2,i)=>{
-      ctx.fillText(cl2,bx+off.code,y+i*56);
+      ctx.fillText(cl2,bx+off.code,y+i*GB);
       end=Math.max(end,bx+off.code+ctx.measureText(cl2).width);});
     if(r.struck){
       strike(bx-4,end+6);
-      (rl.CL||[]).slice(1).forEach((cl2,i)=>strike(bx+off.code-4,bx+off.code+6+ctx.measureText(cl2).width,y+(i+1)*56));
+      (rl.CL||[]).slice(1).forEach((cl2,i)=>strike(bx+off.code-4,bx+off.code+6+ctx.measureText(cl2).width,y+(i+1)*GB));
     }
-    y+=56*Math.max(1,(rl.CL||[]).length||1);
+    y+=GB*Math.max(1,(rl.CL||[]).length||1);
     if(rl.mode===2)rl.L.forEach(ln=>{
       ctx.font=RFONT;ctx.fillStyle=col;
       ctx.fillText(ln,bx+off.cont,y);
       if(r.struck)strike(bx+off.cont-4,bx+off.cont+6+ctx.measureText(ln).width);
-      y+=56;
+      y+=GB;
     });
   });
   return y;
 }
-function rowsH(p,gps){let n=0;p.rows.forEach(r=>n+=rowLines(r,gps).n);return n*56;}
+const GB=64;
+function ySnap(y){return EM+Math.ceil((y-46-EM)/GB)*GB+46;}
+function rowsH(p,gps){let n=0;p.rows.forEach(r=>n+=rowLines(r,gps).n);return n*GB;}
 function setupH(p){
-  let h=76;
+  let h=GB;
   if(p.variant==='res'){
-    if(p.hi||p.qual)h+=64;
-    if(p.bs||p.dh||p.dv)h+=64;
+    if(p.hi||p.qual)h+=GB;
+    if(p.bs||p.dh||p.dv)h+=GB;
   }else{
-    if(p.hi||p.ht)h+=64;
-    if(p.dh||p.dv)h+=64;
+    if(p.hi||p.ht)h+=GB;
+    if(p.dh||p.dv)h+=GB;
   }
-  if(p.rows.length)h+=44;
-  return h+30+rowsH(p,false);
+  if(p.rows.length)h+=GB;
+  return h+rowsH(p,false);
 }
 function gpsH(p){
-  let h=76+60;                       // title + HT/base line
-  if(gpsBaseOver(p))h+=60;           // base info wraps to 2nd line
-  if(p.mode==='base'&&p.brx)h+=56;   // RX line
-  return h+48+rowsH(p,true)+30;      // table header + rows
+  let h=GB*2;                        // title + HT/base line
+  if(gpsBaseOver(p))h+=GB;           // base info wraps to 2nd line
+  if(p.mode==='base'&&p.brx)h+=GB;   // RX line
+  return h+GB+rowsH(p,true);         // table header + rows
 }
 const AREA_TOP=EM+80, AREA_H=EH-EM-AREA_TOP;
 const MCTX=document.createElement('canvas').getContext('2d');
 const TFONT='700 28px ui-monospace,Menlo,monospace';
-const TLINE=46, TWRAP=940;
+const TLINE=64, TWRAP=940;
 function wrapLines(text,font,maxW){
   MCTX.font=font;
   const out=[];
@@ -3233,13 +3255,13 @@ function renderSetupBlock(ctx,p,y){
   if(res){ctx.font=mono(28);ctx.fillStyle='#5E9478';ctx.fillText('RESECTION',x0+700,y);}
   else{ctx.font=mono(34);ctx.fillStyle='#24312B';ctx.fillText('BS',x0+560,y);
     struckPair(ctx,x0+630,y,p.hist.bs,p.bs,mono(34));}
-  y+=76;
+  y+=GB;
   const pair=(l1,f1,l2,f2)=>{
     ctx.font=mono(30);ctx.fillStyle='#24312B';
     ctx.fillText(l1,x0+40,y);struckPair(ctx,x0+230,y,p.hist[f1],p[f1],mono(30));
     if(l2){ctx.font=mono(30);ctx.fillStyle='#24312B';
     ctx.fillText(l2,x0+560,y);struckPair(ctx,x0+740,y,p.hist[f2],p[f2],mono(30));}
-    y+=64;
+    y+=GB;
   };
   if(res){
     if(p.hi||p.qual)pair('HI','hi','QUALITY','qual');
@@ -3248,19 +3270,18 @@ function renderSetupBlock(ctx,p,y){
       ctx.fillText('CHK BS',x0+40,y);struckPair(ctx,x0+230,y,p.hist.bs,p.bs,mono(30));
       if(p.dh){ctx.font=mono(30);ctx.fillText('ΔH '+p.dh,x0+560,y);}
       if(p.dv){ctx.font=mono(30);ctx.fillText('ΔV '+p.dv,x0+840,y);}
-      y+=64;
+      y+=GB;
     }
   }else{
     if(p.hi||p.ht)pair('HI','hi','HT','ht');
     if(p.dh||p.dv)pair('ΔH','dh','ΔV','dv');
   }
-  y+=30;
   if(p.rows.length){
     ctx.font=mono(20);ctx.fillStyle='#5E9478';
     ctx.fillText('PT#',x0+160,y);ctx.fillText('CODE',x0+310,y);
     ctx.fillText('HT',x0+530,y);ctx.fillText('PRISM',x0+650,y);
     ctx.fillText('COMMENTS',x0+790,y);
-    y+=44;
+    y+=GB;
   }
   return drawRowBlock(ctx,p,y,false);
 }
@@ -3287,7 +3308,7 @@ function renderGpsBlock(ctx,p,y){
   struckPair(ctx,x0+110,y,p.hist.recv,p.recv,mono(34));
   ctx.font=mono(24);ctx.fillStyle='#5E9478';
   ctx.fillText((p.mode==='base'?'BASE + ROVER':'ROVER ONLY')+(p.loc?' · LOCALIZED':''),x0+520,y);
-  y+=76;
+  y+=GB;
   ctx.font=mono(30);ctx.fillStyle='#24312B';
   ctx.fillText('HT',x0+40,y);
   struckPair(ctx,x0+120,y,p.hist.rht,p.rht,mono(30));
@@ -3297,7 +3318,7 @@ function renderGpsBlock(ctx,p,y){
     struckPair(ctx,x0+460,y,p.hist.bpt,p.bpt,mono(30));
     const bptEnd=x0+460+pairWidth(p.hist.bpt,p.bpt,mono(30));
     let ax=Math.max(x0+700,bptEnd+50);
-    if(gpsBaseOver(p)){y+=60;ax=x0+320;}
+    if(gpsBaseOver(p)){y+=GB;ax=x0+320;}
     ctx.font=mono(30);ctx.fillStyle='#24312B';
     ctx.fillText('ANT',ax,y);
     struckPair(ctx,ax+90,y,p.hist.bht,p.bht,mono(30));
@@ -3307,18 +3328,18 @@ function renderGpsBlock(ctx,p,y){
       ctx.fillText(p.bcoord==='known'?'(KNOWN PT)':'(AVERAGED)',ae+30,y);
     }
   }
-  y+=60;
+  y+=GB;
   if(p.mode==='base'&&p.brx){
     ctx.font=mono(28);ctx.fillStyle='#24312B';
     ctx.fillText('RX',x0+40,y);
     struckPair(ctx,x0+120,y,p.hist.brx,p.brx,mono(28));
-    y+=56;
+    y+=GB;
   }
   ctx.font=mono(22);ctx.fillStyle='#5E9478';
   ctx.fillText('PT#',x0+200,y);ctx.fillText('CODE',x0+340,y);
   ctx.fillText('HT',x0+600,y);ctx.fillText('COMMENTS',x0+740,y);
   ctx.fillStyle='#24312B';
-  y+=48;
+  y+=GB;
   return drawRowBlock(ctx,p,y,true);
 }
 function renderTextBlock(ctx,p,y){
@@ -3337,11 +3358,11 @@ function divider(ctx,y){
 }
 function renderSetupsPage(ctx,items,idx,total){
   paperPage(ctx,idx,total);gridArea(ctx);
-  let y=AREA_TOP;
+  let y=ySnap(AREA_TOP);
   items.forEach((p,i)=>{
     y=p.type==='text'?renderTextBlock(ctx,p,y)
       :p.type==='gps'?renderGpsBlock(ctx,p,y):renderSetupBlock(ctx,p,y);
-    if(i<items.length-1){divider(ctx,y-16);y+=44;}
+    if(i<items.length-1){divider(ctx,y-46);y+=GB;}
   });
 }
 async function renderCanvasPage(ctx,p,idx,total){
