@@ -3016,7 +3016,7 @@ function renderHeaderPage(ctx,total,segs){
 }
 const RIGHT=EW-EM-10, RFONT='700 24px ui-monospace,Menlo,monospace';
 const HXF='800 24px ui-monospace,Menlo,monospace';
-const TSOFF={pt:120,code:280,ht:470,pr:590,com:750,codeW:170,comW:235,cont:120,fw:865};
+const TSOFF={pt:120,code:270,ht:490,pr:610,com:750,codeW:200,comW:235,cont:120,fw:865};
 const GPOFF={pt:160,code:300,ht:560,com:700,codeW:236,comW:285,cont:160,fw:825};
 function rowRemark(r,gps){
   return [gps&&(r.time||'').trim()?'@ '+r.time.trim():'',r.desc,r.remark]
@@ -3257,8 +3257,8 @@ function renderSetupBlock(ctx,p,y){
   y+=30;
   if(p.rows.length){
     ctx.font=mono(20);ctx.fillStyle='#5E9478';
-    ctx.fillText('PT#',x0+160,y);ctx.fillText('CODE',x0+320,y);
-    ctx.fillText('HT',x0+510,y);ctx.fillText('PRISM',x0+630,y);
+    ctx.fillText('PT#',x0+160,y);ctx.fillText('CODE',x0+310,y);
+    ctx.fillText('HT',x0+530,y);ctx.fillText('PRISM',x0+650,y);
     ctx.fillText('COMMENTS',x0+790,y);
     y+=44;
   }
