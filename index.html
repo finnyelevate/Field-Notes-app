@@ -860,12 +860,22 @@ function diagBusy(c){
   c.fillStyle='#5E9478';c.font='800 14px system-ui';
   c.fillText('boxes: automatic when crowded · toggle on the invert card',60,66);
 }
+const REFVIDS=[
+ {t:'Leica Captivate \u2014 Cut/Fill sheet export',sub:'Stake Points & Stake Roads \u00b7 Greg Perkins \u00b7 YouTube',url:'https://www.youtube.com/watch?v=DeacfbCmrHw'},
+ {t:'Leica Captivate \u2014 Shift, Rotate & Scale',sub:'Orient computed data to field ties \u00b7 Greg Perkins \u00b7 YouTube \u00b7 11 min',url:'https://www.youtube.com/watch?v=kVpeZrVQrZs'},
+ {t:'Leica Captivate \u2014 Shift/Rotate/Scale by matching points',sub:'Translate-rotate method \u00b7 Terrawise Solutions \u00b7 YouTube',url:'https://www.youtube.com/watch?v=y83lZ-FfFz0'}
+];
 function renderTraining(){
   $('train-list').innerHTML=`<div class="paper" style="margin-top:12px"><div class="eyebrow">How-to guides</div>`+
     GUIDES.map(g=>`<button class="gcard" data-g="${g.id}">
       <div class="gico">${g.ico}</div>
       <div><div class="gmain">${g.t}</div><div class="gsub">${g.sub}</div></div>
       <div class="gx">\u203a</div></button>`).join('')+
+    `<div class="eyebrow" style="margin-top:18px">Reference videos</div>`+
+    REFVIDS.map(v=>`<a class="gcard" style="text-decoration:none" href="${v.url}" target="_blank" rel="noopener">
+      <div class="gico">\u25b6</div>
+      <div><div class="gmain">${v.t}</div><div class="gsub">${v.sub} \u2014 needs signal</div></div>
+      <div class="gx">\u2197</div></a>`).join('')+
     `<a class="gcard" style="text-decoration:none" href="https://elevatelandsurveying.sharepoint.com/:f:/s/ElevateField/IgCedng7eMKKQIeK2b43Tx9OAVIPFnGiMYUv8UBtHCTq-2Y?e=ROpFZe" target="_blank" rel="noopener">
       <div class="gico">\ud83d\udcf9</div>
       <div><div class="gmain">Video library</div><div class="gsub">Every walkthrough video \u2014 new ones land here first. Opens SharePoint (company sign-in + signal).</div></div>
