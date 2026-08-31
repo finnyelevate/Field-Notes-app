@@ -1,5 +1,8 @@
 # Elevate Field — Changelog
 
+## Build 28.1 — 2026-08-31
+- **FIX — photo Camera/Gallery buttons dead on iPhone**: all three camera launchers awaited an IndexedDB save before clicking the hidden file input; iOS Safari only honours file-input clicks inside a live tap gesture, so the click was silently dropped (Android/desktop tolerated the gap). Now: sync stash → click → save without awaiting. Crash-safety preserved. Reported by GG (iPhone 16), broken since the crash-safe photo work landed.
+
 ## Build 28 — 2026-08-20
 - **Disto walk auto-refit**: a typed distance that would leave the page rescales the whole drawing uniformly to fit (60px headroom) — booked distances unchanged, symbols/text/labels keep their size, page scale follows so later legs stay consistent. Toast announces it. ⤢ fit button on the walk bar refits/centres on demand.
 - **Label & box page-edge detection**: page borders join the clash registry as obstacles; any invert label that would cross the edge boxes its symbol (boxes clamp on-page). Nothing auto-placed draws off-page.

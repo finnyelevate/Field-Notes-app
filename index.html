@@ -2571,10 +2571,12 @@ function renderShotMgr(){
   $('ms-grid').innerHTML=arr.map((p2,i)=>`<img src="${p2}" data-msv="${i}">`).join('')||
     '<div class="card-sub" style="grid-column:1/-1">No photos yet.</div>';
 }
-async function launchShot(inputId){
-  clearTimeout(saveT);await store.put(note);
+function launchShot(inputId){
+  // iOS: the file-input click must stay inside the tap gesture — no await before it.
+  clearTimeout(saveT);
   try{localStorage.setItem('efn-pendph',JSON.stringify({job:note&&note.job,ts:Date.now()}));}catch(e){}
   $(inputId).value='';$(inputId).click();
+  store.put(note).catch(()=>{});
 }
 $('ms-cam').onclick=()=>{shotReplace=false;launchShot('file-shotcam');};
 $('ms-gal').onclick=()=>{shotReplace=false;launchShot('file-shot');};
@@ -2710,10 +2712,9 @@ $('mi-list').addEventListener('click',e=>{
       });
       return;
     }
-    (async()=>{
-      clearTimeout(saveT);await store.put(note);stashPh();
-      invPh=bp.dataset.iph;$('file-invcam').value='';$('file-invcam').click();
-    })();
+    clearTimeout(saveT);stashPh();
+    invPh=bp.dataset.iph;$('file-invcam').value='';$('file-invcam').click();
+    store.put(note).catch(()=>{});
     return;
   }
 });
@@ -2769,9 +2770,10 @@ $('mi-add').onclick=()=>{
 };
 async function launchInvPhoto(inputId){
   if(!invOp)return;
-  // force-save + stash before the camera can kill the app
-  clearTimeout(saveT);await store.put(note);stashPh();
+  // stash sync + click inside the gesture (iOS), then save without awaiting
+  clearTimeout(saveT);stashPh();
   invPh=null;$(inputId).value='';$(inputId).click();
+  store.put(note).catch(()=>{});
 }
 $('mi-cam').onclick=()=>launchInvPhoto('file-invcam');
 $('mi-gal').onclick=()=>launchInvPhoto('file-invphoto');
