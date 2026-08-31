@@ -1,5 +1,10 @@
 # Elevate Field — Changelog
 
+## Build 29 — 2026-08-31
+- **Delete a sketch, PDF-markup or photo page**: 🗑 in the sketch top bar and on the page's card in the page list. Confirm sheet shows the thumbnail, page number, and warns when the page carries symbols with booked inverts (they go with it). UNDO snackbar for 8 s restores the page in its original slot; remaining pages renumber. Sketch, PDF-markup and photo pages only — setup, GPS and notes pages are legal record and carry no delete affordance (guarded in code, not just hidden). Deleting from inside the sketch ends any live Disto walk and returns to the page list. Requested by crews via HS's 26-3601 notes (scribbled sketch pages couldn't be removed).
+- **Training**: Sketch tools guide gains the page-delete step.
+- Held for Build 30: detail pages (live-view zoom regions), uppercase forcing on sketch text (awaiting ruling).
+
 ## Build 28.1 — 2026-08-31
 - **FIX — photo Camera/Gallery buttons dead on iPhone**: all three camera launchers awaited an IndexedDB save before clicking the hidden file input; iOS Safari only honours file-input clicks inside a live tap gesture, so the click was silently dropped (Android/desktop tolerated the gap). Now: sync stash → click → save without awaiting. Crash-safety preserved. Reported by GG (iPhone 16), broken since the crash-safe photo work landed.
 

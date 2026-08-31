@@ -75,6 +75,9 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .pgthumb img{width:100%;height:100%;object-fit:cover}
 .pgbody{flex:1;min-width:0}
 .pgx{color:var(--muted);font-size:20px;padding:10px}
+.pgdel{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;font-size:18px;color:var(--muted);flex-shrink:0}
+.pgdel:active{background:var(--line)}
+.pdthumb{width:72px;height:92px;font-size:28px}
 /* ---------- setup editor ---------- */
 .setgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .rowitem{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start}
@@ -350,6 +353,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <div class="bar">
     <button class="bicon" id="b-back-note2">‹</button>
     <h1 id="cv-title">Sketch<span class="sub" id="cv-sub"></span></h1>
+    <button class="bicon" id="b-cv-del" title="Delete this page">🗑</button>
     <button class="bicon" id="b-undo">↩</button>
   </div>
   <div id="cv-wrap"><div id="cv-stack"><canvas id="cv-bg"></canvas><canvas id="cv-ink"></canvas></div></div>
@@ -402,6 +406,18 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <button class="btn ghost" data-add="cancel" style="border:0">Cancel</button>
 </div></div>
 
+<div class="mback" id="m-pgdel"><div class="modal">
+  <h2 id="pd-title">Delete this sketch page?</h2>
+  <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">
+    <div class="pgthumb pdthumb" id="pd-thumb"></div>
+    <div class="card-sub" id="pd-sub" style="line-height:1.5"></div>
+  </div>
+  <div style="display:flex;gap:10px">
+    <button class="btn ghost" id="pd-cancel" style="flex:1">Keep it</button>
+    <button class="btn" id="pd-ok" style="flex:1;background:var(--danger)">Delete page</button>
+  </div>
+</div></div>
+
 <div class="mback" id="m-text"><div class="modal">
   <h2 id="mt-title">Add text</h2>
   <div class="field micwrap"><label>Text</label>
@@ -430,7 +446,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 28</h2>
+  <h2>What’s new — build 29</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -586,14 +602,9 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=28;
+const BUILD=29;
 const NEWS=[
- ['📏','Walks fit the page','Disto walk about to run off the edge? The drawing rescales itself to fit — booked distances never change, only the picture. ⤢ fit on the walk bar does it on demand.'],
- ['📦','Boxed inverts on demand','New toggle on the invert card puts any MH\u2019s inverts in the CAD-style block from the start — crowded clusters still box automatically.'],
- ['🚰','Pipe size chips','Tap 100–300 on the invert card and the size rides along with the depth (2.05 200mm). Free-typed sizes still work.'],
- ['✏️','Tap to edit text','✥ select, one clean tap on any text (plain or circled) — the box reopens pre-filled. No more delete-and-retype.'],
- ['🧱','Nothing draws off-page','Invert labels, PT# tags and boxes now treat the page edge like a wall — they dodge inward or box up instead of vanishing off the side.'],
- ['🎓','New guide + video','When the sketch gets busy (boxes, fitting, tap-to-edit) — and the Booking inverts guide now carries a 2-minute walkthrough video.']
+ ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -734,6 +745,7 @@ const GUIDES=[
   '\u25c9 Symbol: tap the sketch to place \u00b7 tap \u25c9 again to open the picker. MH/CB auto-number and hold invert cards.',
   '\u2725 Select: drag to move \u00b7 one clean tap on a MH/CB opens its invert card \u00b7 \u2715 deletes (\u21a9 brings it back).',
   '\u270b pans, pinch zooms, \u21a9 undoes anything \u2014 nothing is lost silently.',
+  'Bad page? \ud83d\uddd1 on the sketch (top bar) or on its card in the page list deletes a <b>sketch, PDF markup or photo page</b> \u2014 confirm first, UNDO for 8 s after, pages renumber. Setup, GPS and notes pages are legal record and can\u2019t be deleted.',
   'Rails crowding the drawing? They fade on their own while your pen is down \u2014 or tuck them fully with the \u2039 \u203a edge tabs. \u2924 flips the canvas landscape for wide lots; prints turned 90\u00b0.']},
  {id:'htx',ico:'\u26a0',t:'Wrong HT',sub:'Booked shots with the wrong pole height \u2014 flag it, don\u2019t fix it',area:'setups',h:430,
   why:'<b>Why it matters:</b> measured values never get changed in the book. An HT\u2717 row tells the office exactly which points to correct \u2014 and the cover page makes sure they can\u2019t miss it.',
@@ -1163,23 +1175,62 @@ function pgTitle(p){
   if(p.type==='text')return p.body?p.body.slice(0,28)+(p.body.length>28?'…':''):'Notes';
   return p.label||PGMETA[p.type][1];
 }
-function renderPages(){
-  const el=$('page-list');
+function pageNos(){
   const pgNo={};
   exportPlan().forEach((s,i)=>{
     if(s.kind==='s')s.items.forEach(p=>{const k=p.pid||p.id;if(pgNo[k]==null)pgNo[k]=i+2;});
     else if(s.p)pgNo[s.p.id]=i+2;
   });
+  return pgNo;
+}
+const DELETABLE=['sketch','mark','photo'];   // legal pages (setups, GPS, notes) are never deletable
+function renderPages(){
+  const el=$('page-list');
+  const pgNo=pageNos();
   el.innerHTML=note.pages.map((p,i)=>`
     <div class="paper pgcard" data-pg="${p.id}">
       <div class="pgthumb">${p.thumb?`<img src="${p.thumb}" alt="">`:PGMETA[p.type][0]}</div>
       <div class="pgbody">
         <div class="card-main" style="font-size:15px">${esc(pgTitle(p))}</div>
         <div class="card-sub">P ${pgNo[p.id]} · ${PGMETA[p.type][1]}</div>
-      </div><div class="pgx">›</div>
+      </div>${DELETABLE.includes(p.type)?`<button class="pgdel" data-del="${p.id}" title="Delete page">🗑</button>`:''}<div class="pgx">›</div>
     </div>`).join('');
 }
+/* ---- page deletion (sketch/photo only) ---- */
+let pgDelTarget=null, pgDelFrom=null;
+function askDeletePage(p,from){
+  if(!p||!DELETABLE.includes(p.type))return;
+  pgDelTarget=p;pgDelFrom=from;
+  const n=pageNos()[p.id], nInv=(p.ops||[]).filter(o=>o.k==='y'&&invCount(o)).length,
+        nOps=(p.ops||[]).length;
+  $('pd-title').textContent='Delete this '+(p.type==='photo'?'photo':p.type==='mark'?'PDF markup':'sketch')+' page?';
+  $('pd-thumb').innerHTML=p.thumb?`<img src="${p.thumb}" alt="">`:PGMETA[p.type][0];
+  $('pd-sub').innerHTML=`<b>P ${n} \u00b7 ${PGMETA[p.type][1]}</b>`+
+    (nOps?'':'<br>Blank page.')+
+    (nInv?`<br><span style="color:var(--danger);font-weight:700">${nInv} symbol${nInv>1?'s':''} with booked inverts go with it.</span>`:'')+
+    '<br>Setup pages are never affected. Pages renumber. UNDO stays up for 8 seconds.';
+  $('m-pgdel').classList.add('on');
+}
+function deletePage(p,from){
+  const i=note.pages.indexOf(p);if(i<0)return;
+  note.pages.splice(i,1);
+  if(from==='canvas'){
+    if(walkPOC)endWalk();
+    polyDraft=null;offPreview=null;offTarget=null;clearSel();
+    clearTimeout(thumb.t);page=null;
+    show('v-note');
+  }
+  touch();renderPages();
+  toastUndo((p.type==='photo'?'Photo':p.type==='mark'?'PDF markup':'Sketch')+' page deleted.',()=>{
+    note.pages.splice(Math.min(i,note.pages.length),0,p);touch();renderPages();
+  },8000);
+}
+$('pd-cancel').onclick=()=>{$('m-pgdel').classList.remove('on');pgDelTarget=null;};
+$('pd-ok').onclick=()=>{$('m-pgdel').classList.remove('on');const p=pgDelTarget,f=pgDelFrom;pgDelTarget=null;deletePage(p,f);};
+$('b-cv-del').onclick=()=>askDeletePage(page,'canvas');
 $('page-list').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');
+  if(d){e.stopPropagation();askDeletePage(note.pages.find(p=>p.id===d.dataset.del),'list');return;}
   const c=e.target.closest('[data-pg]');if(!c)return;
   page=note.pages.find(p=>p.id===c.dataset.pg);
   if(page.type==='setup'||page.type==='gps')openSetup();
@@ -1394,7 +1445,7 @@ let hist=[];
 function snap(){
   try{hist.push(JSON.stringify(page.ops));if(hist.length>30)hist.shift();}catch(e){}
 }
-function toastUndo(msg,cb){
+function toastUndo(msg,cb,ms){
   let t=$('toastu');
   if(!t){t=document.createElement('div');t.id='toastu';
     t.style.cssText='position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 84px);background:#232E27;color:#EDF2EE;padding:12px 14px;border-radius:12px;font-size:14px;z-index:41;box-shadow:0 6px 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:space-between;gap:10px';
@@ -1404,7 +1455,7 @@ function toastUndo(msg,cb){
   t.style.display='flex';
   t.lastChild.onclick=()=>{t.style.display='none';cb();};
   clearTimeout(toastUndo.t);
-  toastUndo.t=setTimeout(()=>t.style.display='none',7000);
+  toastUndo.t=setTimeout(()=>t.style.display='none',ms||7000);
 }
 function selRad(o){return o.k==='y'?(o.s||26)+16:o.k==='c'?o.r+10:o.k==='n'?42:o.k==='misc'?95:52;}
 function hitPointObj(x,y){
@@ -1927,6 +1978,7 @@ function openCanvas(){
   $('f-ortho').classList.toggle('on',ortho);
   $('cv-title').firstChild.textContent=pgTitle(page);
   $('cv-sub').textContent=note.job||'';
+  $('b-cv-del').style.display=DELETABLE.includes(page.type)?'flex':'none';
   tool='pen';updTools();
   show('v-canvas'); zoom=Math.min(1.6,(wrap.clientWidth-28)/plw()); sizeCanvas();
 }
