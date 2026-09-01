@@ -2,6 +2,7 @@
 
 ## Build 29 — 2026-08-31
 - **Delete a sketch, PDF-markup or photo page**: 🗑 in the sketch top bar and on the page's card in the page list. Confirm sheet shows the thumbnail, page number, and warns when the page carries symbols with booked inverts (they go with it). UNDO snackbar for 8 s restores the page in its original slot; remaining pages renumber. Sketch, PDF-markup and photo pages only — setup, GPS and notes pages are legal record and carry no delete affordance (guarded in code, not just hidden). Deleting from inside the sketch ends any live Disto walk and returns to the page list. Requested by crews via HS's 26-3601 notes (scribbled sketch pages couldn't be removed).
+- **Photo page source chooser**: "Photo page" now offers Take a photo / Choose from gallery (was camera-only via `capture="environment"`). Second file input without `capture`; both feed one handler; `.click()` stays inside the tap gesture per the 28.1 iOS rule.
 - **Training**: Sketch tools guide gains the page-delete step.
 - Held for Build 30: detail pages (live-view zoom regions), uppercase forcing on sketch text (awaiting ruling).
 

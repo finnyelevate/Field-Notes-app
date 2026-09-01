@@ -406,6 +406,13 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <button class="btn ghost" data-add="cancel" style="border:0">Cancel</button>
 </div></div>
 
+<div class="mback" id="m-photosrc"><div class="modal">
+  <h2>Photo page</h2>
+  <button class="btn ghost" id="ps-cam" style="width:100%;margin-bottom:10px;text-align:left">📷&ensp;Take a photo</button>
+  <button class="btn ghost" id="ps-gal" style="width:100%;margin-bottom:10px;text-align:left">🖼&ensp;Choose from gallery</button>
+  <button class="btn ghost" id="ps-cancel" style="width:100%">Cancel</button>
+</div></div>
+
 <div class="mback" id="m-pgdel"><div class="modal">
   <h2 id="pd-title">Delete this sketch page?</h2>
   <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">
@@ -564,6 +571,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 <input type="file" id="file-pdf" accept="application/pdf" hidden>
 <input type="file" id="file-zip" multiple hidden>
 <input type="file" id="file-photo" accept="image/*" capture="environment" hidden>
+<input type="file" id="file-photo-gal" accept="image/*" hidden>
 
 <script>
 'use strict';
@@ -604,7 +612,8 @@ const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
 const BUILD=29;
 const NEWS=[
- ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.']
+ ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.'],
+ ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone. Great for shots taken earlier in the day.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -1250,7 +1259,7 @@ $('m-add').addEventListener('click',async e=>{
   if(k==='text'){page={id:uid(),type:'text',body:''};note.pages.push(page);touch();openText();return;}
   if(k==='sketch'){page={id:uid(),type:'sketch',ops:[]};note.pages.push(page);touch();openCanvas();return;}
   if(k==='pdf'){$('file-pdf').value='';$('file-pdf').click();return;}
-  if(k==='photo'){$('file-photo').value='';$('file-photo').click();return;}
+  if(k==='photo'){$('m-photosrc').classList.add('on');return;}
 });
 
 /* ================= setup editor ================= */
@@ -2961,7 +2970,10 @@ $('file-pdf').addEventListener('change',async e=>{
     touch();renderPages();
   }catch(err){toast(err.message||'Couldn’t read that PDF.');}
 });
-$('file-photo').addEventListener('change',e=>{
+$('ps-cancel').onclick=()=>$('m-photosrc').classList.remove('on');
+$('ps-cam').onclick=()=>{$('m-photosrc').classList.remove('on');$('file-photo').value='';$('file-photo').click();};
+$('ps-gal').onclick=()=>{$('m-photosrc').classList.remove('on');$('file-photo-gal').value='';$('file-photo-gal').click();};
+const onPhotoPick=e=>{
   const f=e.target.files[0];if(!f)return;
   const im=new Image();
   im.onload=()=>{
@@ -2973,7 +2985,9 @@ $('file-photo').addEventListener('change',e=>{
     URL.revokeObjectURL(im.src);
   };
   im.src=URL.createObjectURL(f);
-});
+};
+$('file-photo').addEventListener('change',onPhotoPick);
+$('file-photo-gal').addEventListener('change',onPhotoPick);
 function prepBg(p){return new Promise(res=>{
   if(!p.bgimg)return res();
   p._im=new Image();p._im.onload=res;p._im.onerror=res;p._im.src=p.bgimg;});}
