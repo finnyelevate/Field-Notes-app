@@ -406,6 +406,25 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <button class="btn ghost" data-add="cancel" style="border:0">Cancel</button>
 </div></div>
 
+<div class="mback" id="m-ndel"><div class="modal">
+  <h2>Delete this note?</h2>
+  <div class="card-sub" id="nd-sub" style="line-height:1.55;margin-bottom:16px"></div>
+  <div style="display:flex;gap:10px">
+    <button class="btn ghost" id="nd-cancel" style="flex:1">Keep it</button>
+    <button class="btn" id="nd-ok" style="flex:1;background:var(--danger)">Delete note</button>
+  </div>
+</div></div>
+
+<div class="mback" id="m-cleanup"><div class="modal">
+  <h2>Old notes cleanup</h2>
+  <div class="card-sub" style="margin-bottom:6px">These haven’t been touched in 30 days. Untick any to keep.</div>
+  <div id="cu-list" style="max-height:45vh;overflow:auto;margin-bottom:14px"></div>
+  <div style="display:flex;gap:10px">
+    <button class="btn ghost" id="cu-later" style="flex:1">Not now</button>
+    <button class="btn" id="cu-ok" style="flex:1;background:var(--danger)">Delete ticked</button>
+  </div>
+</div></div>
+
 <div class="mback" id="m-photosrc"><div class="modal">
   <h2>Photo page</h2>
   <button class="btn ghost" id="ps-cam" style="width:100%;margin-bottom:10px;text-align:left">📷&ensp;Take a photo</button>
@@ -613,7 +632,8 @@ const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv
 const BUILD=29;
 const NEWS=[
  ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.'],
- ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone. Great for shots taken earlier in the day.']
+ ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone. Great for shots taken earlier in the day.'],
+ ['🧹','Old notes clean themselves up','Notes untouched for 30 days get offered for cleanup when you open the app — you tick what goes, nothing is deleted silently. 🗑 on a note card deletes one anytime. NEVER-EXPORTED notes are flagged in red: the phone copy is the only copy until you export.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -1107,11 +1127,65 @@ async function renderHome(){
       <div class="pgbody">
         <div class="card-main">${esc(n.job||'No job #')}</div>
         <div class="card-sub">${esc(n.addr||'')}${n.addr&&n.city?', ':''}${esc(n.city||'')}</div>
-        <div class="card-meta"><span>${fmtDate(n.date)}</span><span>${1+exportPlan(n).length} pg</span><span>${esc(n.crew||'')}</span>${(n.mod&&(!n.exported||n.exported<n.mod))?'<span style="color:#D2691E;font-weight:800">unexported</span>':''}</div>
-      </div><div class="pgx">›</div>
+        <div class="card-meta"><span>${fmtDate(n.date)}</span><span>${1+exportPlan(n).length} pg</span><span>${esc(n.crew||'')}</span>${(n.mod&&(!n.exported||n.exported<n.mod))?'<span style="color:#D2691E;font-weight:800">unexported</span>':''}${(Date.now()-(n.updated||n.created||Date.now()))>=(PURGE_DAYS-7)*86400000?`<span style="color:var(--muted)">purges in ${Math.max(0,PURGE_DAYS-Math.floor((Date.now()-(n.updated||n.created))/86400000))} d</span>`:''}</div>
+      </div><button class="pgdel" data-ndel="${n.id}" title="Delete note">🗑</button><div class="pgx">›</div>
     </div>`).join('');
 }
+/* ---- note deletion + 30-day cleanup ---- */
+const PURGE_DAYS=30, PURGE_MS=PURGE_DAYS*86400000;
+const nAge=n=>Date.now()-(n.updated||n.created||Date.now());
+const nStale=n=>nAge(n)>=PURGE_MS;
+const nUnexp=n=>!n.exported||(n.mod&&n.exported<n.mod);
+function noteLine(n){
+  return `<b>${esc(n.job||'(no job #)')}</b> · ${fmtDate(n.date)} · ${1+exportPlan(n).length} pg`+
+    (nUnexp(n)?' · <span style="color:var(--danger);font-weight:800">NEVER EXPORTED</span>':' · exported');
+}
+let nDelTarget=null;
+function askDeleteNote(n){
+  nDelTarget=n;
+  $('nd-sub').innerHTML=noteLine(n)+(nUnexp(n)
+    ?'<br><span style="color:var(--danger);font-weight:700">⚠ This note was never exported — the phone copy is the ONLY copy. Deleting it loses the field book.</span>'
+    :'<br>The exported PDF in the job folder is unaffected.')+
+    '<br>UNDO stays up for 8 seconds.';
+  $('m-ndel').classList.add('on');
+}
+$('nd-cancel').onclick=()=>{$('m-ndel').classList.remove('on');nDelTarget=null;};
+$('nd-ok').onclick=async()=>{
+  $('m-ndel').classList.remove('on');const n=nDelTarget;nDelTarget=null;if(!n)return;
+  clearTimeout(saveT);
+  if(note===n){note=null;page=null;show('v-home');}
+  await store.del(n.id);notes=notes.filter(x=>x!==n);await renderHome();
+  toastUndo('Note '+(n.job||'')+' deleted.',async()=>{await store.put(n);await renderHome();},8000);
+};
+function cleanupCheck(){
+  try{
+    const stale=notes.filter(nStale);
+    if(!stale.length)return;
+    const today=new Date().toISOString().slice(0,10);
+    if(localStorage.getItem('efn-cleanask')===today)return;
+    localStorage.setItem('efn-cleanask',today);
+    $('cu-list').innerHTML=stale.map(n=>`
+      <label style="display:flex;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)">
+        <input type="checkbox" data-cu="${n.id}" checked style="width:22px;height:22px">
+        <span class="card-sub" style="line-height:1.45">${noteLine(n)}<br>untouched ${Math.floor(nAge(n)/86400000)} days</span>
+      </label>`).join('');
+    $('m-cleanup').classList.add('on');
+  }catch(e){}
+}
+$('cu-later').onclick=()=>$('m-cleanup').classList.remove('on');
+$('cu-ok').onclick=async()=>{
+  $('m-cleanup').classList.remove('on');
+  const ids=[...document.querySelectorAll('[data-cu]:checked')].map(x=>x.dataset.cu);
+  const gone=notes.filter(n=>ids.includes(n.id));
+  if(!gone.length)return;
+  for(const n of gone)await store.del(n.id);
+  notes=notes.filter(n=>!ids.includes(n.id));await renderHome();
+  toastUndo(gone.length+' old note'+(gone.length>1?'s':'')+' deleted.',async()=>{
+    for(const n of gone)await store.put(n);await renderHome();},8000);
+};
 $('home-list').addEventListener('click',e=>{
+  const d=e.target.closest('[data-ndel]');
+  if(d){e.stopPropagation();askDeleteNote(notes.find(n=>n.id===d.dataset.ndel));return;}
   const c=e.target.closest('[data-open]');if(!c)return;
   note=notes.find(n=>n.id===c.dataset.open); openNote();
 });
@@ -1174,8 +1248,7 @@ $('b-save').onclick=async()=>{
   toast('Note saved on this device.');
 };
 $('b-back-home').onclick=async()=>{clearTimeout(saveT);await store.put(note);note=null;await renderHome();show('v-home');};
-$('b-del-note').onclick=()=>confirmM('Delete this note?','The whole note and all its pages will be removed. This can’t be undone.',
-  async()=>{await store.del(note.id);note=null;await renderHome();show('v-home');});
+$('b-del-note').onclick=()=>askDeleteNote(note);
 
 const PGMETA={setup:['⊼','Instrument setup'],gps:['🛰','GPS setup'],text:['📝','Notes'],sketch:['✏️','Sketch'],mark:['📄','PDF markup'],photo:['📷','Photo']};
 function pgTitle(p){
@@ -3647,6 +3720,7 @@ $('eb-open').onclick=()=>{
     if(!standalone&&window.self===window.top)$('install-banner').style.display='block';
   }catch(e){}
   await renderHome();
+  cleanupCheck();
   checkExportReminder();
   try{
     const st=localStorage.getItem('efn-pendph');
