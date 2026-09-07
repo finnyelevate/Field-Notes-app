@@ -590,7 +590,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 <input type="file" id="file-pdf" accept="application/pdf" hidden>
 <input type="file" id="file-zip" multiple hidden>
 <input type="file" id="file-photo" accept="image/*" capture="environment" hidden>
-<input type="file" id="file-photo-gal" accept="image/*" hidden>
+<input type="file" id="file-photo-gal" accept="image/*" multiple hidden>
 
 <script>
 'use strict';
@@ -632,7 +632,7 @@ const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv
 const BUILD=29;
 const NEWS=[
  ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.'],
- ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone. Great for shots taken earlier in the day.'],
+ ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone — and you can select several at once: each becomes its own photo page.'],
  ['🧹','Old notes clean themselves up','Notes untouched for 30 days get offered for cleanup when you open the app — you tick what goes, nothing is deleted silently. 🗑 on a note card deletes one anytime. NEVER-EXPORTED notes are flagged in red: the phone copy is the only copy until you export.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
@@ -3046,18 +3046,26 @@ $('file-pdf').addEventListener('change',async e=>{
 $('ps-cancel').onclick=()=>$('m-photosrc').classList.remove('on');
 $('ps-cam').onclick=()=>{$('m-photosrc').classList.remove('on');$('file-photo').value='';$('file-photo').click();};
 $('ps-gal').onclick=()=>{$('m-photosrc').classList.remove('on');$('file-photo-gal').value='';$('file-photo-gal').click();};
-const onPhotoPick=e=>{
-  const f=e.target.files[0];if(!f)return;
+const loadPhotoPage=f=>new Promise(res=>{
   const im=new Image();
   im.onload=()=>{
     const r=Math.min(1,1600/Math.max(im.width,im.height));
     const c=document.createElement('canvas');c.width=im.width*r;c.height=im.height*r;
     c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-    page={id:uid(),type:'photo',label:'Photo',bgimg:c.toDataURL('image/jpeg',0.8),ops:[]};
-    note.pages.push(page);touch();prepBg(page).then(()=>openCanvas());
-    URL.revokeObjectURL(im.src);
+    const p={id:uid(),type:'photo',label:'Photo',bgimg:c.toDataURL('image/jpeg',0.8),ops:[]};
+    note.pages.push(p);URL.revokeObjectURL(im.src);res(p);
   };
+  im.onerror=()=>{URL.revokeObjectURL(im.src);res(null);};
   im.src=URL.createObjectURL(f);
+});
+const onPhotoPick=async e=>{
+  const fs=[...e.target.files];if(!fs.length)return;
+  let last=null,n=0;
+  for(const f of fs){const p=await loadPhotoPage(f);if(p){last=p;n++;}}
+  if(!n)return;
+  touch();
+  if(n===1){page=last;prepBg(page).then(()=>openCanvas());}
+  else{renderPages();toast(n+' photo pages added.');}
 };
 $('file-photo').addEventListener('change',onPhotoPick);
 $('file-photo-gal').addEventListener('change',onPhotoPick);
