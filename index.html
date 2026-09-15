@@ -631,6 +631,7 @@ const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
 const BUILD=29;
 const NEWS=[
+ ['📃','Long point lists wrap cleanly','On the exported page, a pt list like 1005,1006,1007 now flows onto the next line of its own column instead of running into the code beside it. Nothing to do differently — book the list as usual.'],
  ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.'],
  ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone — and you can select several at once: each becomes its own photo page.'],
  ['🧹','Old notes clean themselves up','Notes untouched for 30 days get offered for cleanup when you open the app — you tick what goes, nothing is deleted silently. 🗑 on a note card deletes one anytime. NEVER-EXPORTED notes are flagged in red: the phone copy is the only copy until you export.']
@@ -3199,11 +3200,25 @@ function rowRemark(r,gps){
   return [gps&&(r.time||'').trim()?'@ '+r.time.trim():'',r.desc,r.remark]
     .map(x=>(x||'').trim()).filter(Boolean).join(' — ');
 }
+function ptLines(v,font,maxW){
+  // "1005,1006,1007" flows down the pt column: break only after commas,
+  // trailing comma may hang into the gutter (not counted when fitting)
+  const t=String(v??'').trim();if(!t)return[];
+  MCTX.font=font;
+  const toks=t.split(/\s*,\s*/).filter(Boolean), out=[];let line='';
+  toks.forEach(tok=>{
+    const cand=line?line+','+tok:tok;
+    if(line&&MCTX.measureText(cand).width>maxW){out.push(line+',');line=tok;}
+    else line=cand;
+  });
+  if(line)out.push(line);
+  return out;
+}
 function rowLines(r,gps){
   const off=gps?GPOFF:TSOFF;
   if(r.t==='HT✗'){
     MCTX.font=HXF;
-    const ptL=wrapLines((r.pt!==undefined?r.pt:r.pts)||'',HXF,150).filter(Boolean);
+    const ptL=ptLines((r.pt!==undefined?r.pt:r.pts)||'',HXF,off.code-off.pt-16);
     const p1='WRONG '+((r.wht||'').trim()||'?'), p2='→ USE '+((r.cht||'').trim()||'?');
     const spanW=off.com-off.code-30;
     const stack=MCTX.measureText(p1).width+30+MCTX.measureText(p2).width>spanW;
@@ -3213,14 +3228,15 @@ function rowLines(r,gps){
   }
   const c=rowRemark(r,gps);
   const CL=wrapLines(r.code||'',RFONT,off.codeW).filter(Boolean);
-  const cn=Math.max(1,CL.length);
-  if(!c)return{n:cn,mode:0,CL};
+  const PL=ptLines((r.pt!==undefined?r.pt:r.pts)||'',RFONT,off.code-off.pt-16);
+  const cn=Math.max(1,CL.length,PL.length);
+  if(!c)return{n:cn,mode:0,CL,PL};
   const hasF=(r.pt||r.pts||r.code||r.time||r.ht||r.pr);
   if(!hasF){const L=wrapLines(c,RFONT,off.fw);return{n:Math.max(1,L.length),mode:1,L};}
   MCTX.font=RFONT;
-  if(MCTX.measureText(c).width<=off.comW)return{n:cn,mode:0,CL,com:c};
+  if(MCTX.measureText(c).width<=off.comW)return{n:cn,mode:0,CL,PL,com:c};
   const L=wrapLines(c,RFONT,off.fw);
-  return{n:cn+L.length,mode:2,L,CL};
+  return{n:cn+L.length,mode:2,L,CL,PL};
 }
 function drawRowBlock(ctx,p,y,gps){
   const off=gps?GPOFF:TSOFF, x0=EM+60, bx=x0+40;
@@ -3266,21 +3282,25 @@ function drawRowBlock(ctx,p,y,gps){
     let hVal=r.ht?fmtH(r.ht):'';
     if(gps){hVal=(r.ht?fmtH(r.ht):(pvH&&'〃'));if(r.ht)pvH=r.ht;}
     const tShow=gps?(r.t==='OBS'?'':r.t):r.t;
-    const cells=[[0,tShow],[off.pt,(r.pt!==undefined?r.pt:r.pts)||''],[off.ht,hVal||'']];
+    const cells=[[0,tShow],[off.ht,hVal||'']];
     if(!gps)cells.push([off.pr,r.pr||'']);
     if(rl.mode===0&&rl.com)cells.push([off.com,rl.com]);
     let end=bx;
     cells.forEach(([dx,v])=>{if(!v)return;
       ctx.fillText(v,bx+dx,y);
       end=Math.max(end,bx+dx+ctx.measureText(v).width);});
+    (rl.PL||[]).forEach((pl2,i)=>{
+      ctx.fillText(pl2,bx+off.pt,y+i*GB);
+      end=Math.max(end,bx+off.pt+ctx.measureText(pl2).width);});
     (rl.CL||[]).forEach((cl2,i)=>{
       ctx.fillText(cl2,bx+off.code,y+i*GB);
       end=Math.max(end,bx+off.code+ctx.measureText(cl2).width);});
     if(r.struck){
       strike(bx-4,end+6);
       (rl.CL||[]).slice(1).forEach((cl2,i)=>strike(bx+off.code-4,bx+off.code+6+ctx.measureText(cl2).width,y+(i+1)*GB));
+      (rl.PL||[]).slice(1).forEach((pl2,i)=>strike(bx+off.pt-4,bx+off.pt+6+ctx.measureText(pl2).width,y+(i+1)*GB));
     }
-    y+=GB*Math.max(1,(rl.CL||[]).length||1);
+    y+=GB*Math.max(1,(rl.CL||[]).length,(rl.PL||[]).length);
     if(rl.mode===2)rl.L.forEach(ln=>{
       ctx.font=RFONT;ctx.fillStyle=col;
       ctx.fillText(ln,bx+off.cont,y);
