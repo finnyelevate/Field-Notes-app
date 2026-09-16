@@ -1,5 +1,11 @@
 # Elevate Field — Changelog
 
+## Build 29.2 — 2026-09-15
+- **Field Package shares as ONE zip**: primary share path now hands WhatsApp the whole `.zip`, typed `text/plain` to pass Chrome-Android's share allow-list (WhatsApp files documents by extension — proven by `.rw5` arriving as a document in the group). Tries `application/zip` second (iOS/desktop take it natively). Falls back to the old loose-files share with a toast, then to Save-ZIP-to-Downloads. Sheet copy updated; button is now "Share ZIP…". Requested by Finny — one zipped folder per job in the group chat.
+
+## Build 29.1 — 2026-09-15
+- **Share hand-off cleanup**: dropped the `title` from all `navigator.share` calls (package + single file). WhatsApp printed it as a stray auto-linked text message (the blue "…Field_Package….zip" line in the group), making a successful share look like a failed attachment. No behavior change otherwise — Android still can't take a real .zip from a web app, so Field Package continues to share loose files or save the ZIP to Downloads.
+
 ## Build 29 — 2026-08-31
 - **Export: pt lists wrap in-column**: long point lists (e.g. `1005,1006,1007`) overlapped the code column on exported setup/GPS rows (GG's 26-3614). New `ptLines()` breaks only after commas (trailing comma hangs into the gutter, ranges like `1005-1010` stay whole), rows grow taller to fit the stack, following rows shift down, struck rows strike every wrapped line. Columns unchanged per Finny's ruling. Fit is measured with the device font at export time; verified by render test (`test_rows.js`).
 - **Delete a sketch, PDF-markup or photo page**: 🗑 in the sketch top bar and on the page's card in the page list. Confirm sheet shows the thumbnail, page number, and warns when the page carries symbols with booked inverts (they go with it). UNDO snackbar for 8 s restores the page in its original slot; remaining pages renumber. Sketch, PDF-markup and photo pages only — setup, GPS and notes pages are legal record and carry no delete affordance (guarded in code, not just hidden). Deleting from inside the sketch ends any live Disto walk and returns to the page list. Requested by crews via HS's 26-3601 notes (scribbled sketch pages couldn't be removed).

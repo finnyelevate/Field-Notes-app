@@ -3620,28 +3620,40 @@ function offerFile(blob,name,type,desc){
 function offerPkg(pkg){
   pendingPkg=pkg;pendingFile=null;
   $('mr-title').textContent=pkg.zipName;
-  $('mr-sub').textContent=`Android can’t share ZIPs from an app like this. “Share files” sends the notes PDF + ${pkg.files.length} file${pkg.files.length===1?'':'s'} to WhatsApp as attachments. “Save ZIP” puts the package (${(pkg.zipBlob.size/1048576).toFixed(1)} MB) in Downloads — attach it in WhatsApp with 📎 → Document.`;
-  $('mr-share').textContent='Share files…';$('mr-save').textContent='Save ZIP';
+  $('mr-sub').textContent=`“Share ZIP” sends the whole package (${(pkg.zipBlob.size/1048576).toFixed(1)} MB) as one zipped folder. If your phone won’t take it, the app falls back to sending the PDF + ${pkg.files.length} file${pkg.files.length===1?'':'s'} as separate attachments. “Save ZIP” puts it in Downloads instead — attach with 📎 → Document.`;
+  $('mr-share').textContent='Share ZIP…';$('mr-save').textContent='Save ZIP';
   $('m-ready').classList.add('on');
 }
 $('mr-share').onclick=async()=>{
   $('m-ready').classList.remove('on');
   if(pendingPkg){
-    let fl=[new File([pendingPkg.pdfBlob],pendingPkg.pdfName,{type:'application/pdf'}),
-      ...pendingPkg.files.map(f=>new File([f],f.name,{type:SHAREABLE(f.type)?f.type:'text/plain'}))];
-    if(navigator.canShare&&navigator.canShare({files:fl})){
-      try{await navigator.share({files:fl,title:pendingPkg.zipName});}
-      catch(e){if(e&&e.name!=='AbortError'){dlFile(pendingPkg.zipBlob,pendingPkg.zipName);}}
-    }else{
-      toast('These file types can’t be shared directly — saving the ZIP instead.');
-      dlFile(pendingPkg.zipBlob,pendingPkg.zipName);
+    const pkg=pendingPkg;pendingPkg=null;
+    // 1) the whole package as ONE zip — typed text/plain so Chrome's share
+    //    allow-list lets it through; WhatsApp files it by its .zip extension
+    for(const zf of [new File([pkg.zipBlob],pkg.zipName,{type:'text/plain'}),
+                     new File([pkg.zipBlob],pkg.zipName,{type:'application/zip'})]){
+      if(navigator.canShare&&navigator.canShare({files:[zf]})){
+        try{await navigator.share({files:[zf]});return;}
+        catch(e){if(e&&e.name==='AbortError')return;}
+      }
     }
-    pendingPkg=null;return;
+    // 2) loose files (old behaviour)
+    const fl=[new File([pkg.pdfBlob],pkg.pdfName,{type:'application/pdf'}),
+      ...pkg.files.map(f=>new File([f],f.name,{type:SHAREABLE(f.type)?f.type:'text/plain'}))];
+    if(navigator.canShare&&navigator.canShare({files:fl})){
+      toast('One-ZIP share not supported here — sending the files separately.');
+      try{await navigator.share({files:fl});return;}
+      catch(e){if(e&&e.name==='AbortError')return;}
+    }
+    // 3) Downloads
+    toast('Sharing not available — saving the ZIP instead.');
+    dlFile(pkg.zipBlob,pkg.zipName);
+    return;
   }
   if(!pendingFile)return;
   const f=new File([pendingFile.blob],pendingFile.name,{type:pendingFile.type});
   if(navigator.canShare&&navigator.canShare({files:[f]})){
-    try{await navigator.share({files:[f],title:pendingFile.name});}
+    try{await navigator.share({files:[f]});}
     catch(e){if(e&&e.name!=='AbortError')dlFile(pendingFile.blob,pendingFile.name);}
   }else dlFile(pendingFile.blob,pendingFile.name);
 };
@@ -3653,7 +3665,7 @@ $('mr-save').onclick=()=>{
 async function shareFile(blob,name,type,desc){
   const file=new File([blob],name,{type});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({files:[file],title:name});return;}
+    try{await navigator.share({files:[file]});return;}
     catch(e){
       if(e&&e.name==='AbortError')return;           // user closed the sheet
       offerFile(blob,name,type,desc||'');return;    // activation expired — offer a fresh tap
