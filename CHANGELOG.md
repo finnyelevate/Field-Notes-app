@@ -1,5 +1,8 @@
 # Elevate Field — Changelog
 
+## Build 29.3 — 2026-09-16
+- **Field Package: files collect across picker rounds**: Android's picker often returns one file per visit (multi-select needs a long-press most crews don't know). The zip flow now stages picks in a sheet — file list with sizes, per-file remove, "＋ Add more files" reopens the picker, dedupe by name/size/mtime, "Build package (N)" zips. Sheet includes the long-press tip. Zip build and 29.2 one-zip share unchanged.
+
 ## Build 29.2 — 2026-09-15
 - **Field Package shares as ONE zip**: primary share path now hands WhatsApp the whole `.zip`, typed `text/plain` to pass Chrome-Android's share allow-list (WhatsApp files documents by extension — proven by `.rw5` arriving as a document in the group). Tries `application/zip` second (iOS/desktop take it natively). Falls back to the old loose-files share with a toast, then to Save-ZIP-to-Downloads. Sheet copy updated; button is now "Share ZIP…". Requested by Finny — one zipped folder per job in the group chat.
 

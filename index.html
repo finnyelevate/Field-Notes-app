@@ -406,6 +406,17 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <button class="btn ghost" data-add="cancel" style="border:0">Cancel</button>
 </div></div>
 
+<div class="mback" id="m-pkg"><div class="modal">
+  <h2>Field package</h2>
+  <div class="card-sub" style="margin-bottom:6px">Data files going in beside the notes PDF. Tip: in the picker, <b>long-press</b> the first file to select several at once.</div>
+  <div id="pk-list" style="max-height:38vh;overflow:auto;margin-bottom:14px"></div>
+  <button class="btn ghost" id="pk-more" style="width:100%;margin-bottom:10px">＋ Add more files</button>
+  <div style="display:flex;gap:10px">
+    <button class="btn ghost" id="pk-cancel" style="flex:1">Cancel</button>
+    <button class="btn" id="pk-build" style="flex:1">Build package</button>
+  </div>
+</div></div>
+
 <div class="mback" id="m-ndel"><div class="modal">
   <h2>Delete this note?</h2>
   <div class="card-sub" id="nd-sub" style="line-height:1.55;margin-bottom:16px"></div>
@@ -3697,10 +3708,32 @@ $('m-export').addEventListener('click',async e=>{
     catch(err){toast(err.message||'Export failed.');}
     busy(false);return;
   }
-  if(k==='zip'){$('file-zip').value='';$('file-zip').click();}
+  if(k==='zip'){pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
 });
-$('file-zip').addEventListener('change',async e=>{
-  const files=[...e.target.files];
+let pkgFiles=[];
+function pkRender(){
+  $('pk-list').innerHTML=pkgFiles.map((f,i)=>`
+    <div style="display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)">
+      <span class="card-sub" style="flex:1;line-height:1.4;word-break:break-all">${esc(f.name)} · ${(f.size/1048576).toFixed(1)} MB</span>
+      <button class="pgdel" data-pkx="${i}" title="Remove">🗑</button>
+    </div>`).join('')||'<div class="card-sub" style="padding:10px 2px">No files yet.</div>';
+  $('pk-build').textContent=pkgFiles.length?`Build package (${pkgFiles.length})`:'Build package';
+}
+$('pk-list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-pkx]');if(!b)return;
+  pkgFiles.splice(+b.dataset.pkx,1);pkRender();
+});
+$('file-zip').addEventListener('change',e=>{
+  [...e.target.files].forEach(f=>{
+    if(!pkgFiles.some(x=>x.name===f.name&&x.size===f.size&&x.lastModified===f.lastModified))pkgFiles.push(f);
+  });
+  pkRender();$('m-pkg').classList.add('on');
+});
+$('pk-more').onclick=()=>{$('file-zip').value='';$('file-zip').click();};
+$('pk-cancel').onclick=()=>{$('m-pkg').classList.remove('on');pkgFiles=[];};
+$('pk-build').onclick=async()=>{
+  $('m-pkg').classList.remove('on');
+  const files=pkgFiles;pkgFiles=[];
   busy(true);
   try{
     await loadScript(CDN+'jszip.min.js');
@@ -3714,7 +3747,7 @@ $('file-zip').addEventListener('change',async e=>{
       pdfBlob:p.blob,pdfName:p.name,files});
   }catch(err){toast(err.message||'ZIP export failed. Very large videos may not fit — send those separately.');}
   busy(false);
-});
+};
 
 /* ================= boot ================= */
 let remindNotes=[];
