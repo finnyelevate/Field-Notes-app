@@ -1,5 +1,8 @@
 # Elevate Field — Changelog
 
+## Build 31 — 2026-09-24
+- **Symbols snap to corners**: reported by Finny — no way to accurately drop a symbol on a shown corner by finger, and dragging a misplaced one back didn't snap either. Symbols (place-by-tap, place-via-picker, and drag with Select) now magnet onto the nearest line/poly/dim/arc endpoint within a fingertip-sized radius (`symSnapR()` = 44 screen px; shrinks in page units as you zoom in, so zooming gives fine control). Green snap square + haptic reuse the existing line-snap feedback: it flashes 0.6 s on a snapped placement and shows live during a drag. Tap jitter under 8 px never triggers the magnet, so tapping a symbol to open its invert card can't fling it to a nearby corner; text/labels and other non-symbol ops are unaffected. Line/dim endpoint snap widened 26 → 32 screen px for finger drawing.
+
 ## Build 30 — 2026-09-20
 - **Surveyed-point marker (X)**: new `spx` symbol heads the Utilities group — a small stroked X (`_x`, 0.45 r ≈ 12 px arms at default size) marking a shot position exactly. Requested by Finny for building/shed corners where crews were borrowing the filled Iron-post dot, which reads heavy and imprecise on small structures; sized down from the first cut on his review. Deliberately outside `UTIL`: no auto PT#, no invert card, no label — just the mark. Appears in the export legend as SURVEYED POINT when used. Detail pages slip to Build 31.
 

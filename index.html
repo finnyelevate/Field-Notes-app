@@ -483,7 +483,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 30</h2>
+  <h2>What’s new — build 31</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -640,8 +640,9 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=30;
+const BUILD=31;
 const NEWS=[
+ ['\ud83e\uddf2','Symbols snap to corners','Tap a symbol near a drawn corner and it lands exactly on it \u2014 same green square as lines, now sized for a fingertip. Works when placing AND when dragging one back into position with \u2715 Select. Zoom in for fine control: the magnet shrinks as you zoom.'],
  ['\u2715','X marks a surveyed point','New symbol at the top of the Utilities group: a small clean X for shot points on corners, sheds, fences \u2014 sits exactly on the point and stays out of the drawing\u2019s way, unlike the big dot. No PT# or invert card \u2014 it\u2019s just the mark.'],
  ['📃','Long point lists wrap cleanly','On the exported page, a pt list like 1005,1006,1007 now flows onto the next line of its own column instead of running into the code beside it. Nothing to do differently — book the list as usual.'],
  ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.'],
@@ -1529,7 +1530,13 @@ $('b-back-note3').onclick=()=>$('b-text-done').onclick();
 let zoom=0.9, tool='pen', drawing=null, pend=null;
 let ortho=false, polyDraft=null, gest=null, selOp=null, dragSel=null, selTap=null;
 let snapMark=null, snapKey='';
-function snapR(){return 26/zoom;}
+function snapR(){return 32/zoom;}          // line/dim endpoint magnet (~32 screen px)
+function symSnapR(){return 44/zoom;}       // symbols: blind single tap needs a fingertip-sized magnet
+function flashSnap(pt){                     // brief green square confirming where a tap landed
+  setSnap(pt);redraw();
+  clearTimeout(flashSnap.t);
+  flashSnap.t=setTimeout(()=>{setSnap(null);redraw();},600);
+}
 function setSnap(pt){
   const k=pt?pt[0].toFixed(1)+','+pt[1].toFixed(1):'';
   if(k!==snapKey){snapKey=k;
@@ -2323,7 +2330,7 @@ ink.addEventListener('pointerdown',e=>{
     if(hit)snap();
     selTap=(hit&&hit===selOp&&((hit.k==='y'&&UTIL.has(hit.id))||hit.k==='t'||hit.k==='c'))?[x,y]:null;
     selOp=hit;
-    dragSel=hit?[x-hit.x,y-hit.y]:null;
+    dragSel=hit?[x-hit.x,y-hit.y,x,y]:null;
     updSelUI();redraw();
     return;
   }
@@ -2394,9 +2401,11 @@ ink.addEventListener('pointerdown',e=>{
     }
     if(curSym){
       snap();
-      const op={k:'y',id:curSym,x,y,s:26};
+      const sp=nearestEnd(x,y,symSnapR());
+      const op={k:'y',id:curSym,x:sp?sp[0]:x,y:sp?sp[1]:y,s:26};
       if(UTIL.has(curSym))op.pid=nextUid();
       page.ops.push(op);redraw();thumb();touch();
+      if(sp)flashSnap(sp);
     }
     else{symPend=[x,y];openSymPicker();}
   }
@@ -2436,8 +2445,14 @@ ink.addEventListener('pointermove',e=>{
   if(dragSel&&selOp){
     e.preventDefault();
     const [x,y]=evPos(e);
-    if(selTap&&Math.hypot(x-selTap[0],y-selTap[1])>8)selTap=null;   // it's a drag, not a tap
-    selOp.x=x-dragSel[0];selOp.y=y-dragSel[1];
+    const far=Math.hypot(x-dragSel[2],y-dragSel[3])>8;              // a real drag, not tap jitter
+    if(selTap&&far)selTap=null;
+    let nx=x-dragSel[0],ny=y-dragSel[1];
+    if(far&&selOp.k==='y'){                                         // symbols magnet onto corners
+      const sp=nearestEnd(nx,ny,symSnapR());
+      if(sp){nx=sp[0];ny=sp[1];setSnap(sp);}else setSnap(null);
+    }
+    selOp.x=nx;selOp.y=ny;
     redraw();return;
   }
   if(!drawing)return;e.preventDefault();
@@ -2471,6 +2486,7 @@ ink.addEventListener('pointermove',e=>{
   }
   if(dragSel){
     dragSel=null;thumb();touch();
+    if(snapMark){setSnap(null);redraw();}
     if(selTap){selTap=null;
       if(selOp){
         if(selOp.k==='y')openInvCard(selOp);
@@ -3024,9 +3040,11 @@ $('m-sym').addEventListener('click',e=>{
   curSym=picked;
   $('m-sym').classList.remove('on');
   if(symPend){
-    const op={k:'y',id:curSym,x:symPend[0],y:symPend[1],s:26};
+    const sp=nearestEnd(symPend[0],symPend[1],symSnapR());
+    const op={k:'y',id:curSym,x:sp?sp[0]:symPend[0],y:sp?sp[1]:symPend[1],s:26};
     if(UTIL.has(curSym))op.pid=nextUid();
     page.ops.push(op);symPend=null;redraw();thumb();touch();
+    if(sp)flashSnap(sp);
   }
 });
 
