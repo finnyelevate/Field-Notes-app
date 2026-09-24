@@ -483,7 +483,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 29</h2>
+  <h2>What’s new — build 30</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -640,8 +640,9 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=29;
+const BUILD=30;
 const NEWS=[
+ ['\u2715','X marks a surveyed point','New symbol at the top of the Utilities group: a small clean X for shot points on corners, sheds, fences \u2014 sits exactly on the point and stays out of the drawing\u2019s way, unlike the big dot. No PT# or invert card \u2014 it\u2019s just the mark.'],
  ['📃','Long point lists wrap cleanly','On the exported page, a pt list like 1005,1006,1007 now flows onto the next line of its own column instead of running into the code beside it. Nothing to do differently — book the list as usual.'],
  ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.'],
  ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone — and you can select several at once: each becomes its own photo page.'],
@@ -2971,6 +2972,7 @@ const SYMDEFS=[
  ['alp','Alum post','ALUMINUM POST',(c,x,y,r)=>_dia(c,x,y,r,1)],
  ['thf','Trav hub FND','TRAVERSE HUB FOUND',(c,x,y,r)=>_tri(c,x,y,r,1)],
  ['ths','Trav hub SET','TRAVERSE HUB SET',(c,x,y,r)=>_tri(c,x,y,r,0)],
+ ['spx','Surveyed pt','SURVEYED POINT',(c,x,y,r)=>_x(c,x,y,r*.45)],
  ['mhs','MH sanitary','SANITARY MANHOLE',(c,x,y,r)=>{_c(c,x,y,r);c.font='700 '+(r*1.1)+'px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText('S',x,y+1);c.textAlign='start';c.textBaseline='alphabetic';}],
  ['mhd','MH storm','STORM MANHOLE',(c,x,y,r)=>{_c(c,x,y,r);c.font='700 '+(r*1.1)+'px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText('D',x,y+1);c.textAlign='start';c.textBaseline='alphabetic';}],
  ['mh','MH misc','MANHOLE - TYPE UNDETERMINED',(c,x,y,r)=>{_c(c,x,y,r);c.font='700 '+(r*0.72)+'px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText('MH',x,y+1);c.textAlign='start';c.textBaseline='alphabetic';}],

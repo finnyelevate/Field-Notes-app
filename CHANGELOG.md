@@ -1,5 +1,8 @@
 # Elevate Field — Changelog
 
+## Build 30 — 2026-09-20
+- **Surveyed-point marker (X)**: new `spx` symbol heads the Utilities group — a small stroked X (`_x`, 0.45 r ≈ 12 px arms at default size) marking a shot position exactly. Requested by Finny for building/shed corners where crews were borrowing the filled Iron-post dot, which reads heavy and imprecise on small structures; sized down from the first cut on his review. Deliberately outside `UTIL`: no auto PT#, no invert card, no label — just the mark. Appears in the export legend as SURVEYED POINT when used. Detail pages slip to Build 31.
+
 ## Build 29.3 — 2026-09-16
 - **Field Package: files collect across picker rounds**: Android's picker often returns one file per visit (multi-select needs a long-press most crews don't know). The zip flow now stages picks in a sheet — file list with sizes, per-file remove, "＋ Add more files" reopens the picker, dedupe by name/size/mtime, "Build package (N)" zips. Sheet includes the long-press tip. Zip build and 29.2 one-zip share unchanged.
 
