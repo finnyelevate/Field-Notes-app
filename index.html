@@ -36,6 +36,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
   display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;letter-spacing:.02em}
 .btn:active{background:var(--accent-dn)}
 .btn.ghost{background:var(--chrome2);color:#EDF2EE}
+.btn:disabled{opacity:.45;pointer-events:none}
 .btn.sm{padding:10px 14px;font-size:14px;border-radius:10px}
 .scroll{flex:1;overflow-y:auto;background:#0F1512;padding:14px 14px calc(env(safe-area-inset-bottom) + 90px)}
 .fab{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);z-index:6;box-shadow:0 6px 20px rgba(0,0,0,.45)}
@@ -190,7 +191,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <div class="bar">
     <h1>Elevate Field<span class="sub" id="home-sub">Loading…</span></h1>
   </div>
-  <div class="banner" id="storage-banner" style="display:none">Storage unavailable on this device — export your notes before closing.</div>
+  <div class="banner" id="storage-banner" style="display:none">⚠ Phone storage didn’t open — notes are running on a TEMPORARY backup. Close the app fully and reopen it now; export anything important before closing.</div>
   <div class="banner" id="install-banner" style="display:none;background:#6B1F1F;color:#F5C6C6">⚠ Your notes are NOT safe in this browser. Open this link in Chrome/Safari and use “Add to Home screen”, then open the app from its icon.</div>
   <div class="banner" id="export-banner" style="display:none;background:#5A3A16;color:#F5D9B8;text-align:left">
     <span id="eb-text"></span>
@@ -428,7 +429,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 
 <div class="mback" id="m-cleanup"><div class="modal">
   <h2>Old notes cleanup</h2>
-  <div class="card-sub" style="margin-bottom:6px">These haven’t been touched in 30 days. Untick any to keep.</div>
+  <div class="card-sub" style="margin-bottom:6px">These haven’t been touched in 30 days. Tick the ones to delete — nothing is ticked for you.</div>
   <div id="cu-list" style="max-height:45vh;overflow:auto;margin-bottom:14px"></div>
   <div style="display:flex;gap:10px">
     <button class="btn ghost" id="cu-later" style="flex:1">Not now</button>
@@ -483,7 +484,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 31</h2>
+  <h2>What’s new — build 32</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -640,14 +641,9 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=31;
+const BUILD=32;
 const NEWS=[
- ['\ud83e\uddf2','Symbols snap to corners','Tap a symbol near a drawn corner and it lands exactly on it \u2014 same green square as lines, now sized for a fingertip. Works when placing AND when dragging one back into position with \u2715 Select. Zoom in for fine control: the magnet shrinks as you zoom.'],
- ['\u2715','X marks a surveyed point','New symbol at the top of the Utilities group: a small clean X for shot points on corners, sheds, fences \u2014 sits exactly on the point and stays out of the drawing\u2019s way, unlike the big dot. No PT# or invert card \u2014 it\u2019s just the mark.'],
- ['📃','Long point lists wrap cleanly','On the exported page, a pt list like 1005,1006,1007 now flows onto the next line of its own column instead of running into the code beside it. Nothing to do differently — book the list as usual.'],
- ['🗑','Delete a bad sketch page','Scribbled or started wrong? 🗑 on the sketch (top bar) or on its card in the page list removes a sketch, PDF markup or photo page — confirm first, UNDO for 8 seconds after, pages renumber. Setup, GPS and notes pages stay put: they\u2019re legal record.'],
- ['🖼','Photo pages from the gallery','Photo page now asks: take a photo, or choose one already on the phone — and you can select several at once: each becomes its own photo page.'],
- ['🧹','Old notes clean themselves up','Notes untouched for 30 days get offered for cleanup when you open the app — you tick what goes, nothing is deleted silently. 🗑 on a note card deletes one anytime. NEVER-EXPORTED notes are flagged in red: the phone copy is the only copy until you export.']
+ ['\ud83d\udee1\ufe0f','Photo attach can\u2019t cost you notes','Fixed the Tuesday bug: coming back from the camera could land you on the old-notes cleanup sheet with everything pre-ticked \u2014 one rushed tap deleted notes. The sheet now never appears after a camera interruption, nothing is ever pre-ticked, Delete stays off until you tick, and UNDO waits 30 seconds. Your note is also snapshotted before every camera launch, so even a hard kill can\u2019t lose booked work.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -661,16 +657,36 @@ const store={
   async init(){
     if(window.storage&&window.storage.list){this.mode='ws';return;}
     if(window.indexedDB){
-      try{
-        this.db=await new Promise((res,rej)=>{
-          const r=indexedDB.open('elevate-fieldnotes',1);
-          r.onupgradeneeded=()=>r.result.createObjectStore('notes',{keyPath:'id'});
-          r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
-        });
-        this.mode='idb';return;
-      }catch(e){}
+      // iOS: the first open after a relaunch can fail or hang once, then work — retry before giving up
+      for(let att=0;att<4;att++){
+        try{
+          this.db=await Promise.race([
+            new Promise((res,rej)=>{
+              const r=indexedDB.open('elevate-fieldnotes',1);
+              r.onupgradeneeded=()=>r.result.createObjectStore('notes',{keyPath:'id'});
+              r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); r.onblocked=()=>rej(new Error('blocked'));
+            }),
+            new Promise((x,rej)=>setTimeout(()=>rej(new Error('timeout')),2500))
+          ]);
+          this.mode='idb';this.recoverMemBk();return;
+        }catch(e){await new Promise(r2=>setTimeout(r2,250*(att+1)));}
+      }
     }
     $('storage-banner').style.display='block';
+  },
+  async recoverMemBk(){
+    // notes written to localStorage while storage was down — fold them back in
+    try{
+      const keys=[];for(let i2=0;i2<localStorage.length;i2++){const k=localStorage.key(i2);if(k&&k.startsWith('efn-membk-'))keys.push(k);}
+      for(const k of keys){
+        try{
+          const n=JSON.parse(localStorage.getItem(k));
+          const all=await this.list();const cur=all.find(x=>x.id===n.id);
+          if(!cur||(n.mod||0)>(cur.mod||0))await this.put(n);
+        }catch(e){}
+        localStorage.removeItem(k);
+      }
+    }catch(e){}
   },
   tx(m){return this.db.transaction('notes',m).objectStore('notes');},
   async list(){
@@ -686,6 +702,10 @@ const store={
     }
     if(this.mode==='idb')return new Promise(res=>{const q=this.tx('readonly').getAll();
       q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([]);});
+    try{
+      for(let i2=0;i2<localStorage.length;i2++){const k=localStorage.key(i2);
+        if(k&&k.startsWith('efn-membk-')&&!this.mem.has(k.slice(10))){const n=JSON.parse(localStorage.getItem(k));this.mem.set(n.id,n);}}
+    }catch(e){}
     return [...this.mem.values()];
   },
   async put(n){
@@ -694,12 +714,14 @@ const store={
     if(this.mode==='idb')return new Promise(res=>{const q=this.tx('readwrite').put(n);
       q.onsuccess=res;q.onerror=res;});
     this.mem.set(n.id,n);
+    try{localStorage.setItem('efn-membk-'+n.id,JSON.stringify(n));}catch(e){}
   },
   async del(id){
     if(this.mode==='ws'){try{await window.storage.delete('note:'+id);}catch(e){}return;}
     if(this.mode==='idb')return new Promise(res=>{const q=this.tx('readwrite').delete(id);
       q.onsuccess=res;q.onerror=res;});
     this.mem.delete(id);
+    try{localStorage.removeItem('efn-membk-'+id);}catch(e){}
   }
 };
 
@@ -1180,12 +1202,19 @@ function cleanupCheck(){
     localStorage.setItem('efn-cleanask',today);
     $('cu-list').innerHTML=stale.map(n=>`
       <label style="display:flex;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)">
-        <input type="checkbox" data-cu="${n.id}" checked style="width:22px;height:22px">
+        <input type="checkbox" data-cu="${n.id}" style="width:22px;height:22px">
         <span class="card-sub" style="line-height:1.45">${noteLine(n)}<br>untouched ${Math.floor(nAge(n)/86400000)} days</span>
       </label>`).join('');
+    cuSync();
     $('m-cleanup').classList.add('on');
   }catch(e){}
 }
+function cuSync(){
+  const n=document.querySelectorAll('[data-cu]:checked').length;
+  $('cu-ok').disabled=!n;
+  $('cu-ok').textContent=n?('Delete '+n+' note'+(n>1?'s':'')):'Delete ticked';
+}
+$('cu-list').addEventListener('change',cuSync);
 $('cu-later').onclick=()=>$('m-cleanup').classList.remove('on');
 $('cu-ok').onclick=async()=>{
   $('m-cleanup').classList.remove('on');
@@ -1195,7 +1224,7 @@ $('cu-ok').onclick=async()=>{
   for(const n of gone)await store.del(n.id);
   notes=notes.filter(n=>!ids.includes(n.id));await renderHome();
   toastUndo(gone.length+' old note'+(gone.length>1?'s':'')+' deleted.',async()=>{
-    for(const n of gone)await store.put(n);await renderHome();},8000);
+    for(const n of gone)await store.put(n);await renderHome();},30000);
 };
 $('home-list').addEventListener('click',e=>{
   const d=e.target.closest('[data-ndel]');
@@ -2734,10 +2763,36 @@ function renderShotMgr(){
   $('ms-grid').innerHTML=arr.map((p2,i)=>`<img src="${p2}" data-msv="${i}">`).join('')||
     '<div class="card-sub" style="grid-column:1/-1">No photos yet.</div>';
 }
-function launchShot(inputId){
-  // iOS: the file-input click must stay inside the tap gesture — no await before it.
+function snapNote(){
+  // full-note lifeboat: survives Android killing the PWA even if the IDB save never lands
+  try{
+    if(!note)return;
+    const j=JSON.stringify(Object.assign({},note,{_snapts:Date.now()}));
+    if(j.length>4500000)return;                     // stay under localStorage quota
+    localStorage.setItem('efn-notesnap',j);
+  }catch(e){try{localStorage.removeItem('efn-notesnap');}catch(e2){}}
+}
+async function restoreNoteSnap(){
+  try{
+    const raw=localStorage.getItem('efn-notesnap');
+    if(!raw)return;
+    localStorage.removeItem('efn-notesnap');
+    const sn=JSON.parse(raw);
+    if(!sn||!sn.id||Date.now()-(sn._snapts||0)>12*3600*1000)return;
+    delete sn._snapts;
+    const all=await store.list();
+    const cur=all.find(n=>n.id===sn.id);
+    if(!cur||(sn.mod||0)>(cur.mod||0))await store.put(sn);
+  }catch(e){}
+}
+function preCamera(){
+  // iOS: the file-input click must stay inside the tap gesture — all of this is sync.
   clearTimeout(saveT);
   try{localStorage.setItem('efn-pendph',JSON.stringify({job:note&&note.job,ts:Date.now()}));}catch(e){}
+  snapNote();
+}
+function launchShot(inputId){
+  preCamera();
   $(inputId).value='';$(inputId).click();
   store.put(note).catch(()=>{});
 }
@@ -2934,7 +2989,7 @@ $('mi-add').onclick=()=>{
 async function launchInvPhoto(inputId){
   if(!invOp)return;
   // stash sync + click inside the gesture (iOS), then save without awaiting
-  clearTimeout(saveT);stashPh();
+  clearTimeout(saveT);stashPh();snapNote();
   invPh=null;$(inputId).value='';$(inputId).click();
   store.put(note).catch(()=>{});
 }
@@ -3076,8 +3131,8 @@ $('file-pdf').addEventListener('change',async e=>{
   }catch(err){toast(err.message||'Couldn’t read that PDF.');}
 });
 $('ps-cancel').onclick=()=>$('m-photosrc').classList.remove('on');
-$('ps-cam').onclick=()=>{$('m-photosrc').classList.remove('on');$('file-photo').value='';$('file-photo').click();};
-$('ps-gal').onclick=()=>{$('m-photosrc').classList.remove('on');$('file-photo-gal').value='';$('file-photo-gal').click();};
+$('ps-cam').onclick=()=>{$('m-photosrc').classList.remove('on');preCamera();$('file-photo').value='';$('file-photo').click();store.put(note).catch(()=>{});};
+$('ps-gal').onclick=()=>{$('m-photosrc').classList.remove('on');preCamera();$('file-photo-gal').value='';$('file-photo-gal').click();store.put(note).catch(()=>{});};
 const loadPhotoPage=f=>new Promise(res=>{
   const im=new Image();
   im.onload=()=>{
@@ -3091,6 +3146,7 @@ const loadPhotoPage=f=>new Promise(res=>{
   im.src=URL.createObjectURL(f);
 });
 const onPhotoPick=async e=>{
+  try{localStorage.removeItem('efn-pendph');}catch(err){}
   const fs=[...e.target.files];if(!fs.length)return;
   let last=null,n=0;
   for(const f of fs){const p=await loadPhotoPage(f);if(p){last=p;n++;}}
@@ -3812,18 +3868,22 @@ $('eb-open').onclick=()=>{
     const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
     if(!standalone&&window.self===window.top)$('install-banner').style.display='block';
   }catch(e){}
-  await renderHome();
-  cleanupCheck();
-  checkExportReminder();
+  await restoreNoteSnap();
+  let camBoot=false;
   try{
     const st=localStorage.getItem('efn-pendph');
     if(st){
       const p=JSON.parse(st);
-      if(Date.now()-p.ts<12*3600*1000)
-        toast('A photo attach was interrupted'+(p.job?' on job '+p.job:'')+' — the phone closed the app during the camera. Open the note, tap the symbol, and attach the photo from your gallery.');
       localStorage.removeItem('efn-pendph');
+      if(Date.now()-p.ts<12*3600*1000){
+        camBoot=true;
+        toast('A photo attach was interrupted'+(p.job?' on job '+p.job:'')+' — the phone closed the app during the camera. Your note is safe. Open it and attach the photo from your gallery.');
+      }
     }
   }catch(e){}
+  await renderHome();
+  if(!camBoot)cleanupCheck();       // never ambush a crew member mid-photo with the cleanup sheet
+  checkExportReminder();
   try{
     let seen=null;
     try{seen=localStorage.getItem('efn-build');}catch(e){}
