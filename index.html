@@ -407,6 +407,14 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <button class="btn ghost" data-add="cancel" style="border:0">Cancel</button>
 </div></div>
 
+<div class="mback" id="m-msup"><div class="modal">
+  <h2>Uploading to SharePoint</h2>
+  <div class="card-sub" id="mu-dest" style="margin-bottom:10px;line-height:1.5"></div>
+  <div id="mu-list" style="max-height:45vh;overflow:auto;margin-bottom:14px"></div>
+  <button class="btn ghost" id="mu-retry" style="width:100%;margin-bottom:10px;display:none">↻ Retry failed</button>
+  <button class="btn" id="mu-close" style="width:100%" disabled>Uploading…</button>
+</div></div>
+
 <div class="mback" id="m-pkg"><div class="modal">
   <h2>Field package</h2>
   <div class="card-sub" style="margin-bottom:6px">Data files going in beside the notes PDF. Tip: in the picker, <b>long-press</b> the first file to select several at once.</div>
@@ -484,7 +492,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 32</h2>
+  <h2>What’s new — build 33</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -595,6 +603,9 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <h2>Export</h2>
   <button class="btn" data-ex="pdf"><b>📄</b> Field notes PDF</button>
   <button class="btn" data-ex="zip"><b>🗜</b> ZIP package — PDF + collector files, photos, videos</button>
+  <button class="btn" data-ex="ms" style="display:none"><b>⇪</b> Upload to job folder — PDF + files</button>
+  <button class="btn" data-ex="msonly" style="display:none"><b>📤</b> Send files only to job folder</button>
+  <div class="card-sub" id="ms-state" style="display:none;padding:2px 4px 8px"></div>
   <div class="card-sub" style="margin:2px 4px 12px">ZIP: you’ll pick the files next (RW5, CSV, linework, media). Very large videos are better sent on their own.</div>
   <button class="btn ghost" data-ex="cancel" style="border:0">Cancel</button>
 </div></div>
@@ -641,15 +652,27 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=32;
+const BUILD=33;
 const NEWS=[
- ['\ud83d\udee1\ufe0f','Photo attach can\u2019t cost you notes','Fixed the Tuesday bug: coming back from the camera could land you on the old-notes cleanup sheet with everything pre-ticked \u2014 one rushed tap deleted notes. The sheet now never appears after a camera interruption, nothing is ever pre-ticked, Delete stays off until you tick, and UNDO waits 30 seconds. Your note is also snapshotted before every camera launch, so even a hard kill can\u2019t lose booked work.']
+ ['\ud83d\udd27','Groundwork for job-folder upload','Behind the scenes this build carries the plumbing for sending field notes and data straight into the SharePoint job folder from the app. Nothing changes for you yet \u2014 the buttons appear once the office finishes the Microsoft setup. WhatsApp sharing works exactly as before.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtDate=iso=>{if(!iso)return'';const d=new Date(iso+'T12:00:00');
   return d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});};
+function noteDays(n){n=n||note;if(!n)return[];
+  const base=(n.days&&n.days.length?n.days:[n.date]).filter(Boolean);
+  return [...new Set(base)].sort();}
+function noteDateStr(n){
+  const ds=noteDays(n);
+  if(ds.length<=1)return fmtDate(ds[0]||'');
+  const a=ds[0],b=ds[ds.length-1];
+  const A=new Date(a+'T12:00:00'),B=new Date(b+'T12:00:00');
+  if(a.slice(0,7)===b.slice(0,7))
+    return A.toLocaleDateString('en-CA',{month:'short',day:'numeric'})+'\u2013'+B.getDate()+', '+B.getFullYear();
+  return A.toLocaleDateString('en-CA',{month:'short',day:'numeric'})+' \u2013 '+fmtDate(b);
+}
 
 /* ================= storage ================= */
 const store={
@@ -732,6 +755,9 @@ function nowT(){return new Date().toLocaleTimeString([],{hour:'numeric',minute:'
 function touch(){
   if(!note)return;
   note.mod=Date.now();
+  try{const dd=new Date().toISOString().slice(0,10);
+    if(!note.days||!note.days.length)note.days=note.date?[note.date]:[];
+    if(!note.days.includes(dd))note.days.push(dd);}catch(e){}
   setSave('Saving…');
   clearTimeout(saveT);
   saveT=setTimeout(async()=>{await store.put(note);setSave('Saved ✓ '+nowT());},400);
@@ -772,7 +798,15 @@ $('news-ok').onclick=()=>{
   newsSeenSession=true;
   try{localStorage.setItem('efn-build',String(BUILD));}catch(e){}
 };
-$('home-sub').addEventListener('click',openNews);
+let devT=null,devHeld=false;
+$('home-sub').addEventListener('pointerdown',()=>{devHeld=false;clearTimeout(devT);
+  devT=setTimeout(()=>{devHeld=true;
+    const on=msDev();
+    try{localStorage.setItem('efn-msdev',on?'0':'1');}catch(e){}
+    toast('Job-folder upload test mode '+(on?'OFF':'ON')+' on this phone.');
+  },800);});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>$('home-sub').addEventListener(ev,()=>clearTimeout(devT)));
+$('home-sub').addEventListener('click',()=>{if(devHeld){devHeld=false;return;}openNews();});
 
 /* ================= training ================= */
 const GUIDES=[
@@ -1163,7 +1197,7 @@ async function renderHome(){
       <div class="pgbody">
         <div class="card-main">${esc(n.job||'No job #')}</div>
         <div class="card-sub">${esc(n.addr||'')}${n.addr&&n.city?', ':''}${esc(n.city||'')}</div>
-        <div class="card-meta"><span>${fmtDate(n.date)}</span><span>${1+exportPlan(n).length} pg</span><span>${esc(n.crew||'')}</span>${(n.mod&&(!n.exported||n.exported<n.mod))?'<span style="color:#D2691E;font-weight:800">unexported</span>':''}${(Date.now()-(n.updated||n.created||Date.now()))>=(PURGE_DAYS-7)*86400000?`<span style="color:var(--muted)">purges in ${Math.max(0,PURGE_DAYS-Math.floor((Date.now()-(n.updated||n.created))/86400000))} d</span>`:''}</div>
+        <div class="card-meta"><span>${noteDateStr(n)}</span><span>${1+exportPlan(n).length} pg</span><span>${esc(n.crew||'')}</span>${(n.mod&&(!n.exported||n.exported<n.mod))?'<span style="color:#D2691E;font-weight:800">unexported</span>':''}${(Date.now()-(n.updated||n.created||Date.now()))>=(PURGE_DAYS-7)*86400000?`<span style="color:var(--muted)">purges in ${Math.max(0,PURGE_DAYS-Math.floor((Date.now()-(n.updated||n.created))/86400000))} d</span>`:''}</div>
       </div><button class="pgdel" data-ndel="${n.id}" title="Delete note">🗑</button><div class="pgx">›</div>
     </div>`).join('');
 }
@@ -1173,7 +1207,7 @@ const nAge=n=>Date.now()-(n.updated||n.created||Date.now());
 const nStale=n=>nAge(n)>=PURGE_MS;
 const nUnexp=n=>!n.exported||(n.mod&&n.exported<n.mod);
 function noteLine(n){
-  return `<b>${esc(n.job||'(no job #)')}</b> · ${fmtDate(n.date)} · ${1+exportPlan(n).length} pg`+
+  return `<b>${esc(n.job||'(no job #)')}</b> · ${noteDateStr(n)} · ${1+exportPlan(n).length} pg`+
     (nUnexp(n)?' · <span style="color:var(--danger);font-weight:800">NEVER EXPORTED</span>':' · exported');
 }
 let nDelTarget=null;
@@ -1273,7 +1307,7 @@ function openNote(){
 }
 function updateNoteTitle(){
   $('note-title').firstChild.textContent=note.job||'New note';
-  $('note-sub').textContent=(note.addr?note.addr+' — ':'')+fmtDate(note.date);
+  $('note-sub').textContent=(note.addr?note.addr+' — ':'')+noteDateStr(note);
 }
 HF.forEach(f=>$('f-'+f).addEventListener('input',e=>{note[f]=e.target.value;updateNoteTitle();touch();}));
 $('f-date').addEventListener('input',e=>{note.date=e.target.value;updateNoteTitle();touch();});
@@ -3171,7 +3205,7 @@ function paperPage(ctx,idx,total){
   ctx.fillStyle='#24312B';ctx.font='700 26px '+'ui-monospace,Menlo,monospace';
   if(note&&note.job)ctx.fillText('JOB '+note.job,46,64);
   if(note){
-    const hc=[fmtDate(note.date),note.crew].filter(Boolean).join('  ·  ');
+    const hc=[noteDateStr(note),note.crew].filter(Boolean).join('  ·  ');
     if(hc){ctx.textAlign='center';ctx.fillText(hc,EW/2,64);}
   }
   ctx.textAlign='right';ctx.fillText(`P ${idx}|${total}`,EW-46,64);ctx.textAlign='start';
@@ -3223,7 +3257,7 @@ function renderHeaderPage(ctx,total,segs){
   ctx.font=mono(36);
   if(note.addr){ctx.fillText('#  '+note.addr,cx,y);y+=64;}
   if(note.city){ctx.fillText(note.city,cx,y);y+=64;}
-  y+=50;ctx.fillText(fmtDate(note.date),cx,y);y+=64;
+  y+=50;ctx.fillText(noteDateStr(note),cx,y);y+=64;
   if(note.purpose){ctx.fillText(note.purpose,cx,y);y+=64;}
   if(note.crew){ctx.fillText(note.crew,cx,y);y+=64;}
   y+=50;
@@ -3771,6 +3805,7 @@ function toast(msg){
 function busy(on){$('export-label').innerHTML=on?'<span class="spin"></span>':'Export';}
 $('b-export').onclick=()=>{
   if(!note.job||!note.crew||!note.purpose){toast('Job #, crew and scope must be filled before exporting.');return;}
+  msSyncUI();
   $('m-export').classList.add('on');
 };
 $('m-export').addEventListener('click',async e=>{
@@ -3784,16 +3819,210 @@ $('m-export').addEventListener('click',async e=>{
     catch(err){toast(err.message||'Export failed.');}
     busy(false);return;
   }
-  if(k==='zip'){pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
+  if(k==='zip'){pkgMode='zip';pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
+  if(k==='ms'){pkgMode='ms';pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
+  if(k==='msonly'){pkgMode='msonly';pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
 });
-let pkgFiles=[];
+/* ================= Microsoft 365 upload ================= */
+const M365={client:'',tenant:'',host:'elevatelandsurveying.sharepoint.com',site:'/sites/JobFiles',
+  redirect:'https://finnyelevate.github.io/Field-Notes-app/',live:false};
+const msDev=()=>{try{return localStorage.getItem('efn-msdev')==='1';}catch(e){return false;}};
+const m365Ready=()=>!!(M365.client&&M365.tenant);
+let msNav=u=>location.assign(u);                 // wrapper so tests can stub navigation
+const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+async function msLogin(){
+  if(!(window.crypto&&crypto.subtle)){toast('Secure sign-in needs the installed app \u2014 open Elevate Field from its home-screen icon.');return;}
+  const vb=crypto.getRandomValues(new Uint8Array(32)), v=b64u(vb);
+  const ch=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
+  try{localStorage.setItem('efn-ms-ver',v);
+      localStorage.setItem('efn-ms-resume',JSON.stringify({noteId:note&&note.id,ts:Date.now()}));}catch(e){}
+  msNav('https://login.microsoftonline.com/'+M365.tenant+'/oauth2/v2.0/authorize?'+new URLSearchParams({
+    client_id:M365.client,response_type:'code',redirect_uri:M365.redirect,response_mode:'query',
+    scope:'openid profile offline_access https://graph.microsoft.com/Files.ReadWrite.All',
+    code_challenge:ch,code_challenge_method:'S256'}).toString());
+}
+function msSaveTok(t){
+  let name='';
+  try{if(t.id_token){const p=JSON.parse(atob(t.id_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    name=p.name||p.preferred_username||'';}}catch(e){}
+  const old=msTokRaw();
+  try{localStorage.setItem('efn-ms-tok',JSON.stringify({
+    at:t.access_token, rt:t.refresh_token||(old&&old.rt)||'',
+    exp:Date.now()+(t.expires_in||3600)*1000, name:name||(old&&old.name)||''}));}catch(e){}
+}
+function msTokRaw(){try{return JSON.parse(localStorage.getItem('efn-ms-tok')||'null');}catch(e){return null;}}
+function msSignedIn(){return !!msTokRaw();}
+function msSignOut(){try{localStorage.removeItem('efn-ms-tok');}catch(e){} msDrive=null; msSyncUI();}
+async function msTokenReq(body){
+  const r=await fetch('https://login.microsoftonline.com/'+M365.tenant+'/oauth2/v2.0/token',{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams(body).toString()});
+  return r.json();
+}
+async function msExchange(code){
+  const v=localStorage.getItem('efn-ms-ver')||'';
+  const t=await msTokenReq({client_id:M365.client,grant_type:'authorization_code',code,
+    redirect_uri:M365.redirect,code_verifier:v});
+  if(t.access_token){msSaveTok(t);return true;}
+  return false;
+}
+async function msToken(){
+  const t=msTokRaw(); if(!t)return null;
+  if(Date.now()<t.exp-60000)return t.at;
+  if(!t.rt)return null;
+  const n=await msTokenReq({client_id:M365.client,grant_type:'refresh_token',refresh_token:t.rt,
+    scope:'openid profile offline_access https://graph.microsoft.com/Files.ReadWrite.All'});
+  if(n.access_token){msSaveTok(n);return n.access_token;}
+  msSignOut(); return null;
+}
+const GRAPH='https://graph.microsoft.com/v1.0';
+async function gfetch(path,opt){
+  const at=await msToken(); if(!at)throw new Error('signin');
+  opt=opt||{}; opt.headers=Object.assign({Authorization:'Bearer '+at},opt.headers||{});
+  const r=await fetch(GRAPH+path,opt);
+  if(r.status===401)throw new Error('signin');
+  return r;
+}
+let msDrive=null;
+async function msDriveId(){
+  if(msDrive)return msDrive;
+  const sr=await gfetch('/sites/'+M365.host+':'+M365.site);
+  if(!sr.ok)throw new Error('SharePoint site not reachable ('+sr.status+')');
+  const site=await sr.json();
+  const dr=await gfetch('/sites/'+site.id+'/drive');
+  if(!dr.ok)throw new Error('Library not reachable ('+dr.status+')');
+  msDrive=(await dr.json()).id; return msDrive;
+}
+const encPath=p=>p.split('/').map(encodeURIComponent).join('/');
+async function msEnsureFolder(parent,name){
+  const d=await msDriveId();
+  const chk=await gfetch('/drives/'+d+'/root:/'+encPath(parent+'/'+name));
+  if(chk.ok)return parent+'/'+name;
+  const mk=await gfetch('/drives/'+d+'/root:/'+encPath(parent)+':/children',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:name,folder:{},'@microsoft.graph.conflictBehavior':'replace'})});
+  if(!mk.ok)throw new Error('Couldn\u2019t create folder '+name+' ('+mk.status+')');
+  return parent+'/'+name;
+}
+function msJobParts(job){
+  const m=String(job||'').match(/(\d{2})\s*-\s*(\d{3,4})/);
+  if(!m)return null;
+  const q=+m[2], r1=Math.floor(q/1000)*1000, r2=Math.floor(q/100)*100;
+  return {num:m[1]+'-'+m[2], base:r1+'-'+(r1+999)+'/'+r2+'-'+(r2+99)+'/'+m[1]+'-'+m[2]};
+}
+async function msDest(job,fieldDate){
+  const d=await msDriveId();
+  const today=(String(fieldDate||'').match(/^\d{4}-\d{2}-\d{2}$/)?fieldDate:new Date().toISOString().slice(0,10));
+  const jp=msJobParts(job);
+  const inbox=async reason=>{
+    await msEnsureFolder('Field Inbox',(jp?jp.num:'no-job')+' '+today).catch(()=>{});
+    return {path:'Field Inbox/'+(jp?jp.num:'no-job')+' '+today, inbox:true, reason};
+  };
+  if(!jp)return inbox('No job number on the note');
+  const chk=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base));
+  if(chk.status===404)return inbox('Job folder '+jp.num+' not found');
+  if(!chk.ok)throw new Error('SharePoint error ('+chk.status+')');
+  const dataChk=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base+'/Field/Data'));
+  if(dataChk.status===404)return inbox(jp.num+' has no Field/Data folder');
+  if(!dataChk.ok)throw new Error('SharePoint error ('+dataChk.status+')');
+  const kids=await (await gfetch('/drives/'+d+'/root:/'+encPath(jp.base+'/Field/Data')+':/children?$select=name,folder&$top=200')).json();
+  const short=today.slice(2);
+  const hit=(kids.value||[]).find(k=>k.folder&&(k.name.startsWith(today)||k.name.startsWith(short)));
+  if(hit)return {path:jp.base+'/Field/Data/'+hit.name, job:jp.num};
+  await msEnsureFolder(jp.base+'/Field/Data',today);
+  return {path:jp.base+'/Field/Data/'+today, job:jp.num};
+}
+async function msUpload(destPath,file,onProg){
+  const d=await msDriveId();
+  const item='/drives/'+d+'/root:/'+encPath(destPath+'/'+file.name);
+  if(file.size<3500000){
+    const r=await gfetch(item+':/content?@microsoft.graph.conflictBehavior=rename',{method:'PUT',body:file});
+    if(!r.ok)throw new Error('Upload failed ('+r.status+')');
+    onProg&&onProg(1);return;
+  }
+  const sr=await gfetch(item+':/createUploadSession',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({item:{'@microsoft.graph.conflictBehavior':'rename'}})});
+  if(!sr.ok)throw new Error('Upload failed ('+sr.status+')');
+  const url=(await sr.json()).uploadUrl, CH=10*320*1024;
+  for(let off=0;off<file.size;off+=CH){
+    const end=Math.min(off+CH,file.size);
+    const r=await fetch(url,{method:'PUT',
+      headers:{'Content-Range':'bytes '+off+'-'+(end-1)+'/'+file.size},body:file.slice(off,end)});
+    if(!(r.status===200||r.status===201||r.status===202))throw new Error('Upload failed ('+r.status+')');
+    onProg&&onProg(end/file.size);
+  }
+}
+function msSyncUI(){
+  const on=m365Ready()&&(M365.live||msDev());
+  document.querySelectorAll('[data-ex=ms],[data-ex=msonly]').forEach(b=>b.style.display=on?'flex':'none');
+  const st=$('ms-state'); if(!st)return;
+  st.style.display=on?'block':'none';
+  if(!on)return;
+  const t=msTokRaw();
+  st.innerHTML=t?('Microsoft: '+esc(t.name||'signed in')+' \u00b7 <a id="ms-out" style="text-decoration:underline">sign out</a>')
+               :'Microsoft: not signed in \u2014 upload buttons will ask once';
+  const o=$('ms-out'); if(o)o.onclick=e2=>{e2.stopPropagation();msSignOut();};
+}
+let muFails=[], muDest=null;
+async function msUploadFlow(files,withPdf){
+  if(!navigator.onLine){toast('No signal \u2014 connect to data or Wi\u2011Fi and try again. WhatsApp/ZIP still works offline.');return;}
+  if(!msSignedIn()){msLogin();return;}
+  busy(true);
+  try{
+    const list=files.slice();
+    if(withPdf){const p=await buildPdf();list.unshift(new File([p.blob],p.name,{type:'application/pdf'}));}
+    const dest=await msDest(note.job,noteDays().slice(-1)[0]);   // dated folder = LAST field day on the note
+    muDest=dest; muFails=[];
+    $('mu-dest').innerHTML=dest.inbox
+      ?'\u26a0 '+esc(dest.reason)+' \u2014 files are going to <b>Field Inbox</b>; the office will file them.'
+      :'\u2192 <b>'+esc(dest.job)+'</b> \u203a Field \u203a Data \u203a '+esc(dest.path.split('/').pop());
+    $('mu-list').innerHTML=list.map((f,i)=>`
+      <div style="display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)">
+        <span class="card-sub" style="flex:1;word-break:break-all">${esc(f.name)} \u00b7 ${(f.size/1048576).toFixed(1)} MB</span>
+        <span class="mono" id="mu-st-${i}" style="font-size:13px">\u23f3</span>
+      </div>`).join('');
+    $('mu-retry').style.display='none';
+    $('mu-close').disabled=true;$('mu-close').textContent='Uploading\u2026';
+    $('m-msup').classList.add('on');
+    busy(false);
+    for(let i=0;i<list.length;i++){
+      const el=$('mu-st-'+i);
+      try{
+        await msUpload(dest.path,list[i],fr=>{el.textContent=Math.round(fr*100)+'%';});
+        el.textContent='\u2713';
+      }catch(err){
+        el.textContent='\u2717';
+        muFails.push(list[i]);
+        if(String(err.message)==='signin'){$('m-msup').classList.remove('on');msLogin();return;}
+      }
+    }
+    $('mu-close').disabled=false;
+    $('mu-close').textContent=muFails.length?('Done \u2014 '+muFails.length+' failed'):'Done \u2713';
+    $('mu-retry').style.display=muFails.length?'block':'none';
+    if(!muFails.length){
+      note.exported=Date.now();clearTimeout(saveT);store.put(note).catch(()=>{});setSave('Saved \u2713 '+nowT());
+      toast(dest.inbox?'Files uploaded to Field Inbox.':('Uploaded to '+dest.job+' \u2014 job folder updated.'));
+    }
+  }catch(err){
+    busy(false);
+    if(String(err.message)==='signin'){msLogin();return;}
+    toast(err.message||'Upload failed \u2014 try again, or send by WhatsApp.');
+  }
+}
+$('mu-close').onclick=()=>{$('m-msup').classList.remove('on');};
+$('mu-retry').onclick=()=>{const f=muFails.slice();$('m-msup').classList.remove('on');if(f.length)msUploadFlow(f,false);};
+let pkgFiles=[], pkgMode='zip';
 function pkRender(){
   $('pk-list').innerHTML=pkgFiles.map((f,i)=>`
     <div style="display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)">
       <span class="card-sub" style="flex:1;line-height:1.4;word-break:break-all">${esc(f.name)} · ${(f.size/1048576).toFixed(1)} MB</span>
       <button class="pgdel" data-pkx="${i}" title="Remove">🗑</button>
     </div>`).join('')||'<div class="card-sub" style="padding:10px 2px">No files yet.</div>';
-  $('pk-build').textContent=pkgFiles.length?`Build package (${pkgFiles.length})`:'Build package';
+  const n=pkgFiles.length;
+  const lbl=pkgMode==='zip'?'Build package':pkgMode==='ms'?'Upload PDF + files':'Upload files';
+  $('pk-build').textContent=n?(lbl+' ('+(pkgMode==='ms'?n+1:n)+')'):lbl;
+  $('pk-build').disabled=(pkgMode==='msonly'&&!n);
 }
 $('pk-list').addEventListener('click',e=>{
   const b=e.target.closest('[data-pkx]');if(!b)return;
@@ -3810,6 +4039,7 @@ $('pk-cancel').onclick=()=>{$('m-pkg').classList.remove('on');pkgFiles=[];};
 $('pk-build').onclick=async()=>{
   $('m-pkg').classList.remove('on');
   const files=pkgFiles;pkgFiles=[];
+  if(pkgMode==='ms'||pkgMode==='msonly'){msUploadFlow(files,pkgMode==='ms');return;}
   busy(true);
   try{
     await loadScript(CDN+'jszip.min.js');
@@ -3862,6 +4092,18 @@ $('eb-open').onclick=()=>{
   openNote();
 };
 (async()=>{
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get('code')&&m365Ready()){
+      const okx=await msExchange(q.get('code'));
+      history.replaceState(null,'',location.pathname);
+      if(okx){const t=msTokRaw();toast('Microsoft sign-in done'+(t&&t.name?' \u2014 '+t.name:'')+'. Tap Export again to upload.');}
+      else toast('Microsoft sign-in didn\u2019t complete \u2014 try again.');
+    }else if(q.get('error')){
+      history.replaceState(null,'',location.pathname);
+      toast('Microsoft sign-in cancelled.');
+    }
+  }catch(e){}
   await store.init();
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
   try{
