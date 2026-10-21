@@ -1,262 +1,389 @@
-# Elevate Field — Changelog
+# Elevate Office — changelog
 
-## Build 33 — 2026-10-21 (dormant)
-- **Direct SharePoint upload — plumbing** (Finny's rulings 2026-10-21; spec in project doc `claude/field-upload-spec.md`): Export gains "Upload to job folder" (notes PDF + picked files, loose not zipped) and "Send files only" — both hidden until the `M365` config block carries the client + tenant IDs from the admin (hand-off note sent). Microsoft sign-in is hand-rolled OAuth2 auth-code + PKCE (no MSAL lib; SPA token endpoint is CORS-open; refresh-token rotation handled; WebCrypto guard for non-installed contexts). Destination: `range/range/job/Field/Data/<date>/` computed from the note's job #; dated subfolders with office descriptors ("2026-10-21 topo") are reused by date-token, bare date created otherwise; job folder missing/typo'd → batch subfolder under **Field Inbox** with a warning (the app NEVER creates job folders — standing rule). Uploads: `conflictBehavior=rename` (never overwrite), <3.5 MB simple PUT, larger via Graph upload sessions in 3.2 MB chunks with per-file progress; per-file ✓/✗ sheet with retry; a clean full upload stamps `note.exported` without bumping `mod` (fixed in-build: the first cut bumped mod and the "unexported" tag never cleared). WhatsApp/ZIP flows untouched. 32 new checks against mocked Microsoft endpoints (PKCE round-trip, token refresh + rotation, range math incl. 3-digit sequences, descriptor-folder reuse, inbox fallback, chunk ranges, dormant invisibility). **Multi-day notes**: every day a note is actually edited is recorded automatically (`note.days`); the note's date on the home card, note header and printed pages becomes a compact range ("Oct 15–19, 2026") when work spans days, single date otherwise. Dated subfolders use the **LAST field day on the note** (Finny's ruling, Oct 15–19 example → folder `2026-10-19`), not the upload day — data sent a day or two late still files under the day it was shot, and matches the office's existing descriptor folder for that date. Rollout is gated twice: buttons need IDs AND (`M365.live` OR per-phone test mode, toggled by long-pressing the build line on the home screen — short tap still opens What's-new). Plan: 33.1 = IDs in, live:false → Finny + GG pilot quietly on test-mode phones; go-live for all crews = live:true + real What's-new card. What's-new for 33 says plumbing only.
+## Build 1.33 — 2026-10-21
+- **PM › Save to quote folder: dates in file names are no longer read as quote numbers.**
+  - Only files with "quote" in the name are checked for a quote number. Example: in 26-623-Astria Properties, "2026-10-20 Survey Extents.pdf" was read as quote "10-20" and you were asked which folder to use.
+  - A quote file naming another quote (e.g. a copied 26-174 quote) still asks.
+- **PM › Duplicate as sub-quote also clears four more fields:** Services Provided, Additional Task Details, Additional PM comments and Date requested.
+- **PM › saved versions are easier to use.**
+  - **My saved versions** has a **Use** button beside each version. It fills the empty service on the open quote, or adds a new service if they're all in use.
+  - Every service card's first (job-type) dropdown has a **My saved versions** group (★). Pick one to apply that version to that service.
 
-## Build 32 — 2026-10-16
-- **FIX — notes deleted after attaching an image** (crew report, started ~Oct 13): Android kills the PWA during the camera; the relaunch cold-boots to home, where the Build-29 30-day cleanup sheet fired — and mid-October is exactly when the first notes crossed 30 days. The sheet listed old notes **pre-ticked** with a destructive primary button, so one rushed tap on the way back to the note deleted them, and the 8-s UNDO expired unseen. No code had changed since Sep 24; the trigger was the calendar. Fixes: cleanup never runs on a camera-interrupted boot (the `efn-pendph` stash marks it; the once-a-day flag isn't burned, so it still asks on the next normal open); nothing is ever pre-ticked; Delete is disabled until something is ticked and shows a count ("Delete 2 notes"); bulk-delete UNDO widened 8 → 30 s. Ask-first ruling unchanged.
-- **Note lifeboat**: every camera launch now snapshots the whole note to localStorage (skipped above ~4.5 MB, quota-safe). On boot the snapshot is restored iff it's newer than the stored copy (`mod` compare), then cleared — so a hard kill can no longer lose booked work even if the fire-and-forget IndexedDB save never landed.
-- **Photo-page camera guard**: the Take-a-photo / gallery chooser (29.x) never set the crash stash or saved before launching — that path got no recovery toast and was the open door to the cleanup ambush. Both paths now use the same `preCamera()` guard as row/invert photos (sync stash + snapshot → click → save, iOS gesture rule preserved).
-- **iPhone storage hardening** (GG confirmed he's on iPhone; iOS is prone to IndexedDB failing or hanging on the first open after a relaunch): `store.init` now retries the open up to 4× with backoff and a 2.5 s timeout per attempt instead of giving up after one silent failure. If storage still won't open, the app runs on a localStorage backup: every save mirrors to `efn-membk-<id>`, the home list folds those in (notes no longer LOOK deleted), a loud banner says storage is temporary and to fully close and reopen, and the next successful boot folds the backups into real storage (newer-`mod` wins) and clears them.
+## Build 1.32 — 2026-10-20
+- **PM › Duplicate as sub-quote copies only the job details.** A sub-quote is new services and new hours; changes to the original go on the original quote.
+  - Kept: the top section (client, contact, email, phone, site address(es) incl. extra properties, project line, legal, PID, plans, PM name / initials) under the new sub-quote number.
+  - Blank, as on a new quote:
+    - services (one empty service), hours, stages and price lines;
+    - every typed or held price, including "Hourly" and per-unit prices;
+    - disbursements, Field Crew Instructions, notes and the rate-sheet option.
+  - A note on the sub-quote says so. The original quote is untouched.
+- **PM › Renumber… a quote.** For when another quote already has the same number.
+  - The **Renumber…** button sits above the Quote #. It's also offered in the "More than one folder could be quote … — which one?" box.
+  - It suggests the next free number this year (checks the Quotes - Documents folders and your drafts) and refuses a number already used by a folder or a draft.
+  - On confirm it updates the Quote # and Word file name. Then create this quote's folder with "Create quote folder", and update the To Do Quotes tracker.
+  - The other quote and its folder are never touched, and nothing is created automatically.
+- **PM › reminder when no disbursements are selected.** "No disbursements selected — title, plans, checklist or filing fee?" shows under the Save / Download buttons.
+  - It's only a reminder: saving and downloading still work.
+  - It disappears as soon as a disbursement or an "other" amount is entered.
+- **Fix — Match points (General and Calc → tied-in) since 1.31.**
+  - The 1.31 Monitoring code reused a name the matcher relies on. This broke the monument-ID check: every pair showed ✓ID, even G or CHK shots, and the ID hints that steer the match were scrambled.
+  - Fixed. IDs are read correctly again (2022 "ocnt 6292" = 146 OCNT 6292).
+  - New: a crew note naming the other side's point number with its code ("105 occ" → 105 OCC, "opcon 111" → 111 OPCON) also counts as a hint.
+  - With two or more hints, a match that pairs none of them (e.g. a chance triangle of ground shots) is no longer accepted. The tool loosens the tolerance for one that agrees with the hints.
+  - Where a hinted point and a backsight check sit on the same spot, the hinted point is named.
+  - A scale difference between the sides (e.g. UTM grid vs local ground) is now reported. It is never applied; the Helmert in MS CAD solves it.
+  - Checked on 23-2362 lease: 2022 → 146, 2023 → 111 and 2024 → 105, the same pairs as the MS CAD Helmert (scale ≈ 1.0004). Before the fix it gave 2006 → 147, 2002 → 109, 2005 → 143.
+- Verified with a test vault: the sub-quote keeps the job details (incl. a 2nd property) and clears services, held prices, price lines, disbursements, crew instructions, notes and rate sheet, with the original unchanged. Renumber was checked with drafts only (suggests the next after the drafts) and with folders (two 26-618 folders and a 26-652: suggests 26-653, refuses 26-652 and a draft's number, creates and touches no folder), and from the "more than one folder" box. The reminder shows, hides and doesn't block. All earlier checks still pass.
 
-## Build 31 — 2026-09-24
-- **Symbols snap to corners**: reported by Finny — no way to accurately drop a symbol on a shown corner by finger, and dragging a misplaced one back didn't snap either. Symbols (place-by-tap, place-via-picker, and drag with Select) now magnet onto the nearest line/poly/dim/arc endpoint within a fingertip-sized radius (`symSnapR()` = 44 screen px; shrinks in page units as you zoom in, so zooming gives fine control). Green snap square + haptic reuse the existing line-snap feedback: it flashes 0.6 s on a snapped placement and shows live during a drag. Tap jitter under 8 px never triggers the magnet, so tapping a symbol to open its invert card can't fling it to a nearby corner; text/labels and other non-symbol ops are unaffected. Line/dim endpoint snap widened 26 → 32 screen px for finger drawing.
+## Build 1.31 — 2026-10-19
+- **Points tab: tool buttons.** The tools are buttons along the top: Clean-up · Scale · Match points · Design vs Field · Monitoring · Tree table · Transform.
+  - One tool shows at a time, so there's no scrolling past the others. The file shelf stays at the top for every tool.
+  - Clean-up opens first, and the app remembers the last tool you used. Tree table is greyed out when the file has no trees.
+- **Training videos in the Points tab.** Each tool shows its own ▶ Training links, which open the video in a new tab:
+  - Clean-up: tree sizes to imperial, points upload for crew, RW5 to points in feet;
+  - Match points: points matching, plus the PL sample;
+  - Design vs Field: cut / fills, and residuals;
+  - Tree table: tree table.
+- **Points tab: Monitoring** (new). Compares the base (true) values with this trip (observed). The residual is **observed − base**, to the mm. Residuals only, no tolerances applied, and nothing is saved between sessions.
+  - **Base:** paste it from the monitoring spreadsheet (copy the header + values), or pick its point range from a file.
+    - The pasted header decides the layout: "Elevation" only, or N / E / Ele. "Gauge" / "Guage" labels are fine.
+  - **This trip:** type the trip's point range; only those shots are used. A suggested range (the newest shots on the base points) can be accepted with one click.
+  - **Pairing:**
+    - Shots are paired to the base points by position (default within 0.10 m).
+    - Repeat shots of a point within the trip are averaged, with the shot count and spread shown.
+    - With an elevation-only paste, shots are matched by their description (A, B, …) inside the trip range. A point coded twice far apart is flagged and not averaged. Picking the base by range instead pairs by position.
+  - **Copy for the spreadsheet:** rows in the base's order with its labels: observed values (optional), then ΔN ΔE ΔEle (+ ΔTotal), or Elevation only.
+  - Averages and base values are rounded to the mm before differencing, as in the spreadsheets.
+- **Design vs Field:**
+  - **Point ranges** box for each side (e.g. "625-663, 700-750, 812"). It's used instead of the blocks when filled in, for jobs with several days of shots.
+  - The **Note** column lists other field shots also inside the search limit ("also within 0.30 m: 898"). It never chooses between them.
+  - With only **Cut / fill** ticked, points without a design elevation are left out of the .dxf table and Copy table. The on-screen table still shows every row.
+- **Tree table:** has its own Metric / Imperial switch (the same setting as Clean-up).
+- **Training tab:** added RW5 file to points for a topo in feet; Design vs Field cut / fills and residuals; Tree table; a new LISP commands section (cert in metres to feet, feet to metric topo example); Creating blocks; Dimensioning in feet and inches.
+- Verified:
+  - Monitoring on 22-1740 (Oct 7 trip against the Oct 6 baseline, pasted from the spreadsheet): all 9 points paired, F and I averaged, ΔN / ΔE / ΔEle / ΔTotal matching the report (as observed − base).
+  - Monitoring on 24-2709 (May-1 base pasted as Elevation only): matches the PDF's 2nd, 3rd and 4th readings exactly. The 2nd needed the base picked by range, because shot 746 is coded "C" but sits on D; with an elevation-only paste it is flagged, not averaged.
+  - Design vs Field ranges, notes and Cut / fill-only rows, plus the tool buttons and training links, checked on 24-2817. All earlier checks still pass.
 
-## Build 30 — 2026-09-20
-- **Surveyed-point marker (X)**: new `spx` symbol heads the Utilities group — a small stroked X (`_x`, 0.45 r ≈ 12 px arms at default size) marking a shot position exactly. Requested by Finny for building/shed corners where crews were borrowing the filled Iron-post dot, which reads heavy and imprecise on small structures; sized down from the first cut on his review. Deliberately outside `UTIL`: no auto PT#, no invert card, no label — just the mark. Appears in the export legend as SURVEYED POINT when used. Detail pages slip to Build 31.
+## Build 1.30 — 2026-10-15
+Includes everything from 1.29, which was only live for a few hours, plus the first round of feedback on it.
 
-## Build 29.3 — 2026-09-16
-- **Field Package: files collect across picker rounds**: Android's picker often returns one file per visit (multi-select needs a long-press most crews don't know). The zip flow now stages picks in a sheet — file list with sizes, per-file remove, "＋ Add more files" reopens the picker, dedupe by name/size/mtime, "Build package (N)" zips. Sheet includes the long-press tip. Zip build and 29.2 one-zip share unchanged.
+- **Points tab: Design vs Field** (panel under Match points). Compares design points with the field shots for stake-outs, cut / fill and as-builts. Load one .msz holding both, or a field .rw5 / points file next to a design .msz on the shelf.
+  - **Pairing.** Each design point is paired with the nearest field point. Tap point-number blocks to choose the Design and Field sets; with one file, points numbered under 100 start as Design and everything else as Field. Pick the stake-out shots for Field, so pins or ground shots at the same spot aren't used.
+  - **Search limit (default 0.30 m).** Design points with no field point that close are left out of the results. The summary line just counts them.
+  - **Residuals only, no pass / fail.** There is no MEET, no ON and no tolerance check; you judge what's acceptable for the site.
+    - ΔN / ΔE are field minus design, to the mm, shown as where the stake sits ("0.121S 0.004W").
+    - Cut / fill is design elevation minus field elevation, both rounded to the cm (the office method): FILL when the ground is below design, CUT when it's above, CUT0.00 when exactly on grade.
+    - A design elevation of 0 means horizontal only.
+  - **On-screen table.** Every column, plus the field description and a note when one field point is nearest to two design points: Design pt, Field pt, Design elev, Field elev, Cut/Fill, ΔN, ΔE, Horiz.
+  - **Include switches.** Horizontal ΔN / ΔE, Cut / fill, and Horizontal distance (off by default). They decide what goes into the stakes' descriptions and which columns go into the .dxf and Copy table. Point numbers are always in. The elevation columns drop on their own when none of the design points has an elevation.
+  - **Table for the drawing (.dxf).** Lines and text on layer ELV-DESIGN-FIELD, with a text height you set, to insert as a block beside the plan. Copy table pastes into Excel as columns.
+  - **Points file with amended descriptions (.txt).** The field file with only the paired stakes' descriptions changed, e.g. "FILL0.34 0.121S 0.004W". An existing description is kept ("G FILL0.90 …"), and numbers and coordinates are untouched. Import it into MicroSurvey over the existing points so the results show on the drawing. "Changed points only" gives just the amended stakes. Both always save as .txt, whatever the source file was.
+- **Points tab: Tree table** (panel under Design vs Field; shows when the file has trees). Every tree point (TCED, TCLU, TCLUS, TCON, TDEC, TFIR, TSTUMP) by point number, in numeric order.
+  - The description is worded as the AutoMap writes it, built from the cleaned descriptions: metric "30cmØ deciduous Dr=4", or imperial (following the drawing units) "0.98Ø deciduous Dr=13.12". There is never "cm" on an imperial drawing, including TCLU.
+  - Tree table for the drawing (.dxf) has PT and DESCRIPTION columns on layer ELV-TREE-TABLE. Long lists wrap into side-by-side column sets; rows per set default 40, adjustable. Copy list is also available.
+  - On the drawing, show the point numbers beside the tree symbols (e.g. a tree point-number layer) so the table can be cross-referenced.
+- **Jobs: Tidy this job folder**, fixed for older job folders like 21-1323:
+  - Capitals don't matter ("request", "REQUESTS", "office", "FIELD").
+  - Any folder named with "request", "field data" / "field notes" or "data" is recognised, including ones already inside Office or Field. Approval folders go into Office › Requests.
+  - When there's no Requests or Data folder yet, the old folder becomes it, instead of a new empty one being made beside it. When there is one, the old folder's contents go into it, and files already there are kept, never replaced.
+  - If the browser can't move a folder (Edge / Chrome often can't move folders with subfolders), it is copied instead, subfolders and all, and checked. The original is listed for you to delete; the app still never deletes anything.
+- Verified: Design vs Field on 24-2817 against the office's hand-calculated cut / fill plan. 35 of 36 agree; the one difference, point 76, is a sign slip on the plan (ground 41.55, design 41.47 = CUT0.08, plan shows FILL0.08). Also checked: horizontal-only calc corners, design points with no stake left out, the column switches, the .txt names, the amended points file (only descriptions change), and both .dxf tables (opened in a CAD reader). The tree table was checked metric and imperial, with units typed into descriptions and cm drip lines. Tidy was tested with folder moves blocked and with lower-case Office / Field folders. All earlier checks still pass.
 
-## Build 29.2 — 2026-09-15
-- **Field Package shares as ONE zip**: primary share path now hands WhatsApp the whole `.zip`, typed `text/plain` to pass Chrome-Android's share allow-list (WhatsApp files documents by extension — proven by `.rw5` arriving as a document in the group). Tries `application/zip` second (iOS/desktop take it natively). Falls back to the old loose-files share with a toast, then to Save-ZIP-to-Downloads. Sheet copy updated; button is now "Share ZIP…". Requested by Finny — one zipped folder per job in the group chat.
+## Build 1.29 — 2026-10-15
+- First release of Design vs Field and the Tidy fix; live for a few hours and superseded by 1.30, which describes everything.
 
-## Build 29.1 — 2026-09-15
-- **Share hand-off cleanup**: dropped the `title` from all `navigator.share` calls (package + single file). WhatsApp printed it as a stray auto-linked text message (the blue "…Field_Package….zip" line in the group), making a successful share look like a failed attachment. No behavior change otherwise — Android still can't take a real .zip from a web app, so Field Package continues to share loose files or save the ZIP to Downloads.
+## Build 1.28 — 2026-10-13
+- **Quotes: Legal Plan to close Road** (Posting & reference plans), from 20-155-D: "To cover area for Road closure By-law", plus all legal property pins set on site, digital UTM file, legal plan prepared + certified, and the plan to be filed by the client's lawyer. Choosing it adds 1 checklist fee to the disbursements.
+- **Quotes: strata package for townhouse / condo / mixed projects**, from 20-155-E and kept separate from the Duplex–Townhouse final strata plan. "+ Strata package" under the services adds four one-line services (preliminary strata plan for the disclosure statement; excavation, building layout and forms certificate; posting plan before the final strata plan; final strata plan from field measurements). Remove any you don't need with ✕. Prices start blank. The last service carries the closing note "Any additional work or significant revisions to be billed at hourly rates (Field – $220/hr; Office – $125/hr; BCLS – $190/hr)", filled in from the current rates, or pointing to the attached rate sheet when that's ticked.
+- **Price per unit or per building** (any service). Next to the price, choose Flat price / Per unit / Per building, then type the number and the price each. The Word quote shows "$90 per unit (total $1,800)". The total counts in the job total, and the job details show "Quoted price: $1,800.00 (20 units × $90)".
+- **Project line** (optional) under the site address, e.g. "5 BUILDING (TWENTY UNITS) TOWNHOUSE COMPLEX". It prints on the line below the address in the same bar of the Word quote.
+- **Points tab: tree sizes typed with units** ("TDEC 5CM 50", "TFIR 30 CM 2M", "TSTUMP 40cm") are now fixed automatically: the units are dropped (diameter in cm, drip line in m), so the drip-line and imperial conversions pick them up too ("TDEC 5CM 50" → "TDEC 5 0.5", or "TDEC 0.16 1.64" for an imperial drawing).
+- **Job details: hours with stages and several services.** Estimated Field / Draft Time now give the total per role on the top line, and each service on its own line below, with a staged service showing its stages in brackets ("New House Construction: 8.0 hrs 2 MAN CREW (4.0 excavation layout + 2.0 foundation layout + 2.0 forms certificate)"). Before, the other service's hours sat unlabelled at the start of the stage list. A single staged service still lists its stages on the top line as in 1.26.
+- **Quarter hours are no longer rounded** in the job details: 0.75 hrs prints as 0.75 (was 0.8), so hours × rate always matches the amount beside it ($93.75).
+- **Checklists: feet or metres.** Topographic: a tree sizes / drip lines item at the end of General topo requirements (converted to feet for an imperial topo), and an imperial-tree check at the end of Project Manager Checks. New Construction: at the certificate stage only (end of General certificate requirements), check if the certificate needs to be in feet or metres, checking the existing topo drawing (typically feet in Burnaby, Vancouver, North Van and New Westminster). Added at the end of each section, so checklists already in progress keep their ticks.
+- Library changes (road closure + four strata-package services) are in the new pm-vault.json; rates, disbursements, crew instructions and the rate sheet are unchanged.
+- Verified: road closure, strata package, per-unit / per-building prices, the project line and the rate-sheet wording in the Word quote and job details; job details hours with stages; tree sizes with units; all earlier checks still pass.
 
-## Build 29 — 2026-08-31
-- **Export: pt lists wrap in-column**: long point lists (e.g. `1005,1006,1007`) overlapped the code column on exported setup/GPS rows (GG's 26-3614). New `ptLines()` breaks only after commas (trailing comma hangs into the gutter, ranges like `1005-1010` stay whole), rows grow taller to fit the stack, following rows shift down, struck rows strike every wrapped line. Columns unchanged per Finny's ruling. Fit is measured with the device font at export time; verified by render test (`test_rows.js`).
-- **Delete a sketch, PDF-markup or photo page**: 🗑 in the sketch top bar and on the page's card in the page list. Confirm sheet shows the thumbnail, page number, and warns when the page carries symbols with booked inverts (they go with it). UNDO snackbar for 8 s restores the page in its original slot; remaining pages renumber. Sketch, PDF-markup and photo pages only — setup, GPS and notes pages are legal record and carry no delete affordance (guarded in code, not just hidden). Deleting from inside the sketch ends any live Disto walk and returns to the page list. Requested by crews via HS's 26-3601 notes (scribbled sketch pages couldn't be removed).
-- **Photo page source chooser + multi-select**: "Photo page" now offers Take a photo / Choose from gallery, and gallery allows selecting several images at once — each becomes its own photo page (single pick opens the page as before; multi-pick lands on the page list with a count toast). Requested by GG. Chooser, and gallery allows multi-select (`multiple` attr) — each image becomes its own photo page, sequentially loaded; single pick opens the page, multi-pick lands on the page list with a count toast. Requested by crew on WhatsApp (Aug 31). Chooser is Take a photo / Choose from gallery (was camera-only via `capture="environment"`). Second file input without `capture`; both feed one handler; `.click()` stays inside the tap gesture per the 28.1 iOS rule.
-- **Note deletion + 30-day cleanup**: 🗑 on every note card on the home screen and in the note top bar (old confirm replaced) — confirm sheet, 8-s UNDO, red "phone copy is the ONLY copy" warning on never-exported notes. On app open, notes untouched ≥30 days are offered in a tick-list cleanup prompt (all pre-ticked, unexported flagged red, "Not now" snoozes, asks at most once per day via `efn-cleanask`). Nothing auto-deletes silently — Finny's ruling: all notes eligible, ask-first. Cards within 7 days of the window show "purges in X d". UNDO restores to store and resets the note's 30-day clock.
-- **Training**: Sketch tools guide gains the page-delete step.
-- Held for Build 30: detail pages (live-view zoom regions), uppercase forcing on sketch text (awaiting ruling).
+## Build 1.27 — 2026-10-09
+- Internal update; no changes to the shared tabs.
 
-## Build 28.1 — 2026-08-31
-- **FIX — photo Camera/Gallery buttons dead on iPhone**: all three camera launchers awaited an IndexedDB save before clicking the hidden file input; iOS Safari only honours file-input clicks inside a live tap gesture, so the click was silently dropped (Android/desktop tolerated the gap). Now: sync stash → click → save without awaiting. Crash-safety preserved. Reported by GG (iPhone 16), broken since the crash-safe photo work landed.
+## Build 1.26 — 2026-10-08
+- **Stages within a service.** "+ Add stage" splits a service into stages / trips (e.g. Legal + excavation layout, Building layout, Forms certificate), each with its own field and office hours. All stages add up to the service's one price and count in the job total; the Word quote still shows one service and one price. Job details: Estimated Field Time lists each stage ("4.0 hrs 1 MAN CREW (legal + excavation layout) + …"), Estimated Draft Time gives each role with the stages in brackets ("3.0 hrs CAD TECH (1.5 legal + excavation layout + 0.5 building layout + 1.0 forms certificate)"), and the Sublabour Calculation has a block per stage. Adding the first stage keeps the hours already entered as stage 1. Price lines (future trips) still work alongside. The job details file and the Word quote reopen with the stages.
+- New House Construction (both) and New Construction now open with their stages already named from the scope lines, hours blank — rename, reorder, remove or add per quote.
+- **Name by client or contact.** Create quote folder now uses the client (anything in brackets dropped, e.g. "Manjit Kaila (Developer)" → "26-604-Manjit Kaila"); when the quote has both a client and a different contact, "Name by: Client / Contact" lets you switch. The Word file name follows the same choice.
+- **Your name stays the Project Manager.** Opening a job details file or Word quote from another PM, or making a sub-quote, keeps your Project Manager name and initials; the import note shows what the file had ("In the file: Project Manager TC — kept yours").
+- **Numbered sub-quotes.** 24-165-1, 24-165-2 (and 24-165 2) are recognised like 26-586B: the Quote # finds the 24-165 folder, saves into it, converts to a job and picks its own job details file. Duplicate as sub-quote follows the folder's style — 24-165-3 after -1 and -2, D after B and C, B when there are none.
+- **Duplicate as sub-quote with only the Quote # typed** now fills the details from the quote folder first (the app's Word quote for that number, else its job details file) and says where they came from; the empty draft is replaced.
+- **Jobs: drop a file.** Dropping a Word quote or job details file on the Jobs view fills the Quote #, finds the quote folder and fills client and site (it no longer opens a draft under Quotes). With sub-quotes in the folder, the Word quote / job details file matching the Quote # is used.
+- **Add to existing job.** If the job folder already exists (a sub-call), the button becomes Add to existing job: it copies the quote's files into Office (files already there are kept), adds Office › Requests › yy-mm-dd-approval and any missing Field / Office folders. The renamed job details goes in as "24-2636-job details (24-165-1).txt" when the job already has one.
+- **Tidy this job folder.** Entering a job number whose folder isn't in the usual layout shows what Tidy would do: create Field › Data, Uploads and Office › Obsolete, Requests, move the contents of "Field data" into Field › Data, the contents of "requests" into Office › Requests, and everything else into Office. You confirm first; whatever the browser can't move is listed to drag in File Explorer; nothing is deleted or overwritten (emptied folders are left for you to delete).
+- Save to quote folder: clearer message when no folder is found (choose it, or create it with Create quote folder).
+- Verified: 26-435-style new construction (3 stages, $1,935) in the job details, Word quote and reopen; 24-165 → 24-165-3 from Quote-24-165-job details.txt; 24-2636 tidy with and without browser move support, and Add to existing job; all earlier checks still pass.
 
-## Build 28 — 2026-08-20
-- **Disto walk auto-refit**: a typed distance that would leave the page rescales the whole drawing uniformly to fit (60px headroom) — booked distances unchanged, symbols/text/labels keep their size, page scale follows so later legs stay consistent. Toast announces it. ⤢ fit button on the walk bar refits/centres on demand.
-- **Label & box page-edge detection**: page borders join the clash registry as obstacles; any invert label that would cross the edge boxes its symbol (boxes clamp on-page). Nothing auto-placed draws off-page.
-- **Boxed inverts toggle**: checkbox on the invert card forces the CAD-style block per symbol from the start (invBox flag); auto-boxing on crowding unchanged.
-- **Pipe size chips**: 100–300 chips on the invert card suffix the value (e.g. 2.05 200mm); free-typed sizes respected (mm/in/" detected, no double-suffix).
-- **Tap-to-edit text**: ✥ + clean tap on plain or circled text reopens the modal pre-filled (Save in place, size/rotation kept).
-- **Training**: new guide — When the sketch gets busy (boxes, edge fitting, tap-to-edit, landscape). Walkthrough videos wired: Disto walk incl. auto-fit (Point of commencement guide) and Legal sketch — monuments, lines, labels (Sketch tools guide).
-- Held for the next build: detail pages (live-view zoom regions).
+## Build 1.25 — 2026-10-07
+- **RW5 raw data → points file (Points tab).** Drop a .rw5 from the data collector on the Points tab. The app reads it (the file is never changed), lists the stored points, the measured shots and each setup, and works out coordinates for the measured shots from the setup, backsight, instrument and target heights (each target-height change, reflectorless shots, scale factor, EDM offset and curvature/refraction when the file has them on). Check shots to points already in the file, such as the backsight check, are listed with their differences and never overwrite the stored coordinates. Choose Everything (one file), Measured shots only, Stored points only, or Two separate files — each downloads as comma-separated P,N,E,Z,D and goes on the shelf for cleanup or Match points. GPS points written with grid coordinates (--GS lines) are read as stored points; a shot that can't be reduced (no setup, backsight or distance) is listed, never guessed.
+- **Duplicate as sub-quote checks the quote folder.** The next letter now comes from the files already in the quote's folder (26-586B, 26-586-C, 26-586 C in Word quote and job details names) as well as the drafts on this computer, and the note says what it found ("26-586B, 26-586C already there — this is 26-586D"). With folders not connected it uses the drafts, and says so.
+- **Paste a list into the scope.** Copy the list of items from a client's email and paste it into any scope line (or note) on a service: each line becomes its own scope line, in order, right after the one you pasted into (an empty line is used for the first item). Bullets, dashes and numbering (1. a) •) and full stops at the end are dropped; blank lines are skipped.
+- Save to quote folder: if a new sub-quote's files are already in the folder, it offers to save it as the next free letter instead of only replace or keep.
+- **Disbursements start at $0 on a new quote** (previously 1 title + 1 legal plan = $45 was pre-filled). Add what each job needs.
+- Opening a job details file made outside the app: a Disbursements line that is only a total ("Disbursements: $45") is no longer put under Other (it was being counted again on top of the title/plan counts); the import note asks for the counts instead. Lists such as "1 title, 2 legal plans" or "$45 (1 title, 2 legal plans)" are read into the counts. Estimated Field Time in days ("1.5 days (2man)") is read as 8-hour days (12 hrs 2-man crew).
+- **Quote folder tidy-up always creates the range folder.** When the tidy-up is ticked, "Elev. Survey Quotes 26-500-26-599" (or "2026 Quotes" at a new year) is created even when the browser can't move folders; the message then lists exactly which folders to drag into it in File Explorer. Nothing is ever deleted or overwritten.
+- Verified: 26-3647F06OCT26.rw5 — 552 stored points and 102 measured shots; backsight checks to 100 and 346 come out within 3 mm horizontally and 1.5 cm in elevation, matching the deltas the data collector recorded; 707 "P CEN" lands on the centre of design points 500–503. Sub-quote letters and the save offer tested against a stand-in quote folder; all earlier checks still pass.
 
-## Build 27 — 2026-08-19
-- **Training videos**: guides can now carry a walkthrough video (repo /videos folder, streamed on demand, preload none). First one: Booking inverts (2 min). Offline: baked-in diagrams and steps remain the canonical content; the player politely notes it needs signal.
-- **FIX — tuck tabs overlapped the tool rails**: the ‹ › collapse tabs anchored at the same 40% height as the clusters one z-layer up, shadowing the top of whichever button sat there (✋ on desktop). Tabs now sit below the clusters.
-- **FIX — invisible toast was eating taps**: the notification toast hid by fading to opacity 0 but stayed in the DOM at z-40 across the bottom band, silently swallowing clicks on + Add page, Add INV, Export and anything else it covered (worse in 25–27 as toast traffic grew). Toasts and the error banner are now pointer-events:none — informational strips can never intercept input again.
-- **Boxed invert blocks (auto)**: a pre-pass detects clashing utility clusters; any multi-invert symbol involved renders its inverts as a CAD-style stacked box (title: symbol · PT#, one line per direction in compass order, D markers kept) placed in the clearest of 8 spots around the symbol, single leader to the rim. PT# folds into the box title.
-- **Sketch label clash detection**: single-invert labels and PT# tags dodge each other and avoid covering symbols; PT# tags try all 8 directions before sliding. Per-label leader lines dropped (superseded by boxes). Fixes wiped-out numbers on tight IC/MH clusters.
-- **Tool rails auto-fade + tuck**: side clusters drop to 15% opacity while a pointer is down on the canvas; ‹ › edge tabs collapse either rail entirely (persisted per device).
-- **Landscape sketches**: ⤢ button on the sketch page flips page.orient; canvas, grid, thumbnails, clamps and label placement all follow; exports rotate 90° to fill the portrait sheet. Flipping is non-destructive.
-- **Misc manhole symbol (mh)**: plain circle with MH for type-undetermined manholes; full utility behaviour (inverts, PT# tag, invert card, clash dodging); legend prints MANHOLE - TYPE UNDETERMINED.
+## Build 1.24.1 — 2026-10-06
+- Training tab: Elevate Office app — PM tab now also has "Sub-quote for an existing quote folder".
+- Everything from 1.24 is included, so this build can be uploaded on its own.
 
-## Build 26 — 2026-08-19
-- **Wrong HT rows (HT✗)** on TS and GPS setups: PT# (one / list / range), wrong HT, correct HT, comments. Prints boxed in red inline; cover page gets a ⚠ HT CORRECTIONS — FIX BEFORE DRAFTING box listing every correction with page reference. Struck HT✗ rows excluded from the cover box.
-- **Endpoint snap**: pen and line grab nearby endpoints (tight screen-based radius) — green square indicator + haptic tick. Snap overrides ortho. Poly and Disto POC use the same radius.
-- **Block lettering**: sketch text, dimension labels, 'D' markers and free-form note pages render in ui-monospace print — legal field book standard. Existing sketches update automatically. Case preserved as typed.
-- **GPS rows**: TIME column removed (receiver logs it); COMMENTS column in its place. Legacy booked times print folded into comments as "@ hh:mm".
-- **Print clash fixes**: long codes wrap within their column; GPS base line (BASE @ / ANT / KNOWN-AVERAGED tag) measures itself and flows to a second line instead of overprinting.
-- **Training**: two new guides — Sketch tools (annotated screen map) and Wrong HT. Standing policy: crew-facing features ship with their guide in the same build.
+## Build 1.24 — 2026-10-06
+- **Several prices for one service.** "+ Add price line" on a service card adds a second price for the same service (e.g. 1st trip to setup / Any future trips), each with its own label (pick-list or free text), its own field and office hours, and its own calculated or typed price. The Word quote shows one service with the prices stacked in the price column, each with its label underneath; nothing is marked Optional or Additional.
+- Job details keep each price line's hours separate under the same service ("Price line 1 — 1st trip to setup", "Price line 2 — Any future trips (per trip, not in total)"). Totals count price line 1 only; Estimated Field/Draft Time list each line under the service. The .txt and the Word quote both reopen with all price lines.
+- **Price note.** Each service has an optional Price note that prints as *note under the service and puts * in front of the price (e.g. *$3,380). "Rate-sheet wording" fills in the 3-trip wording that points to the attached rate sheet and ticks the rate sheet.
+- **Attach rate sheet (page 2).** A tick under Quote document adds a second page: the letterhead, a "RATES, FEES, & DELIVERABLES FOR 2026" bar, then Rates, Additional Fees/Disbursements and Deliverables with the footnotes. Rates and fees come from the current rates in the vault, so the sheet follows any rate change; the year updates itself. No boxes or ruled lines on the page (Acrobat's Prepare Form turns those into form fields). The quote can't be built if a price note mentions the rate sheet but the tick is off.
+- pm-vault.json: rate-sheet wording added (legal plan scan copy $70, drone minimums, deliverables, footnotes). Rates, library and crew instructions unchanged.
+- Tools: Feet-inches ↔ metres — type a metric value with an m (3.81 m) to see it as feet-inches (12' 6", to the nearest 1/8"; ≈ when rounded) and decimal feet. Anything without an m works as before.
+- Training tab: Elevate Office app — fixing tree sizes to imperial; new Elevate Office app — PM tab group: cert quote on the PM tab, convert a quote to a job, setting up the connection to the Quotes + Jobs folders, topo + posting option.
+- Verified: monitoring quote (26-595 layout) and new construction quote with rate sheet (26-596 layout) built, rendered and reopened from Word and from the job details file; page 2 has no lines or boxes apart from the teal heading bar (same as the site address bar); all earlier checks still pass.
 
-## Build 25 — 2026-08-17
-- **🎓 Training tab** on the home screen (next to Notes and Resources):
-  offline how-to guides with numbered steps and field-book-style diagrams.
-  First three: Point of commencement, Booking inverts, Photos on control
-  & ties. Each opens with a "why it matters" line. Content is baked into
-  the app — no signal needed. More guides added as features get under-used.
-- **GPS rover pages fixed (data-loss bug).** Rover-only GPS setups were judged
-  "empty" by looking only at the base-station fields, so a page with receiver
-  and rover HT filled: (a) refused "＋ Add another" with a misleading
-  "still empty" toast, and (b) was silently deleted by Save setup / back.
-  Reported by GG on 26-3583. Blank/keep logic now counts receiver, rover HT
-  and receiver IDs — but values inherited from the previous GPS setup via
-  "＋ Add another" don't count, so an untouched chained page still cleans
-  itself up. (Build 24.2 folded into this build — never deployed separately.)
+## Build 1.23.1 — 2026-10-05
+- **Tracker rows for the same client become one quote with several properties.** When the rows you paste from To Do Quotes have the same client (or contact) and email but different site addresses, the app asks: OK = one quote with each address as its own property (Site Address, PID, Legal Desc. per property, "SITE ADDRESSES:" on the Word quote); Cancel = a separate quote for each site, as before. Services, notes and dates from the rows are combined without repeats.
+- Pasting a selection that doesn't start at column A (e.g. Client to Service) now lines the cells up by the email column, instead of putting the client name in Quote #.
+- The What's new card now reads its notes from this build's CHANGELOG.md entry, so it always matches the build (it had been showing older Points notes).
+- Verified: the Inderjit Singh rows (10142 128A Street and 9088 126th Street) join into one quote with two properties or stay separate on Cancel; partial and wide selections; all earlier checks still pass.
 
-## Build 24.1 — 2026-08-11
-- Real undo on sketches: ↩ now steps back through history — deletions, moves,
-  rotations, invert-card edits, anything — instead of only removing the last
-  drawn item. A deleted manhole comes back with its PT# and all its inverts.
-  ↩ also floats on the right cluster now, and 🧭 north joins the left one
-- Deleting a setup line shows an UNDO button for a few seconds
-- Moving utility symbols fixed: with ✥ Select, dragging a selected manhole now
-  moves it — the invert card only opens on a clean tap (no finger movement),
-  instead of hijacking every second touch
-- Setup rows re-laid on two lines — type · pt # · code on the first, HT ·
-  prism · 📷 · ✕ on the second — so the fields are full width and readable
-  again on phones (they'd gotten squeezed when prism and the camera joined
-  the row)
+## Build 1.23 — 2026-10-02
+- **Older quote folders are found too.** Find quote folder, Save to quote folder, Jobs and the next-number check now understand every naming used since 2020: "Elev. Survey Quote 21-015-…" (Quote without the s), "Elev.Survey Quotes 23-755-…" (no space), and range folders written "21-100-199", "21-01-099", "23-001-099" as well as "26-400-26-499". Checked against the real Quotes - Documents: quotes from every year 2020–2026 are found (e.g. 21-015 in 2021 Quotes › 21-01-099), and the next number is still 26-593.
+- **Sub-quotes however they're written.** 26-568C, 26-568-C and 26-568 C all belong to the 26-568 folder: Find quote folder and Jobs open it, the Quotes view shows "Quote folder: …26-568-…" instead of offering a new folder, and a sub-quote without a folder offers the main quote's number (the Quote # stays 26-568-C).
+- **Job details renamed reliably when converting to a job.** Any job details text file is recognised (quote-26-568-C-job_details.txt, Quote-26-233-job details.txt, …). If the quote folder holds several (26-568, 26-568B, 26-568-C), only the one for the quote being converted becomes "26-3646-job details.txt"; the others are copied with their names unchanged. The preview shows which one.
+- **Create quote folder** moved to the top of the quote, above the fields; its "needs the client or contact name" hint now disappears as soon as a name is typed.
+- **City map links updated:** West Vancouver (new maps page), City of Langley (maps.langleycity.ca — the old link had a typo), Mission (map.mission.ca), Pitt Meadows (MapView), Port Coquitlam (opens PoCoMap directly), Vancouver (new VanMap at geoportal.vancouver.ca), Delta (maps.delta.ca), North Vancouver City (secure https).
+- Field Crew Instructions Option 4 (Vancouver/Burnaby) now asks for the basic building outline of the existing house — in the pm-vault.json sent earlier today.
+- Verified: older names, sub-quote variants, job details choice, button position and hint, links; all earlier checks still pass.
 
-## Build 24 — 2026-08-11
-**Photos everywhere**
-- Every tie/set/check row (TS and GPS) has a 📷 — photograph pins, tags, TBMs;
-  the ⊼ station and BS points (and GPS base point) get cameras too, so control
-  locations are documented for future recovery
-- All shot photos print on the Measurement Record pages with matching captions
-  ("⊼ @ 100 · SETUP", "PT# 102 · OCN"), alongside the invert photos
-- In-app photo viewer: tap any 📷 marker to see the photo immediately —
-  Replace (camera or gallery), Rotate, or Remove on the spot; no more finding a
-  blurry shot only after export
-**Export reminder**
-- If work from the last session never got exported, a banner says so — once,
-  on the first open of the day. "Don't remind for these" mutes test/demo notes
-  permanently; a passive "unexported" tag stays on note cards. Today's active
-  work is never flagged
-**Editor**
-- Rod height carries to the next row automatically (both setup types), like
-  prism; NOTE rows now show just the type + full-width comment box
-- Ⓓ Circled tool retired (symbols + PT# IDs replaced it); existing circled
-  labels still render and move
-**Canvas**
-- Quick-tools cluster on the left edge: ✏️ pen · Ａ text · ◉ symbol · ✥ select,
-  synced with the bottom toolbar; navigation stays on the right
-**Resources & security**
-- Job Maps link — the live Google My Maps job map, opens in the Maps app
-- PDF/ZIP libraries are now hosted inside the app's own repo instead of a
-  third-party CDN — no outside code source to trust, and exports load faster
-  and more reliably offline
+## Build 1.22.2 — 2026-10-01
+- **Word quotes are now packed the way Word packs them.** The app wrote its .docx files uncompressed with placeholder 1980 dates. They open fine in Word, but when one lands in a SharePoint library, Office's upload (which merges the library's properties into the file) failed on it — Word showed "UPLOAD BLOCKED", OneDrive sat on "Sync pending", and Acrobat's Create PDF couldn't open it. A copy re-saved by Word/SharePoint of the very same quote synced and converted at once. Every part is now compressed like Word's own files (about 40% smaller) and stamped with the real time. Reopening quotes made by earlier builds still works.
+- Verified: Word files pass validation, reopen with their draft, 26-590 still fits on one page; all earlier checks still pass.
 
-## Build 23.1 — 2026-08-05
-- Misclosure note now clash-detects before placing itself: it checks every
-  dimension label, wall, symbol, and text box on the page, tries the box
-  centre first, and slides below/above/beside the figure when the box is too
-  small to hold it — so it never covers your dimensions. (Notes already placed
-  by 23 can just be dragged clear with ✥.)
+## Build 1.22.1 — 2026-10-01
+- **Word quotes no longer carry another library's SharePoint settings.** The 2023 letterhead file the template was built from still held hidden SharePoint document-library information from the library it was originally saved in (its content type and managed-metadata fields). Every quote inherited it. When such a file lands in Quotes - Documents, Office has to reconcile those settings during OneDrive's upload, which is the likely reason today's Word quotes sat on "syncing". The template now has none of it — the quote looks and prints exactly the same, and the app's own draft inside the Word file (for reopening) is kept. **Upload the new quote-master.docx** with this build.
+- Verified: Word files pass validation, reopen with their draft, 26-590 still fits one page; all earlier checks still pass.
 
-## Build 23 — 2026-08-05
-**Inverts & symbols**
-- Two-tap inverts: ◉ then tap the manhole — the card opens directly; the symbol
-  library only opens on a second tap of the ◉ button. In ✥ Select, tapping an
-  already-selected utility symbol opens its card too
-- 📷 opens the camera directly again; new 🖼 button picks from the gallery
-  (both on the add row and per invert entry; force-save safety net unchanged)
-- Labels keep clear of each other: PT# automatically takes a side with no
-  inverts (and pushes further out if all eight are busy), diagonal invert
-  stacks sit wider, and dimension labels on short walls step off the line
-**Walk mode**
-- Closure rework: every wall is held exactly as measured — nothing snaps.
-  Closing a box (auto-detected at the POC, or the Close button) prints a
-  MISC. ΔN / ΔE note inside the figure (page-up = north, per the field-book
-  convention; crews declare true orientation with the north arrow). One note
-  per box; movable with ✥, deletable
-**Setups**
-- Prism column on instrument setups: RND / 360 / MINI / RL dropdown per row,
-  new rows inherit the previous prism; prints between HT and comments
-  (per the Field Survey Guidelines requirement)
+## Build 1.22 — 2026-10-01
+- **Quote folders follow your Quotes - Documents layout** — the current hundred loose at the top, finished hundreds in range folders ("Elev. Survey Quotes 26-400-26-499"), past years in "2025 Quotes" (its ranges plus that year's last hundred loose):
+  - **Next quote number** now counts the quotes inside the range and year folders too, so it stays right after a hundred has been tidied away (before, it only looked at the top level). The 26-000 template folder and the range folders' own names are never mistaken for quotes. Numbers are three digits (27-001).
+  - **Find quote folder, Save to quote folder and Jobs** now look inside the matching range folder and year folder, so older quotes such as 26-450 or 25-747 are found automatically.
+- **Tidy-up offered automatically, the usual way.** When the next quote folder starts a new hundred (26-600), the confirmation also offers — ticked — to move 26-500 … 26-599 into a new "Elev. Survey Quotes 26-500-26-599". At the first quote of a new year (27-001), it offers to move all of last year's folders into "2026 Quotes", leaving that year's last hundred loose inside, as in 2025 Quotes. The folders being moved are listed; untick to skip. This is the only time the app moves anything, and only on your Create folder. If the browser can't move folders, the quote folder is still created and the app lists exactly which folders to drag where.
+- Verified on a copy of the real layout: 26-450 and 26-499 found inside 26-400-26-499 (not confused with the range folder), 25-747 inside 2025 Quotes, next number 26-600, tidy of 100 folders, next 26-601 after the tidy, untick leaves things alone, no-move browser fallback, new-year 27-001 with 2026 Quotes; all earlier checks still pass.
 
-## Build 22 — 2026-08-04 (fixes from first field use of 21)
-- Disto photos rebuilt to survive Android closing the app during the camera:
-  📷 now sits on the add row (photo + value + Add in one motion, or photo
-  auto-adds if the value's already typed); the note force-saves before the
-  camera opens; the picker also allows choosing from the gallery — the safest
-  habit is snap with the camera app, then attach from gallery; if the app does
-  get closed mid-photo, it tells you on restart instead of silently losing it
-- Structure labels now print as "PT# 5133" so IDs can't be misread as inverts
-  (Measurement Record captions match)
-- Walk mode: tap any wall while walking to edit its distance/azimuth or delete
-  it — everything after it shifts to stay connected, and the walk continues
-  from the corrected corner; ↩ still steps back one reading
+## Build 1.21 — 2026-10-01
+- **Create the next quote folder from the PM tab** (Quotes side, under the fields; needs *Quotes - Documents* connected under Folders on this computer). **Create next quote folder** looks through Quotes - Documents for the highest number this year (e.g. 26-590), proposes the next one — "Elev. Survey Quotes 26-591-Simon", named after the contact's first name or, with no contact, the client — and lets you change the name. Nothing is created until you press **Create folder**. Right before creating, it checks again; if another PM has just taken the number it uses the next free one and tells you. The quote's Quote # is set to the new number, with a reminder to add it to To Do Quotes.
+- If the Quote # is already typed, the button reads "Create quote folder for 26-xxx": it uses an existing folder for that number if there is one, otherwise creates that exact number.
+- Always optional: quotes from a tracker row (or typed in) are never given a folder automatically — the message after pasting a row points to the button for the ones that need one. The client or contact name must be filled in first.
+- Verified: next-number logic (ignores last year's and non-quote folders), name choice and editing, number taken mid-way, existing folder reused, typed number, tracker-row quote with and without a folder, Save to quote folder finding the new folder; all earlier checks still pass.
 
-## Build 21 — 2026-08-04
-**The app is now "Elevate Field"** — notes plus field resources in one place.
-**Resources tab (home screen)**
-- Office contacts with tap-to-call (Selene = Admin)
-- Documents: Field Survey Guidelines, Code List 2026, Job Requirements sample,
-  Leica Captivate reset guide + Technical Reference, Coordinate Systems,
-  MetroVan network + source-table quickguides
-- ★ on any doc saves it for offline; managed via resources.json in the repo
-**Disto workflow**
-- 📏 Disto walk mode: tap the point of commencement, enter distance + direction,
-  walls draw themselves; auto-detects and snaps closure onto the POC; Close
-  button computes the final leg for checking against the last reading
-- 📷 per-invert Disto photos → printed on Measurement Record pages, captioned
-  "Pt 5133 · SW 1.96 D"
-- Structure IDs: every utility symbol auto-numbers across the note (1, 2, 3…),
-  overridable with the collector pt # on the invert card; printed beside the
-  symbol
-- ᴰ tag on laser-measured dimensions and inverts (auto via walk mode or photo,
-  toggleable on the dim card and invert list); page footnote defines it
-**Other**
-- Change symbol on the invert card (sanitary ↔ storm etc.) keeping inverts + ID
-- Description column removed from setup rows — pt # / code / HT / comments;
-  old descriptions print merged into comments
-- Fixed a startup crash introduced by the walk bar (caught in testing)
+## Build 1.20 — 2026-10-01
+- **New quote from a To Do Quotes row.** In the tracker, select the whole row (click the row number), press Ctrl+C, then press Ctrl+V anywhere on the PM tab (Quotes side) — or use **New from tracker row** and paste into the box. A new quote opens with Quote #, Client, Contact, Email, Phone, Site Address, Services, Additional Task Details, Date requested, Assigned and PM comments filled in from columns A–K. Several rows make several quotes; the header row is skipped; cells with line breaks come through intact. If a draft with the same Quote # already exists it asks whether to fill that draft's empty fields or make a separate one. Pasting into a field still pastes normally.
+- Verified: single and multiple rows, header row, multi-line and quoted cells, same-Quote # fill, paste box, job details carry the row; all earlier checks still pass.
 
-## Build 20.1 — 2026-08-01 (fixes from Finny's demo)
-- Invert labels were rendering too small to read at the phone's default zoom —
-  now sized like dimension labels, with heavier leader ticks; clearly legible
-  without zooming in
-- Offset reworked: tap the line, enter the distance, then BOTH sides appear as
-  dashed previews — tap the one you want to keep (undo cancels the preview)
-- Lines/polylines/arcs are easier to grab for offset (wider tap zone)
+## Build 1.19.2 — 2026-10-01
+- **More room on page 1 of the Word quote.** Word was still moving the contract to page 2 on 26-590, so about 3/4 inch more space is freed on every quote: a little less space under the date and the Site Address bar and above each service, body line spacing 1.05 instead of 1.1, and an empty line at the bottom of the letterhead footer removed (the teal footer bar is lowered by the same amount, so the footer looks the same). Wording and font sizes are unchanged; the contract and signature lines still stay together. **Upload the new quote-master.docx** with this build.
+- Verified: 26-590 rebuilt from its Word file fits on one page with room to spare; Word files pass validation; all earlier checks still pass.
 
-## Build 20 — 2026-07-31
-**Sketch / markup tools**
-- Offset: tap a polyline, line, or arc with the ∥ tool, type a width in metres —
-  a parallel (mitred/concentric) copy draws on the side you tapped
-- Arcs: 3-point arc tool (start, end, through-point) with endpoint snapping
-- Select (✥): tap symbols, text, circled labels, or the north arrow to drag them
-  to a new position; ✕ deletes the selected item
-- North arrow rotates: select it and tap ↻ (15° steps)
-- Writing colors: ink / red / blue / green / orange for pen strokes, text, and
-  circled labels (linework and monument symbols stay ink)
-- Pen and eraser sizes: S / M / L per tool
-**Inverts**
-- Tap a placed utility symbol (manholes, inspection chambers, catch basins) with
-  the ◉ tool to open its invert card: compass grid (N/E/S/W + diagonals + single
-  INV), multiple inverts allowed in the same direction, values stack outward on
-  the drawing with leader ticks
-- All labels (inverts, dimensions, text) print with a paper-coloured knockout so
-  linework never crosses the numbers
-- Works on sketches, PDF markups, and photo pages; inverts move with their symbol
-**Printed notes**
-- Every page header now shows JOB # (left), date · crew (centre), P x|y (right)
-**In-app**
-- "What's new" card shows automatically once per build; tap the build number on
-  the home screen to reopen it anytime
+## Build 1.19.1 — 2026-09-30
+- **Word quote addressed to the client only:** "To: Schedio Spaces" instead of "To: Schedio Spaces - Simon Boisvert". The contact is used only when there is no client name, and it stays in the job details file as before.
+- **Optional add-ons say so on the quote:** an Optional add-on's title now ends "(Optional)", e.g. "Posting plan for Permit Purposes (Optional)", beside its "Additional $1,330" price (not added twice if the title already says optional). Reopening the Word quote reads it back without doubling it.
+- **Two services fit on one page more often:** GST EXTRA, the disbursements line and the signatory now follow straight after the last service; only the contract paragraph and the signature lines are kept together, so they still never split across pages. Spacing above each service and around the closing block is a little tighter; wording and font sizes are unchanged. When a quote doesn't fit, the contract and signature lines move to page 2 together. **Upload the new quote-master.docx** with this build.
+- Verified: 26-590 rebuilt from the draft inside its Word file now fits on one page; a four-service quote still breaks cleanly between services; Word files pass validation; all earlier checks still pass.
 
-## Build 19 — 2026-07-30
-**Setups**
-- Resection setup type (toggle in instrument setup): computed station pt#, HI,
-  overall QUALITY/RMS, CHK BS with ΔH/ΔV; prints with a RESECTION tag
-- GPS localization toggle (works with Base+Rover or Rover only): LOCALIZED tag
-  on the printed header, new LOC row type for the control points used
-**Printed notes**
-- Comment-only rows (e.g. NOTE) print across the full row width; long comments
-  on any row wrap full-width instead of squeezing into the right column
-- Job number now prints top-left on every page (JOB 26-XXXX)
-- Optional SITE SUMMARY on the title page (new field in the note header)
-- Auto-LEGEND page at the end when sketch symbols are used ("DENOTES ..." lines,
-  only for symbols actually placed)
-**Sketch / PDF markup canvas**
-- Two-finger pan and pinch-zoom work in any tool; one finger keeps drawing
-- Floating side controls: ＋ / － / ✋ pan / ORTHO (zoom removed from toolbar)
-- New Line tool (straight, snaps to existing line ends)
-- New Polyline tool (tap vertices, ✓ to finish, undo removes last vertex)
-- ORTHO toggle snaps Line/Polyline segments to 45° increments
-- Symbol library: 19 monument/pin symbols (filled = found, hollow = set) and
-  8 utility symbols (manholes, inspection chambers, catch basins)
-**Reliability**
-- App requests durable storage from the OS (protects notes from cleanup)
-- "Saved ✓ time" indicator and a manual 💾 Save button on the note screen
-- Red warning banner when running uninstalled (e.g. WhatsApp's in-app browser)
-- Fixed: reopening a saved GPS setup opened the wrong screen
+## Build 1.19 — 2026-09-30
+- **PM tab now has two parts: Quotes and Jobs** (switch at the top).
+- **Folders on this computer** (bottom of the PM tab, Edge or Chrome): each PM connects their OneDrive-synced *Job Files - Documents* and *Quotes - Documents* once; OneDrive uploads whatever the app saves. The app only ever creates folders and adds files. It never deletes or moves anything, never creates a quote folder and never changes an existing job folder.
+- **Save to quote folder** (Quotes, next to Download quote): saves the Word quote and the job details file straight into the quote's existing folder, found by its Quote # (26-561 never picks up 26-5610; if more than one folder could match, you choose). If either file is already there it asks before replacing it. If no folder matches, it says so, lets you choose the folder yourself, and creates nothing.
+- **Jobs — convert an accepted quote to a job:**
+  1. Enter the Quote # and **Find quote folder**, or press **Convert to job…** on the quote. The client and address are shown (from the draft on this computer or, if it has been tidied away, from the Word quote or job details file in the folder) so you can check it's the right quote. A folder whose number matches but whose files name a different quote (older folders were numbered separately) is never picked automatically — you choose, or pick any folder yourself.
+  2. Enter the job number issued by the online app (the job record is entered there first, as now).
+  3. **Create job folder** makes Job Files - Documents › 3000-3999 › 3400-3499 › 26-3466 with Field › Data, Uploads and Office › Obsolete, Requests › 26-09-30-approval (approval date editable), and copies everything from the quote folder into Office, renaming the job details file to "26-3466-job details.txt". A new hundreds range folder (e.g. 3500-3599) is created when needed. It stops without creating anything if the job folder already exists or the thousands folder isn't there.
+- Verified against a stand-in of the folders: save/replace/keep in the quote folder, lookalike folders untouched, details read from the Word quote and from an older job details file, folder structure, renaming, subfolders copied, originals left in place, existing job refused, new range, missing range; all earlier PM, Points and Transform checks still pass.
 
-## Builds 1–18 — 2026-07-29 (summary)
-- 1–9: core app — header, TS setups with strike-through corrections, grid
-  sketches, PDF markup, photo pages, dictation, PDF export named
-  {job}_Field_Notes_{date}.pdf, offline PWA on GitHub Pages
-- 10: dimension lines switched to azimuth convention (0° up, clockwise)
-- 11: forgiving endpoint snapping; tap a dim line to edit/delete it
-- 12: "＋ Add another" in setup editor; carries HT / receiver forward
-- 13: update fix — app checks for new builds when online (network-first)
-- 14: labeled row fields (pt# / description / code / HT / comments) + printed
-  column headers
-- 15: blank setups auto-remove when abandoned
-- 16: export "ready" dialog (Android share-sheet timing fix)
-- 17: ZIP dialog offers Share files (PDF + attachments to WhatsApp) or Save ZIP
-- 18: free-form Notes pages (full-width text, prints in handwriting style)
+## Build 1.18 — 2026-09-29
+- **Several properties on one quote.** On the PM tab, Site Address, PID and Legal Desc. are now grouped as a property, with **+ Add another property** underneath; each extra property has its own address, PID and legal description and a ✕ to remove it. The Legal Desc. box is now full width and grows onto more lines. Quotes for one property look and work exactly as before.
+- **Word quote:** with more than one property the teal bar reads "SITE ADDRESSES:" with the addresses stacked, one line per street — addresses that share a street and city share a line ("5864 & 5868 Pioneer Avenue, Burnaby", "5864, 5868 & 5872 …"). One property: unchanged.
+- **Job details .txt and tracker row:** each label stays on one line, with the properties joined by " / " in order, e.g. "Site Address: 5864 Pioneer Ave, Burnaby / 5868 Pioneer Ave, Burnaby", and the same for Legal Desc. and PID (a blank in the middle shows as "—" so the order still lines up). Importing the file splits them back into properties; single-property files are unchanged.
+- Sub-quotes, drafts saved inside the Word quote and reopening carry every property.
+- Verified: add/remove properties, grouping by street, job details round trip exact, tracker row, Word files pass validation; all earlier PM, Points and Transform checks still pass.
+
+## Build 1.17.3 — 2026-09-29
+- **Job details: hours broken down by service.** When a quote has more than one service, Estimated Field Time and Estimated Draft Time keep the combined total on the first line and list each service's hours underneath, e.g. "   Topographic survey: 6.0 hrs 2 MAN CREW" / "   Posting plan: 3.0 hrs 2 MAN CREW". Optional and Option services are listed marked "(optional — not in total)" / "(option — not in total)"; a service with no field (or no office) hours is left off that line. Single-service quotes are unchanged. Import reads the new files (the hours still come from the Sublabour block) and older files open as before.
+- **Word quote: cleaner fillable PDF.** Acrobat's Prepare Form auto-detect was making stray fields on every drawn line and box. The thin grey rule between services is gone (each service now has a little more space above it instead); the rule under the signatory is gone (more space before the contract instead); and the teal footer line is now a picture of the same line, which Acrobat ignores. The Site Address bar is unchanged. Only the Name, Phone #, Billing address, Date and Signature lines are left for Acrobat to find. **Upload the new quote-master.docx** with this build.
+- Verified: per-service lines with included, optional and office-only services; job details round trip exact; files without the breakdown still import; Word file passes validation; all earlier PM, Points and Transform checks still pass.
+
+## Build 1.17.2 — 2026-09-29
+- Points tab fix: ticked fixes now always take effect even when an earlier fix on the same point is unticked. Before, if "Untick all" was used (or a fix such as trailing whitespace or underscores was unticked), any later ticked fix on that point — e.g. the imperial tree cm/m → ft conversion — was silently dropped, so the count read "0 points will change" and the downloads came out uncorrected. Each fix is now worked out from the text as it stands after the ticked fixes before it. A fix that depends on an unticked one (e.g. a tree code written with underscores) drops off the list until that one is ticked.
+- Verified: ticking only the imperial conversions after Untick all changes exactly those points in the full cleaned file, corrections-only file and change log; all earlier Points, Transform and PM checks still pass.
+
+## Build 1.17.1 — 2026-09-29
+- **Open a quote (.docx or .txt)** on the PM tab (or drop the file on the tab). Every Word quote the app makes now carries the full draft hidden inside it — job details, every service card with its hours, scope lines (ticked and unticked), notes, blanks, status and price overrides, and the disbursements — in a standard custom-XML part that Word keeps when the file is opened and saved; the client never sees it. Opening that Word file brings the quote back exactly as downloaded, so a quote can be amended long after its draft has left the device. If the Word file was edited by hand afterwards, the app says so, lists the differences, and asks: take the services' text from the Word file (titles, scope lines, notes, prices; hours stay from the app) or open the app's version. Quotes made before this build have no draft inside; for those, open the job details .txt or start a new quote.
+- **Duplicate as sub-quote**: copies the open quote as the next lettered sub-quote (26-586 → 26-586B, then C…), keeping client, site, job details and every service to trim with ✕; file name follows (Elev. Survey Quote 26-586B-Mark).
+- **Unsaved quotes are marked**: a quote counts as saved once its Word quote or job details file has been downloaded since the last change. Unsaved drafts show NOT SAVED on their chip, with a count beside the drafts; deleting one warns that the draft will be lost.
+- **30-day tidy, same rule as the checklists**: quotes saved and then untouched for 30 days are removed from the device when the PM tab opens, with a note saying how many; the downloaded files remain the record. Unsaved drafts are never removed automatically.
+- Word quote signature block: each label now sits directly against its line ("Name: ____", "Phone #: ____", "Billing address: ____", "Date: ____", "Signature: ____") with more space under the contract, so Acrobat's Prepare Form auto-detect names the fillable fields from their own labels.
+- Verified: reopening an app-made quote rebuilds the identical job details; a hand-edited copy (title changed, scope line added, price changed, re-zipped as Word saves) is detected and taken back correctly; older quotes are refused with a pointer to the .txt; sub-quote lettering; saved/unsaved marking, the 30-day tidy and the unsaved-delete warning; all earlier PM, Points and Transform checks still pass, and the Word files pass validation.
+
+## Build 1.17 — 2026-09-28
+- **Download quote (.docx)** on the PM tab builds the client quote in Word, on the 2023 letterhead, from the same services that drive the rate calculation. Built from a new template file, **quote-master.docx** (upload it next to index.html), with a clean layout: one two-column table (scope left, fixed right-aligned price column), numbered services with lettered scope lines that restart per service, Word styles for every part, services kept whole across pages, underline-tab signature blanks, no red text. Date (September 28, 2026), "Quote# 26-561", site bar, GST EXTRA, the disbursements line ("Disbursements extra at cost (1 title, 2 legal plans, 1 checklist fee): $155"), signatory and the acceptance contract fill in automatically. File name defaults to "Elev. Survey Quote 26-561-Jeff" (contact first name, else client) and can be changed. The template is cached so it also works offline after the first use.
+- **Service cards replace the plain calculations.** Each card is one numbered service on the Word quote and one section of the job details calculation: pick a job type, and its approved title, scope lines and notes load; enter hours; the price is the calculation, or type over it (a number, "Hourly", "$90 per unit"). Each card is Included, Optional add-on (prints "Additional $X") or Option (prints "Option 1:", "Option 2:"); move up/down or remove.
+- **Clause library** of 40 job types in 8 groups (topographic, property line, posting & reference plans, subdivision & legal plans, strata, construction & layout, certificates & as-builts, monitoring), with last year's sample wording restored. It lives in the encrypted vault and changes only through Finny. Lines to add only when they apply (Vancouver building envelope, White Rock average natural grade, Delta extras, additions/renos, Surrey as-built extra…) load unticked with the reason shown.
+- **Fill-in blanks** such as "Final Strata plan for [building type]" (Duplex / Triplex / Fourplex / Six-plex / Townhouse complex or type your own), number of points, trips, lots, area. The quote can't be downloaded while a blank, the Quote #, client, site, signatory or a service price is missing; the reasons are listed.
+- **Everything is editable per quote**: title, lead-in line, scope lines and notes (tick on/off, edit, add, reorder, remove), price text, and blank "Custom service" cards. Edits never change the library.
+- **My saved versions**: "Save as my version" keeps a PM's own wording for a job type on their device; it appears under that job type as "Mine: …" beside the approved wording. Rename, delete, export and import to another computer under My saved versions.
+- Job details file follows the cards: each card's title is its Sublabour section; Estimated Field/Draft Time and the totals count Included services only; Optional and Option services show their own subtotal marked "(optional — not in total)"; a typed price shows as "Posting plan Labour: $1,110.00 (quoted $1,200.00)" with "Total quoted" and Total before GST using the quoted prices. Import reads the markings and quoted prices back.
+- Project Manager and PM initials carry over; drafts from 1.16 open unchanged as custom services.
+- Verified: 26-561 and 26-562 rebuilt entirely inside the app, both passing Word file validation and matching the approved layout; blanks, options, optional add-ons, overrides, reordering, favourites and export/import; job details round trip exact; every earlier PM, Points and Transform check still passing.
+
+## Build 1.16 — 2026-09-28
+- New **PM** tab for building quotes. Locked behind a passphrase: the rates, disbursement prices, short role names and field crew instruction options live in a separate encrypted file, **pm-vault.json** (AES-256, key derived from the passphrase with 600,000 PBKDF2 rounds, all in the browser). Nothing about the rates is in index.html. "Remember on this device" skips the prompt on that device; Lock forgets it.
+- **Locked by design.** Rates, disbursement prices, short names and the passphrase are view-only in the app — there is no way to edit them there. Changes are confirmed with Finny and arrive as a new pm-vault.json in the repo. The app always uses the repo's vault when online; the copy kept on the device is only an offline fallback, so a stale or altered local copy can never override the rates.
+- **Job details form** in the order of the quote-26-000 template, plus Date requested and Assigned for the tracker. Quote # is required before the file can be saved; with it empty, the field is outlined red, the same rule as Job No. on checklists. **Project Manager and PM initials carry over**: once entered, every new quote on that device starts with them.
+- **Rate calculation** with any number of calculations per quote (e.g. Topographic survey + Posting plan), hours per role with no minimums, a labour subtotal per calculation, disbursement counts (title, legal plan, checklist, filing fee, plus a free "other"), and the total before GST.
+- **Download job details (.txt)**, named quote-26-561-job_details.txt, with Windows line endings. Hours are written as `6.0 hrs 2 MAN CREW`: one decimal, short uppercase role names (2 MAN CREW, 1 MAN CREW, LIDAR FIELD TECH, DRONE PILOT (PHOTO), DRONE PILOT (LIDAR), DRONE OFFICE TECH, CAD TECH, SENIOR CAD TECH, BCLS), in both the Estimated Field/Draft Time lines (totalled by role) and the Sublabour Calculation block (itemised per calculation). Copy job details and **Copy tracker row** (tab-separated, columns A–K of To Do Quotes) are also there, with a live preview.
+- **Import job details (.txt)**: the Import button, or drop the file on the PM tab. It reads the header fields, crew instructions, notes (anything after the crew instructions, including trailing lines such as Rate source), disbursement counts, and hours from the Sublabour block — including the older wording (`6.0 hrs 2-man crew @ $220/hr`, `CAD tech`, `Senior Office Technician`) — with each calculation kept separate; if there's no Sublabour block it falls back to the Estimated Time lines. Anything it can't map is listed as "couldn't read — enter manually", and a rate in the file that differs from the current rate is pointed out. If a draft with the same Quote # already exists it asks whether to replace it or open the file as a separate draft. It also carries a draft between devices: save the .txt on one, import it on the other.
+- Field Crew Instructions: pick one of the five standard topo options (1 Standard topo, 2 Topo with building details, 3 Full legal topo, 4 Typical Vancouver/Burnaby topo/post, 5 Topo for new laneway – Vancouver) and Insert, then edit freely, e.g. to fill in the [__cm] tree size. The options can be edited in the app under Rates & crew instructions; saved edits apply on that device straight away and download a pm-vault.json (same locked rates) to upload so every PM gets them.
+- Drafts autosave on this device; each draft is a chip at the top with ✕ to delete.
+- Verified: 26-561 (two calculations) and 26-562 reproduce their totals exactly ($3,107.50 and $1,640.00). Your 26-561, 26-562 and 26-000 files import with every field, calculation, hour line and disbursement read, and a file saved by the tab imports back identically. Also tested: wrong passphrase rejected, remembered unlock after reload, a newer local vault copy ignored in favour of the repo, offline fallback, option edits reaching another PM through the uploaded vault, and every other tab still loading.
+
+## Build 1.15 — 2026-09-28
+- Points tab: **Transform between drawings** — a new collapsible panel under Match points, for when two drawings of the same job are in different systems (e.g. a UTM-local drawing and the plan drawing) and you need to bring new points across. Pick From and To from the shelf; points are paired by identical point number (use Match points first when numbering differs).
+- It fits four models at once — shift only, rotation + shift, scale + shift, scale + rotation + shift — shows each one's rms and max, and highlights the simplest that fits to within 3 mm. Scales are shown as grid → ground / ground → grid with the reciprocal, and are matched against any scale factor booked in either drawing (e.g. "exactly 1 / the factor booked on point 50 (BOOK73H0178 SF-0.99959126)"). Elevation offset is the mean dZ over points with elevations on both sides; points at 0 are ignored, and a varying dZ is flagged.
+- When the whole set doesn't fit tightly it fits each numbering block separately and says so — e.g. control 1000–1009 scaled by 1/0.99959126 with +0.126 elevation, calc 1–28 by 1.00012383 — with a Fit on this block button. Fit on also takes a typed range (1000-1999, 1..28); individual common points can be unticked in the residual table.
+- **Points to bring across** defaults to the points in From that aren't in To, or pick any shelf file and type point numbers (24_1,28_1). Output is the three values for MicroSurvey's Shift Coordinates → Shift using North/East/Elev, plus the Range of points to shift in MicroSurvey syntax, evaluated at the centre of those points with the worst-case error across them; a red note appears when one shift isn't good to 1 cm. Copy values button.
+- Downloads: **Transformed points** (exact fitted model, only the selected points, source format and line endings kept, elevation-0 points left at 0 by default) and a **Transform log** with all four models, parameters, per-point before/after, and residuals.
+- Verified on 26-3630: UTM-LOCAL vs PL packages (37 common points) — no rotation; control fits exactly at scale 1.00040892 = 1/0.99959126 with +0.126 elevation, calc points exactly at 1.00012383; 24_1 / 28_1 come out at North −1.368, East +0.638 (calc fit) or North −1.399, East +0.632, Elev +0.126 (control fit), matching the hand analysis.
+
+## Build 1.14 — 2026-09-22
+- Points tab **file shelf**. Every file you drop — .txt/.csv/.asc points files and .msz/.mbz drawing packages alike — is added to a shelf at the top of the tab instead of replacing what was there. The highlighted file is the one cleanup, extraction, and scale act on; tap another to switch, and each keeps its own ticks, manual rules, and scale settings while you do. Re-dropping a file with exactly the same name replaces that entry in place (marked ↻) — the "I re-exported after fixing codes in CAD" workflow. Each file has a ✕ to remove it; **Reset** clears the shelf.
+- Match points picks each side from the shelf. The Second file buttons are gone: both the default Calc → tied-in mode and General mode show a source dropdown per side. With several files loaded the default mode proposes plan = the file with calc points and local = the file with control points, so a plan export plus a field file becomes drop, drop, Find. General mode with two different files on the sides takes all points of each unless you narrow with blocks or the control-codes filter; with one file on both sides it proposes the two far-apart blocks as before. Stages and Carry forward unchanged.
+- Verified: 3621 (two text files) and 23-2362 (.msz) side by side on one shelf, switching between them, same-name replacement, single-file and cross-file matching, the three-set stages, remove and reset.
+- Training tab: 18 videos that live directly in SharePoint as .mp4 (and so had no link file for the video pipeline) are now listed and clickable, each opening in the SharePoint player: the whole Elevate Office app folder (points matching, PL sample, points upload for crew), Automap (edit automap, process range linework), Area calculation (sliding bearing command), the beginner mp4s (3603 viewport and layout, PL sketch / import data / Helmerts, PDF .ctb print issue), the BCLS/PM mp4s (Survey Hub 2026 sign + register, monitoring Excel sheet, the three ChatGPT walkthroughs) with the Elevate system subfolder (job schedule, new draft, complete task + invoice), and "Using older drawings as base" at the root. 52 videos in 9 groups, plus a link to open the whole library. The obsolete folders are skipped.
+
+## Build 1.13 — 2026-09-22
+- Match points gains a **General** mode for stitching any two point sets; the default **Calc → tied-in** mode is unchanged. In General mode each side (A = reference, B = local) is picked from the file's numbering blocks — the tool proposes the two blocks that sit farthest apart, the usual sign of two coordinate systems — with an optional control-codes-only filter and a second file on either side.
+- **Chained stages.** After any match, *Carry A + B forward* builds the combined set (B placed into A's system by the solved rotation and translation, matcher-internal only) and makes it side A for the next match. GPS → ground control, then ground + GPS → calc: two stacked results, each with its own pairs for its own Helmert. Start over clears the stages.
+- **Monument-ID hints.** When the same monument number appears in descriptions on both sides (OCNT 5995 / OCNT 5995) those pairs seed the search and show ✓ID in the results. Where a coded ID disagrees with the figure — a shot coded OCNT 9999 that geometrically sits on OCNT 3314 — it's flagged ID≠ with an explanation, and IDs present on both sides but not paired by the figure are listed. Which control the crew tied, settled by evidence.
+- Results now show descriptions on both sides, and a match with near-zero rotation and shift is labelled "same coordinate system". A faster pair-based engine handles larger sets (120 vs 90 points in about 150 ms); sets over 400 a side ask to be narrowed.
+- Verified: the 3621 and 23-2362 defaults are byte-identical in behaviour; a synthetic three-set job (calc, ground control, GPS rotated 37.5° with one miscoded monument) resolves both stages correctly with the miscode flagged.
+
+## Build 1.12.1 — 2026-09-21
+- Save PDF to job file and Save as JSON now require a job number. With the field empty, nothing is written: the Job No. box is outlined red and focused with a note beneath the buttons, and the highlight clears as soon as you type. Prevents exports that can't be filed or found later.
+- Points: Match points panel labels no longer run into their values, and the two Second file buttons line up.
+
+## Build 1.12 — 2026-09-18
+- Points tab: **Match points** — for the searches where it isn't apparent which found monument is which plan corner. Plan side = the file's calc points (1–99, CALC, blanks) or a second file; local side = the file's control-layer points (OCNT, OSPK, OLP, OIP…) or a second file, with each code shown as a chip so city control monuments can be excluded in a tap. Everything else in the file is ignored by the matcher.
+- Method: matches the *figure* the points make — triangles with equal side lengths, same handedness — then tests each candidate pairing by fitting rotation + translation (never scale) and counting how many more points it explains; the pairing explaining the most points with the smallest residuals wins. Tries 5, 10, 15, then 20 cm, stops at the first solution, and reports which step it needed and whether the pairing stays stable when loosened to 30 cm.
+- Output in the MS CAD Helmert layout (Local --> Plan, Vn, Ve, Dist, Direction), unmatched points on both sides (disturbed pins / monuments not found), and the rotation and translation as reference only. Copy pairs (`104 --> 7`) or the whole table; nothing is written to the change log — run the Helmert in MS CAD with the pairs you're confident in, as always.
+- Scale is strictly diagnostic: if nothing fits at scale 1 but the figure would fit with one side converted, the tool says which side looks like feet and points at the Scale panel. It never scales anything itself.
+- Verified on a real search (job 3621): 382-shot topo on assumed coordinates against 14 plan corners — nothing at 5 cm, solved at 10 cm with OLP 104 → 7, OLP 106 → 5, OIP 296 → 12 (residuals 3–6 cm, rotation 2.414°), stable to 30 cm; confirmed against the MS CAD Helmert. And on 23-2362: four found pins matched to calc corners at 5 cm in the same coordinate system.
+- Scale about a point and Match points now sit as collapsible panels under the downloads, closed by default.
+
+## Build 1.11.1 — 2026-09-10
+- Fix: dragging a file anywhere on the Points tab now goes to the Points loader. The app-wide checklist import was grabbing every drop, so a dragged .msz showed "Drop checklist file to import" and never reached the Points tab (Choose file worked; drag didn't). The overlay now says "Drop points file or drawing package" on Points and routes accordingly; on Checklists it behaves as before.
+- Points: the package banner's button is now "Points file — uncorrected" with a note that it's exactly what the database holds, no fixes applied — the quick path when an .msz is dropped just to get a points file. Above the fixes, Untick all / Tick all fixes controls: untick everything and the full cleaned file comes out uncorrected too.
+- Wording: the .mbz note now says it's the automatic backup — a different snapshot from the .msz whose date should be checked — rather than assuming it's older (a background save can be newer than the last manual save). Legacy .msd projects get a clear message to open once in MicroSurvey, which converts them to .msz.
+
+## Build 1.11 — 2026-09-10
+- **Points from a drawing package.** Drop a MicroSurvey `.msz` (project zip) or `.mbz` (backup zip) onto the Points tab and the points are read straight from the coordinate database inside it (`db_coord.dbf`) — no CAD needed. Verified byte-identical against a points file exported from MicroSurvey CAD the same day. The package date is shown, a `.mbz` is flagged as a backup that may be older than the `.msz`, and a share-conflict copy of the database is reported if present (the primary is used). The points feed the normal pipeline — cleanup, extraction, scaling — or download directly as a points file. A bare `db_coord.dbf` is accepted too. Zero libraries: the zip is read with the browser's built-in decompression and dBase is parsed directly.
+- Scale: one factor field replaces the two-button mode. Below 1 reads as ground → grid (file suffixed -GRID), above 1 as grid → ground (-GROUND); a 1/x button flips between them. A booked monument carrying a scale factor in its description (e.g. `89H5014booked sf-0.99960238`) is auto-detected and offered as the scale point with the factor pre-filled and elevations left untouched — one tap, no retyping. Direction label and download state now refresh as you type; checkbox hint spacing fixed.
+- Combined scale factor: the geoid separation is no longer pre-filled with a regional guess. Enter the value from your GNSS export's Geoid Separation column, the mascot listing, or NRCan — the tool won't compute without it, and with it the result matches the export to 8 decimals.
+
+## Build 1.10 — 2026-09-08
+- Points tab: **Scale about a point**. Three modes — metres → feet (× 3.280839895), feet → metres (× 0.3048), and custom: either paste a combined scale factor for grid → ground (the tool applies 1/CSF and shows the multiplier before you commit) or type a factor directly.
+- Scale point: a point number from the file — SCPT / SCALE PT / SCALE POINT descriptions are auto-proposed — confirmed with its N, E, Z, and description echoed back; or manual N/E/Z entry as a fallback (Z defaults to 0). Nothing scales until a base is confirmed.
+- N and E scale about the scale point (it keeps its coordinates). Elevations scale about zero by the same factor on unit conversions and are left untouched on custom / grid → ground scaling (toggle either way). If the scale point's booked elevation isn't zero the tool says so rather than scaling Z about it.
+- Output written at the input's decimal precision with descriptions from the cleaned state; point numbers, delimiter, spacing, and line endings otherwise byte-identical. Files suffixed -FT, -M, -GROUND, or -SCALED; a Scale log records mode, base point, factor, and elevation treatment.
+
+## Build 1.9 — 2026-09-02
+- The Cleanup tab is now **Points** — one drop of the exported PNEZD file yields every deliverable. Two new extracts join the download row:
+- **Control + calc file**: every point whose code the 2026 automap places on the CONTROL layer (OCM, OCNT, OCN, OIP/OIPB/OIPT, OSPK, OMON, OMAG, ORBR, IP, LP, CP, MON, RP and the rest of the found/set-monument family — 37 keys, derived from the automap itself) plus calc points: numbers 1–99, CALC descriptions, and blank descriptions. For carrying a topo forward into a legal file.
+- **Client file**: everything else, using the cleaned descriptions — control, calc, and check shots stripped.
+- Check shots drop from both extracts: any CHK token, the BS/BSCHK/OCL check family, STK_ re-shot IDs, and leading-point-number descriptions the review identifies as check shots ("1003 OSPK"). Not needed for topo-to-legal or for the client.
+- The split (control · calc · deliverable · check shots dropped) shows above the extract buttons and is recorded in the change log. Extracts cover the whole file regardless of focus; formatting, numbering, and coordinates are byte-identical as always.
+
+## Build 1.8 — 2026-09-02
+- Comments now show in red — in the app and in the PDF — so notes like "Reverse. See notes" jump out instead of blending into the item text. The bold stamps from 1.7.2 are unchanged; embedded data untouched.
+- In-progress list managed: shows the five most recently worked checklists (anything unsaved always stays visible) with a Show all expander; every row has a ✕ to remove it from this computer — a calm confirm when it's saved to the job file, a strong warning when the browser copy is the only copy. Checklists saved to the job file and untouched for 30 days are tidied away automatically, with a one-line note when it happens; the job-file PDFs remain the record and re-import brings anything back.
+- Invert calculator: pipe size is entered in metres like every other number — a 300 mm culvert is 0.3, a 150 is 0.15. Values over 3 get a gentle "this field is metres" nudge.
+- Resources: Training videos group linking the SharePoint library and its beginner, GPS items, Automap, and BCLS + project manager sections.
+- Note: the toast-shield item from the queue doesn't apply to Elevate Office (no toast element exists in this app); it remains a Field Notes fix.
+
+## Build 1.7.2 — 2026-08-31
+- Fix: the "unsaved to job file" flag no longer comes back after a save when you merely reopen the checklist, go back to the library, close the tab, or take an update-banner refresh. The saved record's "updated" timestamp now moves only on real changes (ticks, check stamps, comments, sheet numbers, pages added/removed, job number) — not on every save-to-browser. Anything genuinely changed after an export still flags correctly.
+- PDF checklists: the [YES] / [N/A] / [CHK] stamps now print bold black so the answers stand out, with initials and date slightly quieter beside them. Comments print darker and a step larger. Rendering only — the embedded data is unchanged, so PDFs from any build import identically.
+- Note: checklists exported on older builds may still show the flag once; the next Save PDF or JSON export on 1.7.2 clears it for good.
+
+## Build 1.7 — 2026-08-24
+- New: Code cleanup, its own tab. Drop an exported PNEZD points file (.txt/.csv/.asc — the raw RW5 is refused) and every description validates against the current ELEV-AUTOMAP-2026 metric + imperial key lists. Point numbers, coordinates, and elevations are never touched; outputs preserve the original delimiter, spacing, and line endings byte for byte outside the accepted changes.
+- Pre-ticked fixes for confirmed miscodes: OIP B / OIP T / OIP BASE / OIP BENT → OIPB/OIPT (OIPT held on a known-pending list until the 2027 automap publishes it), TCONN → TCON, SPK → OSPK, codes glued to their numbers (OCNT8221 → OCNT 8221), underscores → spaces in descriptions only, trailing whitespace, and THCED/THDEC → TH CED / TH DEC. Every fix is per-point untickable.
+- Drip lines booked in centimetres (third token over 25) normalize to metres on every run. When the file has trees, a metric/imperial question appears; imperial converts tree diameters cm÷30.48 and drip lines m×3.28084 to feet, 2 decimals, trailing flags like MS preserved. The change log records the answer.
+- Unticked suggestions: STUMP → TSTUMP, DOOR SIL → SILL, CONWW → WWCON, BLOCK WALL → RTB, and leading-point-number descriptions (e.g. "1003 OSPK") → CHK check-shot form.
+- Add your own fix: one-off find/replace rules with live match preview before committing, whole-token matching by default, optional point-range scope. Rules die with the file.
+- Point-population chips summarize the file's numbering blocks (with blank counts) and let you exclude any block — issued search points, office COGO ranges — from cleanup entirely; exclusions are recorded in the change log.
+- Codes outside the automap are listed once, collapsed, as information only — legal-search vocabulary, control notes, and combined codes like BT-HWM are never flagged as wrong or altered. Blank descriptions pass through silently with a count in the summary and log.
+- Three outputs always: full cleaned file, corrections-only file, and a change log tagging every change as fix, suggestion, or manual rule.
+
+## Build 1.6 — 2026-08-21
+- New tool: Calculator — a single expression line with add, subtract, multiply, divide, and parentheses. Paste numbers with commas, × and ÷ both work, the result shows live, and Enter keeps the line on a running tape; tape results can be copied or clicked back into the next expression so chained work never re-keys numbers.
+- New tool: Combined scale factor — enter northing, easting, orthometric elevation, and geoid separation (pre-filled −18.2 m for the Lower Mainland, editable) from a corrected network RTK observation; the tool derives ellipsoidal height and computes grid, elevation, and combined factors to 8 decimals on GRS80, matching NRCan/mascot output. Copy results carries the inputs, all three factors, and the RTK-basis statement into the calc notes. A standing note on the tool restricts use to corrected dual-frequency network RTK observations or better.
+- Resources: workflow note added for bringing vector architectural PDFs into MicroSurvey with PDFIMPORT — scale by reference off a labelled dimension, verify against a second, keep imported linework as reference-only on its own layers, and treat a PDFIMPORT that returns nothing as the signal the PDF is a scan.
+- Fix: the update check now skips quietly when fetch is unavailable (file:// testing).
+
+## Build 1.5 — 2026-08-18
+- Four new checklists, transcribed from the office PDFs on SharePoint: **Preliminary Strata** (Page 1 + Units), **Final Strata** (Page 1 with closure and PMBC, Units, Cross sections, optional Building foundations), **Legal Plan 2026**, and **Ex. Plan 2025**. Duplicated "Unfreeze" items in the two PMBC sections were de-duplicated, a doubled word in the Final Units source was corrected, and "preffered" was corrected to "preferred" in both legal lists; the source PDFs remain the wording of record.
+- Dual-check system on both strata checklists: each item takes a first pass (Yes/N/A) plus a separate Chk stamp. The Chk button unlocks only after the first pass, warns when the same initials try to do both, and any change to the first pass clears the check. Section footers show both names; both passes travel in JSON, PDF, and print.
+- Strata Units, Cross sections, and Foundations pages can be added and removed per job, each with its own sheet-number field. Removing a page asks before deleting its ticks; mandatory pages keep a minimum of one. Pages, sheet numbers, and their ticks travel in all exports.
+- Per-item comments on every checklist (✎): independent of tick state, don't affect the progress bar, ride along in JSON and PDF, and print as indented notes.
+- Proration: once a side has a factor (derived or manual), an apply strip takes intermediate plan calls and shows each prorated value plus a cumulative chainage column. Copy results carries the applied block, labelled with the factor.
+- Proration: per-side m/ft toggle for plan calls (exact 0.3048 conversion). The field box and every output stay in metres; Copy results shows the full chain per call (ft → m plan → m prorated) and notes the conversion.
+- Invert calculator: direction/pipe column removed — rows are just depth → invert, numbered in Copy results; the field sketch remains the record of which invert is which.
+- Date cell removed from the checklist title block — per-item stamps carry the dates.
+- Update awareness: the app checks the live changelog on open, on tab focus, and every 30 minutes, and shows a "Build X is available — Refresh" bar when a newer build has shipped. Refreshing is safe mid-checklist (every tick is already persisted); "later" snoozes it for about half an hour. Browsers with the app closed simply pick the new build up on next launch.
+
+## Build 1.4.1 — 2026-08-17
+- Fix: the "unsaved to job file" flag now clears properly after Save PDF or JSON export. A timestamp race meant every export immediately re-flagged itself as unsaved, so the daily reminder and orange badge never went away.
+- Fix: importing a saved file (PDF or JSON) no longer shows the checklist as unsaved — it only flags again once you make a new change.
+
+## Build 1.4 — 2026-08-17
+- Save PDF to job file: the app now generates its own checklist PDF — checked boxes, N/A crosses, initials + date stamps, section signoffs — with the full checklist state embedded invisibly in the same file. One artifact serves both workflows: anyone can read it as a normal PDF, and importing it into the app restores every tick to continue (e.g. PM Checks after the drafter's pass). Import accepts app-made PDFs and JSON alike, by button or drag-and-drop; PDFs from other sources are declined with a clear message. JSON export stays available; Print remains for quick paper copies.
+- Daily reminder: opening the app lists any checklists with changes not yet saved to the job file (job #, progress, last-worked date, click to open), dismissible until tomorrow. The in-progress list also flags them with an orange "unsaved to job file" badge.
+- Samples: legal plans filled out and grouped — Postings, Reference plans (road closure, sec 107 dedicate road, sec 100(1)(a) old area), SRW (0.5 SRW Surrey, volumetric), Subdivisions, Ex. plans, and Strata (townhouse + condo unit samples, Form V duplex) — each with an open-folder shortcut.
+- Resources: GeoNetBC (geodetic control) added under Provincial/federal; new Company reference group with the past-jobs Google My Maps (read-only viewer link).
+
+## Build 1.3 — 2026-08-14
+- New tool: Proration. Per-side cards named as you like (NORTH PL...); enter multiple plan (record) calls — Enter on the last row adds another — against one measured field distance. Factor = field ÷ Σ plan derives live at 8 decimals with full internal precision; every call shows its prorated value at 3 decimals and a Σ check confirms the prorated calls rebuild the field distance. Type a factor directly (Helmerts result, combined scale) to switch the card to manual mode: a blue tag shows, the field box becomes an output showing the implied distance, and Copy results labels each side (derived) or (manual) for the calc notes. Add/remove sides freely while working a calc.
+- New tool: Absolute accuracy (95%). One row per point/monument: enter σN and σE off the transformed-coordinates report; accuracy = 1.96 × √(σN² + σE²) shows with the combined σ beside it. The governing (largest) point is highlighted in orange — that's the accuracy-statement value — and Copy results outputs the table with the confidence basis noted (horizontal, 95%, k=1.96).
+- No changes to checklists, samples, or training.
+
+## Build 1.2 — 2026-08-14
+- New Training tab: 34 walkthrough videos pulled from the SharePoint Training Videos folder, grouped by topic — Beginner (9), GPS (5), Surface/modelling/cross-sections (3), PMBC/closure/parcel map (5), BCLS & Project Manager (6), General/other (6).
+- Each entry links straight to the video (Vidyard, YouTube, Screencast) extracted from the folder's .txt pointer files; entries with a second reference link show it alongside.
+- The folder's "obsolete" videos are intentionally excluded so staff aren't learning retired workflows.
+- New tool: feet-inches → decimal feet + metres. Type a dimension as written on an architectural plan (12' 6 1/2", 12-6, 6 1/2" inches-only, or a bare number for feet) and get both decimal feet and metres for CAD entry. One direction only, by design.
+- No changes to checklists or samples.
+
+## Build 1.1 — 2026-08-14
+- Samples tab expanded from a stub to the real library: 22 example plans pulled from the SharePoint samples folder, grouped by type — Topos (7), Certificates (4), Sketches (5), FAR (2), Block plans & as-builts (2), Monitoring (2). Legal-plan samples unchanged.
+- Each group lists its files and an "open folder" shortcut into SharePoint, so newly filed plans are reachable even before they're named.
+- No changes to checklists or tools.
+
+## Build 1.0 — 2026-08-13
+First release.
+- Checklists: Topographic 2026, Building Location Certificate 2026, New Construction 2026, Property Line Sketch 2026 — content word-for-word from the SharePoint source PDFs. Property Line Sketch is the 2025 sketch checklist updated to 2026 with two items added to the model-space section (control cleanup, point protection), replacing the overwritten 2026 PDF.
+- Tick items Yes / N/A; every tick auto-stamps initials + date. Long items show lead phrase with expandable detail (full source wording preserved).
+- Section footers auto-sign "Completed by [initials] on [date]" from whoever ticked the items; PM/Finalize sections flagged orange.
+- Auto-save to the browser per checklist + job number; in-progress list on the home screen; storage-persist requested.
+- Handoffs: "Save to job file" downloads {job}-{type} checklist.json; Import (button or drag-and-drop) restores it exactly. Wording-signature check warns if checklist text changed between save and import. Save button pulses when a checklist is 100% but unexported.
+- Print / PDF button produces a paper-style record with checked boxes and stamps.
+- Read-only banner when opened in an in-app browser or a context that can't save.
+- Keyboard on PC: arrows/J/K move, Y yes, N n/a, C clear, D detail.
+- Tools: quadrant bearing ↔ azimuth converter, bearing add/subtract (DMS with carrying, normalized + raw result, chaining), feet ↔ metres, four-way area converter (m² / sq ft / acres / ha), invert calculator (rim in m or ft, depths in m, optional top-of-pipe deduction by size in mm, results in both units, copy-out).
+- Samples tab linking SharePoint sample plans + folders; Resources tab with all 21 city GIS viewers from CITY GIS LINKS.xlsx plus Canada Lands and Crown Grants.
+- What's-new card, Build number in header.
+<!-- redeploy -->
