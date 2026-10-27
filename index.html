@@ -3961,30 +3961,57 @@ async function msEnsureFolder(parent,name){
   return parent+'/'+name;
 }
 function msJobParts(job){
-  const m=String(job||'').match(/(\d{2})\s*-\s*(\d{3,4})/);
-  if(!m)return null;
-  const q=+m[2], r1=Math.floor(q/1000)*1000, r2=Math.floor(q/100)*100;
-  return {num:m[1]+'-'+m[2], base:r1+'-'+(r1+999)+'/'+r2+'-'+(r2+99)+'/'+m[1]+'-'+m[2]};
+  // "26-3568", "26-3568 topo", or just the sequence "3568" (unique across years)
+  const s0=String(job||'');
+  let yy=null, seq=null;
+  let m=s0.match(/(\d{2})\s*-\s*(\d{3,4})/);
+  if(m){yy=m[1];seq=m[2];}
+  else{m=s0.trim().match(/^(\d{3,4})$/);if(m)seq=m[1];}
+  if(seq===null)return null;
+  const q=+seq, r1=Math.floor(q/1000)*1000, r2=Math.floor(q/100)*100;
+  const range=r1+'-'+(r1+999)+'/'+r2+'-'+(r2+99);
+  return {num:yy?yy+'-'+seq:null, seq:String(seq), range,
+          base:yy?range+'/'+yy+'-'+seq:null};
+}
+async function msResolveJob(jobStr){
+  // the SEQUENCE is the identity (unique across year prefixes) — exact typed folder
+  // wins; otherwise find the one folder in the range ending in -<seq>
+  const jp=msJobParts(jobStr); if(!jp)return null;
+  const typed=jp.num||jp.seq;
+  const d=await msDriveId();
+  if(jp.base){
+    const r=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base));
+    if(r.ok)return {num:jp.num, base:jp.base, typed};
+    if(r.status!==404)throw new Error('SharePoint error ('+r.status+')');
+  }
+  const kr=await gfetch('/drives/'+d+'/root:/'+encPath(jp.range)+':/children?$select=name,folder&$top=200');
+  if(!kr.ok)return {missing:true, typed, seq:jp.seq};
+  const re=new RegExp('^\\d{2}-'+jp.seq+'$');
+  const cands=(((await kr.json()).value)||[]).filter(k=>k.folder&&re.test(k.name));
+  if(cands.length===1)return {num:cands[0].name, base:jp.range+'/'+cands[0].name, typed};
+  if(cands.length>1)return {ambiguous:cands.map(c=>c.name), typed, seq:jp.seq};
+  return {missing:true, typed, seq:jp.seq};
 }
 async function msDest(job,fieldDate){
   const d=await msDriveId();
   const today=(String(fieldDate||'').match(/^\d{4}-\d{2}-\d{2}$/)?fieldDate:new Date().toISOString().slice(0,10));
   const jp=msJobParts(job);
-  const inbox=async reason=>({path:'Field Inbox/'+(jp?jp.num:'no-job')+' '+today, inbox:true, reason,
-    mk:{parent:'Field Inbox',name:(jp?jp.num:'no-job')+' '+today}});
+  const lbl=jp?(jp.num||jp.seq):'no-job';
+  const inbox=async reason=>({path:'Field Inbox/'+lbl+' '+today, inbox:true, reason,
+    mk:{parent:'Field Inbox',name:lbl+' '+today}});
   if(!jp)return inbox('No job number on the note');
-  const chk=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base));
-  if(chk.status===404)return inbox('Job folder '+jp.num+' not found');
-  if(!chk.ok)throw new Error('SharePoint error ('+chk.status+')');
-  const dataChk=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base+'/Field/Data'));
-  if(dataChk.status===404)return inbox(jp.num+' has no Field/Data folder');
+  const res=await msResolveJob(job);
+  if(!res||res.missing)return inbox('Job folder '+lbl+' not found');
+  if(res.ambiguous)return inbox('Several jobs end in -'+res.seq+' ('+res.ambiguous.join(', ')+') \u2014 type the full number');
+  const dataChk=await gfetch('/drives/'+d+'/root:/'+encPath(res.base+'/Field/Data'));
+  if(dataChk.status===404)return inbox(res.num+' has no Field/Data folder (old layout \u2014 office will file it)');
   if(!dataChk.ok)throw new Error('SharePoint error ('+dataChk.status+')');
-  const kids=await (await gfetch('/drives/'+d+'/root:/'+encPath(jp.base+'/Field/Data')+':/children?$select=name,folder&$top=200')).json();
+  const kids=await (await gfetch('/drives/'+d+'/root:/'+encPath(res.base+'/Field/Data')+':/children?$select=name,folder&$top=200')).json();
   const short=today.slice(2);
   const hit=(kids.value||[]).find(k=>k.folder&&(k.name.startsWith(today)||k.name.startsWith(short)));
-  if(hit)return {path:jp.base+'/Field/Data/'+hit.name, job:jp.num, base:jp.base};
-  return {path:jp.base+'/Field/Data/'+today, job:jp.num, base:jp.base,
-    mk:{parent:jp.base+'/Field/Data',name:today}};
+  if(hit)return {path:res.base+'/Field/Data/'+hit.name, job:res.num, base:res.base, typed:res.typed};
+  return {path:res.base+'/Field/Data/'+today, job:res.num, base:res.base, typed:res.typed,
+    mk:{parent:res.base+'/Field/Data',name:today}};
 }
 async function msUpload(destPath,file,onProg){
   const d=await msDriveId();
@@ -4026,12 +4053,17 @@ async function msDetailsLines(base,job){
   const d=await msDriveId();
   let r=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office/'+job+'-job details.txt')+':/content');
   if(!r.ok){
-    const kr=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office')+':/children?$select=name,file&$top=200');
-    if(!kr.ok)return null;
-    const cands=(((await kr.json()).value)||[]).filter(k=>k.file&&/job[ _-]?details.*\.txt$/i.test(k.name));
-    if(!cands.length)return null;
-    cands.sort((a,b)=>(b.name.indexOf(job)===0?1:0)-(a.name.indexOf(job)===0?1:0));
-    r=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office/'+cands[0].name)+':/content');
+    let hit=null;
+    for(const sub of ['/Office','']){                 // old jobs keep files at the job root
+      const kr=await gfetch('/drives/'+d+'/root:/'+encPath(base+sub)+':/children?$select=name,file&$top=200');
+      if(!kr.ok)continue;
+      const cands=(((await kr.json()).value)||[]).filter(k=>k.file&&/job[ _-]?details.*\.txt$/i.test(k.name));
+      if(!cands.length)continue;
+      cands.sort((a,b)=>(b.name.indexOf(job)===0?1:0)-(a.name.indexOf(job)===0?1:0));
+      hit=base+sub+'/'+cands[0].name;break;
+    }
+    if(!hit)return null;
+    r=await gfetch('/drives/'+d+'/root:/'+encPath(hit)+':/content');
     if(!r.ok)return null;
   }
   const lines=String(await r.text()).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,60);
@@ -4057,8 +4089,13 @@ async function msJobLookup(jobStr){
   try{
     if(!m365Ready()||!navigator.onLine||!msSignedIn())return null;
     const jp=msJobParts(jobStr); if(!jp)return null;
-    const info=await msDetailsLines(jp.base,jp.num);
-    return info?{num:jp.num, info}:{num:jp.num, missing:true};
+    const res=await msResolveJob(jobStr);
+    if(!res)return null;
+    if(res.ambiguous)return {num:jp.num||jp.seq, missing:true,
+      warn:'Several jobs end in -'+res.seq+' ('+res.ambiguous.join(', ')+') \u2014 type the full number.'};
+    if(res.missing)return {num:jp.num||jp.seq, missing:true};
+    const info=await msDetailsLines(res.base,res.num);
+    return info?{num:res.num, typed:res.typed, info}:{num:res.num, missing:true};
   }catch(e){return null;}
 }
 function wireJobCheck(inputId,hintId,fill){
@@ -4071,10 +4108,10 @@ function wireJobCheck(inputId,hintId,fill){
     if(!res){el.style.display='none';return;}
     el.style.display='block';
     if(res.missing){
-      el.innerHTML='\u26a0 No job details found for <b>'+esc(res.num)+'</b> \u2014 check the number.';
+      el.innerHTML='\u26a0 '+(res.warn?esc(res.warn):'No job details found for <b>'+esc(res.num)+'</b> \u2014 check the number.');
       el.style.color='var(--danger)';
     }else{
-      el.innerHTML='<b>'+esc(res.num)+'</b>: '+msInfoHtml(res.info);
+      el.innerHTML='<b>'+esc(res.num)+'</b>'+(res.typed&&res.typed!==res.num?' <span style="color:var(--danger);font-weight:700">(you typed '+esc(res.typed)+')</span>':'')+': '+msInfoHtml(res.info);
       el.style.color='var(--green,#5E9478)';
       if(fill)fill(res.info);
     }
@@ -4113,7 +4150,8 @@ async function msUploadFlow(files,withPdf,jobOv,dateOv){
     muDest=dest; muFails=[]; muCtx=(jobOv!==undefined)?[jobOv,dateOv]:null;
     $('mu-dest').innerHTML=dest.inbox
       ?'\u26a0 '+esc(dest.reason)+' \u2014 files will go to <b>Field Inbox</b> for the office to file. If the job # is just mistyped, Cancel and fix it.'
-      :'\u2192 <b>'+esc(dest.job)+'</b> \u203a Field \u203a Data \u203a '+esc(dest.path.split('/').pop());
+      :'\u2192 <b>'+esc(dest.job)+'</b>'+(dest.typed&&dest.typed!==dest.job?' <span style="color:var(--danger);font-weight:700">(you typed '+esc(dest.typed)+')</span>':'')
+        +' \u203a Field \u203a Data \u203a '+esc(dest.path.split('/').pop());
     const chk=$('mu-check');
     if(dest.inbox){chk.style.display='none';}
     else{
