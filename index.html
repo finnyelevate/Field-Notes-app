@@ -599,8 +599,8 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 <div class="mback" id="m-new"><div class="modal">
   <h2>New note</h2>
   <div class="frow"><div class="field"><label>Job no. — required</label>
-    <input class="mono" id="n-job" placeholder="26-3568" autocapitalize="characters"></div>
-    <div class="card-sub" id="n-jobchk" style="display:none;margin-top:4px;line-height:1.4"></div></div>
+    <input class="mono" id="n-job" placeholder="26-3568" autocapitalize="characters" style="letter-spacing:.06em">
+    <div class="card-sub" id="n-jobchk" style="display:none;margin-top:5px;line-height:1.4"></div></div></div>
   <div class="frow"><div class="field"><label>Crew — required</label>
     <input class="mono" id="n-crew" placeholder="VG / HS" autocapitalize="characters"></div></div>
   <div class="frow"><div class="field micwrap"><label>Purpose / scope — required</label>
@@ -4019,27 +4019,37 @@ function msSyncUI(){
   const o=$('ms-out'); if(o)o.onclick=e2=>{e2.stopPropagation();msSignOut();};
 }
 let muFails=[], muDest=null;
-async function msJobDetails(dest){
-  // cross-reference: the office keeps <job>-job details.txt in every job's Office folder
-  try{
-    const d=await msDriveId();
-    const r=await gfetch('/drives/'+d+'/root:/'+encPath(dest.base+'/Office/'+dest.job+'-job details.txt')+':/content');
+async function msDetailsLines(base,job){
+  // the office keeps <job>-job details.txt in the job's Office folder — but sometimes it
+  // still carries the QUOTE number (e.g. Quote-26-191-job details.txt), so fall back to
+  // any "…job details….txt" in Office, preferring one that starts with the job number.
+  const d=await msDriveId();
+  let r=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office/'+job+'-job details.txt')+':/content');
+  if(!r.ok){
+    const kr=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office')+':/children?$select=name,file&$top=200');
+    if(!kr.ok)return null;
+    const cands=(((await kr.json()).value)||[]).filter(k=>k.file&&/job details.*\.txt$/i.test(k.name));
+    if(!cands.length)return null;
+    cands.sort((a,b)=>(b.name.indexOf(job)===0?1:0)-(a.name.indexOf(job)===0?1:0));
+    r=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office/'+cands[0].name)+':/content');
     if(!r.ok)return null;
-    const t=await r.text();
-    const lines=String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,3);
-    return lines.length?lines.join('<br>'):null;
+  }
+  const lines=String(await r.text()).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,3);
+  return lines.length?lines:null;
+}
+async function msJobDetails(dest){
+  try{
+    const lines=await msDetailsLines(dest.base,dest.job);
+    return lines?lines.map(esc).join('<br>'):null;
   }catch(e){return null;}
 }
 async function msJobLookup(jobStr){
-  // {num, lines:[..]} from <job>/Office/<job>-job details.txt, or {num, missing:true}, or null when not checkable
+  // {num, lines:[..]}, or {num, missing:true}, or null when not checkable
   try{
     if(!m365Ready()||!navigator.onLine||!msSignedIn())return null;
     const jp=msJobParts(jobStr); if(!jp)return null;
-    const d=await msDriveId();
-    const r=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base+'/Office/'+jp.num+'-job details.txt')+':/content');
-    if(!r.ok)return {num:jp.num, missing:true};
-    const lines=String(await r.text()).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,3);
-    return {num:jp.num, lines};
+    const lines=await msDetailsLines(jp.base,jp.num);
+    return lines?{num:jp.num, lines}:{num:jp.num, missing:true};
   }catch(e){return null;}
 }
 function wireJobCheck(inputId,hintId,fill){
