@@ -4028,19 +4028,28 @@ async function msDetailsLines(base,job){
   if(!r.ok){
     const kr=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office')+':/children?$select=name,file&$top=200');
     if(!kr.ok)return null;
-    const cands=(((await kr.json()).value)||[]).filter(k=>k.file&&/job details.*\.txt$/i.test(k.name));
+    const cands=(((await kr.json()).value)||[]).filter(k=>k.file&&/job[ _-]?details.*\.txt$/i.test(k.name));
     if(!cands.length)return null;
     cands.sort((a,b)=>(b.name.indexOf(job)===0?1:0)-(a.name.indexOf(job)===0?1:0));
     r=await gfetch('/drives/'+d+'/root:/'+encPath(base+'/Office/'+cands[0].name)+':/content');
     if(!r.ok)return null;
   }
-  const lines=String(await r.text()).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,3);
-  return lines.length?lines:null;
+  const lines=String(await r.text()).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,60);
+  if(!lines.length)return null;
+  // job details are key:value lines (Client, Contact Name, …, Site Address, …)
+  const kv={};
+  lines.forEach(l=>{const m=l.match(/^([A-Za-z#.\/ ]{2,28}):\s*(.+)$/);if(m)kv[m[1].trim().toLowerCase()]=m[2].trim();});
+  return {addr:kv['site address']||kv['address']||'', client:kv['client']||'', lines:lines.slice(0,3)};
+}
+function msInfoHtml(info){
+  if(info.addr||info.client)
+    return [info.addr?'<b>'+esc(info.addr)+'</b>':null, info.client?esc(info.client):null].filter(Boolean).join(' \u00b7 ');
+  return info.lines.map(esc).join(' \u00b7 ');
 }
 async function msJobDetails(dest){
   try{
-    const lines=await msDetailsLines(dest.base,dest.job);
-    return lines?lines.map(esc).join('<br>'):null;
+    const info=await msDetailsLines(dest.base,dest.job);
+    return info?msInfoHtml(info):null;
   }catch(e){return null;}
 }
 async function msJobLookup(jobStr){
@@ -4048,8 +4057,8 @@ async function msJobLookup(jobStr){
   try{
     if(!m365Ready()||!navigator.onLine||!msSignedIn())return null;
     const jp=msJobParts(jobStr); if(!jp)return null;
-    const lines=await msDetailsLines(jp.base,jp.num);
-    return lines?{num:jp.num, lines}:{num:jp.num, missing:true};
+    const info=await msDetailsLines(jp.base,jp.num);
+    return info?{num:jp.num, info}:{num:jp.num, missing:true};
   }catch(e){return null;}
 }
 function wireJobCheck(inputId,hintId,fill){
@@ -4065,20 +4074,28 @@ function wireJobCheck(inputId,hintId,fill){
       el.innerHTML='\u26a0 No job details found for <b>'+esc(res.num)+'</b> \u2014 check the number.';
       el.style.color='var(--danger)';
     }else{
-      el.innerHTML='<b>'+esc(res.num)+'</b>: '+res.lines.map(esc).join(' \u00b7 ');
+      el.innerHTML='<b>'+esc(res.num)+'</b>: '+msInfoHtml(res.info);
       el.style.color='var(--green,#5E9478)';
-      if(fill)fill(res.lines);
+      if(fill)fill(res.info);
     }
   };
   $(inputId).addEventListener('change',run);
   $(inputId).addEventListener('blur',run);
 }
-wireJobCheck('n-job','n-jobchk',lines=>{
-  // pre-fill ONLY empty fields; street-ish line (starts with digits) -> address, next clean line -> city
-  const street=lines.find(l=>/^\d+\s+/.test(l));
+wireJobCheck('n-job','n-jobchk',info=>{
+  // pre-fill ONLY empty fields
+  if(info.addr){
+    const parts=info.addr.split(',').map(x=>x.trim()).filter(Boolean);
+    const city=parts.slice(1).filter(x=>!/\d/.test(x)).join(', ');
+    if(!$('n-addr').value.trim())$('n-addr').value=parts[0]||info.addr;
+    if(city&&!$('n-city').value.trim())$('n-city').value=city;
+    return;
+  }
+  // older free-text files: street-ish line -> address, next clean line -> city
+  const street=info.lines.find(l=>/^\d+\s+/.test(l));
   if(street&&!$('n-addr').value.trim())$('n-addr').value=street;
   if(street){
-    const after=lines[lines.indexOf(street)+1];
+    const after=info.lines[info.lines.indexOf(street)+1];
     if(after&&!/\d/.test(after)&&!/british columbia/i.test(after)&&!$('n-city').value.trim())$('n-city').value=after;
   }
 });
