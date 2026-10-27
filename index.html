@@ -153,6 +153,9 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .mrow .btn{flex:1}
 .addmenu .btn{width:100%;margin-bottom:10px;justify-content:flex-start;background:#fff;color:var(--ink);border:1.5px solid var(--line)}
 .addmenu .btn b{margin-right:4px}
+.addmenu .eyebrow{margin:4px 2px 8px}
+.xwrap{display:block;text-align:left;line-height:1.3}
+.xsub{display:block;font-size:12px;font-weight:400;opacity:.75;margin-top:2px}
 .banner{background:#5A4A16;color:#F5E6B8;font-size:13px;padding:10px 14px;text-align:center}
 .hometabs{display:flex;gap:8px;padding:10px 14px 0;background:#0F1512}
 .htab{flex:1;padding:12px;border-radius:12px;background:#232E27;color:#B8C6BD;font-weight:800;font-size:14px}
@@ -411,7 +414,8 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 <div class="mback" id="m-extup"><div class="modal">
   <h2>Upload to job folder</h2>
   <div class="card-sub" style="margin-bottom:10px">For paper field notes: scan them with your camera/scan app first, then send the scans and collector files here — they file into the job folder like app notes do.</div>
-  <div class="field"><label>Job #</label><input class="mono" id="ex-job" placeholder="26-3568" autocapitalize="characters"></div>
+  <div class="field"><label>Job #</label><input class="mono" id="ex-job" placeholder="26-3568" autocapitalize="characters">
+  <div class="card-sub" id="ex-jobchk" style="display:none;margin-top:4px;line-height:1.4"></div></div>
   <div class="field" style="margin-top:10px"><label>Field date (last day on the notes)</label><input type="date" class="mono" id="ex-date"></div>
   <div style="display:flex;gap:10px;margin-top:14px">
     <button class="btn ghost" id="ex-cancel" style="flex:1">Cancel</button>
@@ -420,16 +424,20 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-msup"><div class="modal">
-  <h2>Uploading to SharePoint</h2>
-  <div class="card-sub" id="mu-dest" style="margin-bottom:10px;line-height:1.5"></div>
-  <div id="mu-list" style="max-height:45vh;overflow:auto;margin-bottom:14px"></div>
+  <h2 id="mu-title">Check before uploading</h2>
+  <div class="card-sub" id="mu-dest" style="margin-bottom:8px;line-height:1.5"></div>
+  <div class="card-sub" id="mu-check" style="display:none;margin-bottom:10px;line-height:1.5;border:1.5px solid var(--line);border-radius:10px;padding:10px"></div>
+  <div id="mu-list" style="max-height:38vh;overflow:auto;margin-bottom:14px"></div>
   <button class="btn ghost" id="mu-retry" style="width:100%;margin-bottom:10px;display:none">↻ Retry failed</button>
-  <button class="btn" id="mu-close" style="width:100%" disabled>Uploading…</button>
+  <div style="display:flex;gap:10px">
+    <button class="btn ghost" id="mu-close" style="flex:1">Cancel</button>
+    <button class="btn" id="mu-go" style="flex:1">Upload</button>
+  </div>
 </div></div>
 
 <div class="mback" id="m-pkg"><div class="modal">
-  <h2>Field package</h2>
-  <div class="card-sub" style="margin-bottom:6px">Data files going in beside the notes PDF. Tip: in the picker, <b>long-press</b> the first file to select several at once.</div>
+  <h2 id="pk-title">Field package</h2>
+  <div class="card-sub" id="pk-sub" style="margin-bottom:6px">Data files going in beside the notes PDF. Tip: in the picker, <b>long-press</b> the first file to select several at once.</div>
   <div id="pk-list" style="max-height:38vh;overflow:auto;margin-bottom:14px"></div>
   <button class="btn ghost" id="pk-more" style="width:100%;margin-bottom:10px">＋ Add more files</button>
   <div style="display:flex;gap:10px">
@@ -591,7 +599,8 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 <div class="mback" id="m-new"><div class="modal">
   <h2>New note</h2>
   <div class="frow"><div class="field"><label>Job no. — required</label>
-    <input class="mono" id="n-job" placeholder="26-3568" autocapitalize="characters"></div></div>
+    <input class="mono" id="n-job" placeholder="26-3568" autocapitalize="characters"></div>
+    <div class="card-sub" id="n-jobchk" style="display:none;margin-top:4px;line-height:1.4"></div></div>
   <div class="frow"><div class="field"><label>Crew — required</label>
     <input class="mono" id="n-crew" placeholder="VG / HS" autocapitalize="characters"></div></div>
   <div class="frow"><div class="field micwrap"><label>Purpose / scope — required</label>
@@ -613,12 +622,15 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 
 <div class="mback" id="m-export"><div class="modal addmenu">
   <h2>Export</h2>
-  <button class="btn" data-ex="pdf"><b>📄</b> Field notes PDF</button>
-  <button class="btn" data-ex="zip"><b>🗜</b> ZIP package — PDF + collector files, photos, videos</button>
-  <button class="btn" data-ex="ms" style="display:none"><b>⇪</b> Upload to job folder — PDF + files</button>
-  <button class="btn" data-ex="msonly" style="display:none"><b>📤</b> Send files only to job folder</button>
-  <div class="card-sub" id="ms-state" style="display:none;padding:2px 4px 8px"></div>
-  <div class="card-sub" style="margin:2px 4px 12px">ZIP: you’ll pick the files next (RW5, CSV, linework, media). Very large videos are better sent on their own.</div>
+  <div id="ex-ms-sec" style="display:none">
+    <div class="eyebrow">To the job folder — SharePoint</div>
+    <button class="btn" data-ex="ms"><b>⤴️</b><span class="xwrap">Notes + data → job folder<span class="xsub">The finished notes PDF, plus any collector files and photos you add</span></span></button>
+    <button class="btn" data-ex="msonly"><b>📤</b><span class="xwrap">Data files only → job folder<span class="xsub">Photos, videos or collector files without the notes — e.g. mid-day, before the notes are done</span></span></button>
+    <div class="card-sub" id="ms-state" style="padding:0 4px 10px"></div>
+  </div>
+  <div class="eyebrow">By WhatsApp — the old way</div>
+  <button class="btn" data-ex="pdf"><b>📄</b><span class="xwrap">Field notes PDF<span class="xsub">Make the PDF to share or save on this phone</span></span></button>
+  <button class="btn" data-ex="zip"><b>🗜</b><span class="xwrap">ZIP package<span class="xsub">PDF + collector files, photos, videos in one zip for the group chat. Very large videos are better sent on their own.</span></span></button>
   <button class="btn ghost" data-ex="cancel" style="border:0">Cancel</button>
 </div></div>
 
@@ -866,6 +878,16 @@ const GUIDES=[
   'Book the <b>wrong HT</b> and the <b>correct HT</b> side by side. Never re-strike the shots themselves.',
   'Comments: say how it happened (pole clamp slipped, forgot after MH shots) \u2014 it helps the office trust the rest.',
   'It prints boxed in red right in the shot sequence, and the front page gets a \u26a0 HT CORRECTIONS box listing every one with a page reference. Nothing to remember at export.']},
+ {id:'upl',ico:'\u2934\ufe0f',t:'Upload to job folder',sub:'Notes + data straight into Field \u203a Data \u2014 app notes or paper scans',area:'setups',h:300,
+  why:'<b>Why it matters:</b> the office stops re-filing WhatsApp downloads \u2014 your data lands in the right job, under the right field date, the moment you send it.',
+  cap:'Phone \u2192 job folder \u00b7 the app shows the job\u2019s address before anything uploads',diag:diagUpload,steps:[
+  'One-time: first upload asks you to sign in with your <b>Elevate Microsoft account</b> (same as OneDrive). Once per phone.',
+  'App notes: open the note \u2192 Export \u2192 <b>Notes + data \u2192 job folder</b>. The notes PDF is included automatically \u2014 add collector files and photos with \uff0b, or send the PDF alone.',
+  'Paper notes: scan them first, then tap <b>\u2934 Upload scans / data to job folder</b> on the home screen and confirm the job # and the field date (the last day on the notes).',
+  '<b>Read the check screen.</b> It shows the job\u2019s address from the office\u2019s job details \u2014 if that\u2019s not your site, Cancel and fix the job #. Nothing uploads until you tap Upload.',
+  'Job # not found? Files go to <b>Field Inbox</b> and the office files them \u2014 you\u2019ll see a warning first.',
+  'Files land in Field \u203a Data under the <b>field date</b>, never the upload date. Nothing in the job folder can be overwritten or deleted from the phone.',
+  'No signal? Upload when you\u2019re back in coverage \u2014 or share to WhatsApp like always. Big videos show a % while they go up.']},
  {id:'busy',ico:'\ud83d\udce6',t:'When the sketch gets busy',sub:'Boxed inverts, page fitting, fixing text in place',area:'sketches',h:430,
   why:'<b>Why it matters:</b> dense corners are where books get misread. These tools keep every number owned and on the page \u2014 without changing anything as measured.',
   cap:'One stacked box per MH \u00b7 one leader \u00b7 walks rescale to fit',diag:diagBusy,steps:[
@@ -951,6 +973,26 @@ function diagHtx(c){
   c.fillStyle='#24312B';c.fillText('P 2 · ⊼ @ 110',390,348);
   c.fillStyle='#B3402E';c.font='700 13px system-ui';
   c.fillText('the shots themselves stay exactly as measured',98,380);
+}
+function diagUpload(c){
+  c.fillStyle='#FBFAF5';c.fillRect(0,0,640,300);
+  c.strokeStyle='#B7D5C4';c.lineWidth=1;
+  for(let g=0;g<=640;g+=40){c.beginPath();c.moveTo(g,0);c.lineTo(g,300);c.stroke();}
+  for(let g=0;g<=300;g+=40){c.beginPath();c.moveTo(0,g);c.lineTo(640,g);c.stroke();}
+  c.strokeStyle=c.fillStyle='#24312B';c.lineWidth=3;
+  // phone
+  c.strokeRect(60,60,110,180);c.strokeRect(95,220,40,8);
+  c.font='700 22px ui-monospace,Menlo,monospace';c.fillText('\u2934',100,150);
+  // arrow
+  c.beginPath();c.moveTo(190,150);c.lineTo(350,150);c.stroke();
+  c.beginPath();c.moveTo(350,150);c.lineTo(336,142);c.moveTo(350,150);c.lineTo(336,158);c.stroke();
+  c.fillStyle='#5E9478';c.font='700 18px ui-monospace,Menlo,monospace';
+  c.fillText('checks the job first',200,130);
+  // folder
+  c.strokeStyle=c.fillStyle='#24312B';
+  c.beginPath();c.moveTo(390,110);c.lineTo(440,110);c.lineTo(455,125);c.lineTo(560,125);c.lineTo(560,220);c.lineTo(390,220);c.closePath();c.stroke();
+  c.font='700 20px ui-monospace,Menlo,monospace';
+  c.fillText('26-3465',410,160);c.fillText('\u203a Field \u203a Data',410,186);c.fillText('\u203a 2026-10-27',410,210);
 }
 function diagBusy(c){
   c.fillStyle='#FBFAF5';c.fillRect(0,0,640,430);
@@ -1287,6 +1329,7 @@ $('b-new').onclick=()=>{
   nWx='';
   $('n-wx').innerHTML=WX.map(w=>`<button class="chip" data-nwx="${w}">${w}</button>`).join('');
   ['n-job','n-crew','n-purpose'].forEach(i=>$(i).classList.remove('miss'));
+  $('n-jobchk').style.display='none';
   $('m-new').classList.add('on');
   setTimeout(()=>$('n-job').focus(),80);
 };
@@ -3833,8 +3876,8 @@ $('m-export').addEventListener('click',async e=>{
     busy(false);return;
   }
   if(k==='zip'){pkgMode='zip';pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
-  if(k==='ms'){pkgMode='ms';pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
-  if(k==='msonly'){pkgMode='msonly';pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
+  if(k==='ms'){pkgMode='ms';pkgFiles=[];pkRender();$('m-pkg').classList.add('on');}
+  if(k==='msonly'){pkgMode='msonly';pkgFiles=[];pkRender();$('m-pkg').classList.add('on');}
 });
 /* ================= Microsoft 365 upload ================= */
 const M365={client:'e143d511-8c89-4a13-99b7-352f573035b6',tenant:'2d73cd36-e487-4b47-87d9-4eb3b239507e',host:'elevatelandsurveying.sharepoint.com',site:'/sites/JobFiles',
@@ -3927,10 +3970,8 @@ async function msDest(job,fieldDate){
   const d=await msDriveId();
   const today=(String(fieldDate||'').match(/^\d{4}-\d{2}-\d{2}$/)?fieldDate:new Date().toISOString().slice(0,10));
   const jp=msJobParts(job);
-  const inbox=async reason=>{
-    await msEnsureFolder('Field Inbox',(jp?jp.num:'no-job')+' '+today).catch(()=>{});
-    return {path:'Field Inbox/'+(jp?jp.num:'no-job')+' '+today, inbox:true, reason};
-  };
+  const inbox=async reason=>({path:'Field Inbox/'+(jp?jp.num:'no-job')+' '+today, inbox:true, reason,
+    mk:{parent:'Field Inbox',name:(jp?jp.num:'no-job')+' '+today}});
   if(!jp)return inbox('No job number on the note');
   const chk=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base));
   if(chk.status===404)return inbox('Job folder '+jp.num+' not found');
@@ -3941,9 +3982,9 @@ async function msDest(job,fieldDate){
   const kids=await (await gfetch('/drives/'+d+'/root:/'+encPath(jp.base+'/Field/Data')+':/children?$select=name,folder&$top=200')).json();
   const short=today.slice(2);
   const hit=(kids.value||[]).find(k=>k.folder&&(k.name.startsWith(today)||k.name.startsWith(short)));
-  if(hit)return {path:jp.base+'/Field/Data/'+hit.name, job:jp.num};
-  await msEnsureFolder(jp.base+'/Field/Data',today);
-  return {path:jp.base+'/Field/Data/'+today, job:jp.num};
+  if(hit)return {path:jp.base+'/Field/Data/'+hit.name, job:jp.num, base:jp.base};
+  return {path:jp.base+'/Field/Data/'+today, job:jp.num, base:jp.base,
+    mk:{parent:jp.base+'/Field/Data',name:today}};
 }
 async function msUpload(destPath,file,onProg){
   const d=await msDriveId();
@@ -3968,10 +4009,9 @@ async function msUpload(destPath,file,onProg){
 }
 function msSyncUI(){
   const on=m365Ready()&&(M365.live||msDev());
-  document.querySelectorAll('[data-ex=ms],[data-ex=msonly]').forEach(b=>b.style.display=on?'flex':'none');
+  const sec=$('ex-ms-sec'); if(sec)sec.style.display=on?'block':'none';
   const eb=$('b-extup'); if(eb)eb.style.display=on?'flex':'none';
   const st=$('ms-state'); if(!st)return;
-  st.style.display=on?'block':'none';
   if(!on)return;
   const t=msTokRaw();
   st.innerHTML=t?('Microsoft: '+esc(t.name||'signed in')+' \u00b7 <a id="ms-out" style="text-decoration:underline">sign out</a>')
@@ -3979,6 +4019,61 @@ function msSyncUI(){
   const o=$('ms-out'); if(o)o.onclick=e2=>{e2.stopPropagation();msSignOut();};
 }
 let muFails=[], muDest=null;
+async function msJobDetails(dest){
+  // cross-reference: the office keeps <job>-job details.txt in every job's Office folder
+  try{
+    const d=await msDriveId();
+    const r=await gfetch('/drives/'+d+'/root:/'+encPath(dest.base+'/Office/'+dest.job+'-job details.txt')+':/content');
+    if(!r.ok)return null;
+    const t=await r.text();
+    const lines=String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,3);
+    return lines.length?lines.join('<br>'):null;
+  }catch(e){return null;}
+}
+async function msJobLookup(jobStr){
+  // {num, lines:[..]} from <job>/Office/<job>-job details.txt, or {num, missing:true}, or null when not checkable
+  try{
+    if(!m365Ready()||!navigator.onLine||!msSignedIn())return null;
+    const jp=msJobParts(jobStr); if(!jp)return null;
+    const d=await msDriveId();
+    const r=await gfetch('/drives/'+d+'/root:/'+encPath(jp.base+'/Office/'+jp.num+'-job details.txt')+':/content');
+    if(!r.ok)return {num:jp.num, missing:true};
+    const lines=String(await r.text()).split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,3);
+    return {num:jp.num, lines};
+  }catch(e){return null;}
+}
+function wireJobCheck(inputId,hintId,fill){
+  let seq=0;
+  const run=async()=>{
+    const my=++seq, el=$(hintId), v=$(inputId).value.trim();
+    if(!v||!msJobParts(v)){el.style.display='none';return;}
+    const res=await msJobLookup(v);
+    if(my!==seq)return;                       // stale lookup — field changed meanwhile
+    if(!res){el.style.display='none';return;}
+    el.style.display='block';
+    if(res.missing){
+      el.innerHTML='\u26a0 No job details found for <b>'+esc(res.num)+'</b> \u2014 check the number.';
+      el.style.color='var(--danger)';
+    }else{
+      el.innerHTML='<b>'+esc(res.num)+'</b>: '+res.lines.map(esc).join(' \u00b7 ');
+      el.style.color='var(--green,#5E9478)';
+      if(fill)fill(res.lines);
+    }
+  };
+  $(inputId).addEventListener('change',run);
+  $(inputId).addEventListener('blur',run);
+}
+wireJobCheck('n-job','n-jobchk',lines=>{
+  // pre-fill ONLY empty fields; street-ish line (starts with digits) -> address, next clean line -> city
+  const street=lines.find(l=>/^\d+\s+/.test(l));
+  if(street&&!$('n-addr').value.trim())$('n-addr').value=street;
+  if(street){
+    const after=lines[lines.indexOf(street)+1];
+    if(after&&!/\d/.test(after)&&!/british columbia/i.test(after)&&!$('n-city').value.trim())$('n-city').value=after;
+  }
+});
+wireJobCheck('ex-job','ex-jobchk',null);
+let muPend=null;
 async function msUploadFlow(files,withPdf,jobOv,dateOv){
   if(!navigator.onLine){toast('No signal \u2014 connect to data or Wi\u2011Fi and try again. WhatsApp/ZIP still works offline.');return;}
   if(!msSignedIn()){msLogin();return;}
@@ -3990,42 +4085,73 @@ async function msUploadFlow(files,withPdf,jobOv,dateOv){
       dateOv!==undefined?dateOv:noteDays().slice(-1)[0]);   // dated folder = LAST field day
     muDest=dest; muFails=[]; muCtx=(jobOv!==undefined)?[jobOv,dateOv]:null;
     $('mu-dest').innerHTML=dest.inbox
-      ?'\u26a0 '+esc(dest.reason)+' \u2014 files are going to <b>Field Inbox</b>; the office will file them.'
+      ?'\u26a0 '+esc(dest.reason)+' \u2014 files will go to <b>Field Inbox</b> for the office to file. If the job # is just mistyped, Cancel and fix it.'
       :'\u2192 <b>'+esc(dest.job)+'</b> \u203a Field \u203a Data \u203a '+esc(dest.path.split('/').pop());
+    const chk=$('mu-check');
+    if(dest.inbox){chk.style.display='none';}
+    else{
+      const det=await msJobDetails(dest);
+      chk.style.display='block';
+      chk.innerHTML=det
+        ?'<b>'+esc(dest.job)+' is:</b><br>'+det+'<br><span style="color:var(--danger);font-weight:700">Not your site? Cancel and check the job #.</span>'
+        :'Couldn\u2019t read this job\u2019s details file \u2014 double-check the job # yourself before uploading.';
+    }
     $('mu-list').innerHTML=list.map((f,i)=>`
       <div style="display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)">
         <span class="card-sub" style="flex:1;word-break:break-all">${esc(f.name)} \u00b7 ${(f.size/1048576).toFixed(1)} MB</span>
-        <span class="mono" id="mu-st-${i}" style="font-size:13px">\u23f3</span>
+        <span class="mono" id="mu-st-${i}" style="font-size:13px"></span>
       </div>`).join('');
+    muPend={list,dest,fromNote:jobOv===undefined};
+    $('mu-title').textContent='Check before uploading';
     $('mu-retry').style.display='none';
-    $('mu-close').disabled=true;$('mu-close').textContent='Uploading\u2026';
+    $('mu-close').disabled=false;$('mu-close').textContent='Cancel';
+    $('mu-go').style.display='block';$('mu-go').disabled=false;
+    $('mu-go').textContent='Upload '+list.length+' file'+(list.length>1?'s':'');
     $('m-msup').classList.add('on');
     busy(false);
-    for(let i=0;i<list.length;i++){
-      const el=$('mu-st-'+i);
-      try{
-        await msUpload(dest.path,list[i],fr=>{el.textContent=Math.round(fr*100)+'%';});
-        el.textContent='\u2713';
-      }catch(err){
-        el.textContent='\u2717';
-        muFails.push(list[i]);
-        if(String(err.message)==='signin'){$('m-msup').classList.remove('on');msLogin();return;}
-      }
-    }
-    $('mu-close').disabled=false;
-    $('mu-close').textContent=muFails.length?('Done \u2014 '+muFails.length+' failed'):'Done \u2713';
-    $('mu-retry').style.display=muFails.length?'block':'none';
-    if(!muFails.length){
-      if(jobOv===undefined&&note){note.exported=Date.now();clearTimeout(saveT);store.put(note).catch(()=>{});setSave('Saved \u2713 '+nowT());}
-      toast(dest.inbox?'Files uploaded to Field Inbox.':('Uploaded to '+dest.job+' \u2014 job folder updated.'));
-    }
   }catch(err){
     busy(false);
     if(String(err.message)==='signin'){msLogin();return;}
     toast(err.message||'Upload failed \u2014 try again, or send by WhatsApp.');
   }
 }
-$('mu-close').onclick=()=>{$('m-msup').classList.remove('on');};
+async function msDoUpload(){
+  const p=muPend; muPend=null; if(!p)return;
+  const {list,dest,fromNote}=p;
+  $('mu-title').textContent='Uploading to SharePoint';
+  $('mu-check').style.display='none';
+  $('mu-go').style.display='none';
+  $('mu-close').disabled=true;$('mu-close').textContent='Uploading\u2026';
+  list.forEach((f,i)=>{const el=$('mu-st-'+i);if(el)el.textContent='\u23f3';});
+  if(dest.mk){
+    try{await msEnsureFolder(dest.mk.parent,dest.mk.name);delete dest.mk;}
+    catch(err){
+      $('mu-close').disabled=false;$('mu-close').textContent='Close';
+      toast(err.message||'Couldn\u2019t create the dated folder \u2014 try again.');
+      return;
+    }
+  }
+  for(let i=0;i<list.length;i++){
+    const el=$('mu-st-'+i);
+    try{
+      await msUpload(dest.path,list[i],fr=>{el.textContent=Math.round(fr*100)+'%';});
+      el.textContent='\u2713';
+    }catch(err){
+      el.textContent='\u2717';
+      muFails.push(list[i]);
+      if(String(err.message)==='signin'){$('m-msup').classList.remove('on');msLogin();return;}
+    }
+  }
+  $('mu-close').disabled=false;
+  $('mu-close').textContent=muFails.length?('Done \u2014 '+muFails.length+' failed'):'Done \u2713';
+  $('mu-retry').style.display=muFails.length?'block':'none';
+  if(!muFails.length){
+    if(fromNote&&note){note.exported=Date.now();clearTimeout(saveT);store.put(note).catch(()=>{});setSave('Saved \u2713 '+nowT());}
+    toast(dest.inbox?'Files uploaded to Field Inbox.':('Uploaded to '+dest.job+' \u2014 job folder updated.'));
+  }
+}
+$('mu-go').onclick=()=>msDoUpload();
+$('mu-close').onclick=()=>{muPend=null;$('m-msup').classList.remove('on');};
 let muCtx=null;
 $('mu-retry').onclick=()=>{const f=muFails.slice();$('m-msup').classList.remove('on');
   if(f.length)msUploadFlow(f,false,muCtx?muCtx[0]:undefined,muCtx?muCtx[1]:undefined);};
@@ -4033,6 +4159,7 @@ let pkgFiles=[], pkgMode='zip', extJob='', extDate='';
 $('b-extup').onclick=()=>{
   try{$('ex-job').value=localStorage.getItem('efn-extjob')||'';}catch(e){$('ex-job').value='';}
   $('ex-date').value=new Date().toISOString().slice(0,10);
+  $('ex-jobchk').style.display='none';
   $('m-extup').classList.add('on');
   setTimeout(()=>$('ex-job').focus(),80);
 };
@@ -4043,7 +4170,7 @@ $('ex-go').onclick=()=>{
   extJob=j; extDate=$('ex-date').value||new Date().toISOString().slice(0,10);
   try{localStorage.setItem('efn-extjob',j);}catch(e){}
   $('m-extup').classList.remove('on');
-  pkgMode='msext'; pkgFiles=[]; $('file-zip').value=''; $('file-zip').click();
+  pkgMode='msext'; pkgFiles=[]; pkRender(); $('m-pkg').classList.add('on');
 };
 function pkRender(){
   $('pk-list').innerHTML=pkgFiles.map((f,i)=>`
@@ -4052,8 +4179,14 @@ function pkRender(){
       <button class="pgdel" data-pkx="${i}" title="Remove">🗑</button>
     </div>`).join('')||'<div class="card-sub" style="padding:10px 2px">No files yet.</div>';
   const n=pkgFiles.length;
-  const lbl=pkgMode==='zip'?'Build package':pkgMode==='ms'?'Upload PDF + files':'Upload files';
-  $('pk-build').textContent=n?(lbl+' ('+(pkgMode==='ms'?n+1:n)+')'):lbl;
+  $('pk-title').textContent=pkgMode==='zip'?'Field package':pkgMode==='ms'?'Upload to job folder':pkgMode==='msext'?'Upload scans / data':'Send files to job folder';
+  $('pk-sub').innerHTML=pkgMode==='zip'
+    ?'Data files going in beside the notes PDF. Tip: in the picker, <b>long-press</b> the first file to select several at once.'
+    :pkgMode==='ms'
+    ?'The notes PDF is included automatically. Add collector files and photos with \uff0b \u2014 or upload the PDF alone.'
+    :'Add the files to send with \uff0b. Tip: in the picker, <b>long-press</b> the first file to select several at once.';
+  const lbl=pkgMode==='zip'?'Build package':pkgMode==='ms'?(n?'Upload PDF + files':'Upload PDF only'):'Upload files';
+  $('pk-build').textContent=(n&&pkgMode!=='zip')?(lbl+' ('+(pkgMode==='ms'?n+1:n)+')'):(pkgMode==='zip'&&n?lbl+' ('+n+')':lbl);
   $('pk-build').disabled=((pkgMode==='msonly'||pkgMode==='msext')&&!n);
 }
 $('pk-list').addEventListener('click',e=>{
