@@ -209,6 +209,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <div class="scroll" id="home-list"></div>
   <div class="scroll" id="res-list" style="display:none"></div>
   <div class="scroll" id="train-list" style="display:none"></div>
+  <button class="btn ghost" id="b-extup" style="display:none;position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 78px);z-index:6">⇪ Upload scans / data to job folder</button>
   <button class="btn fab" id="b-new">＋ New note</button>
 </div>
 
@@ -405,6 +406,17 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <button class="btn" data-add="pdf"><b>📄</b> Mark up a PDF</button>
   <button class="btn" data-add="photo"><b>📷</b> Photo page</button>
   <button class="btn ghost" data-add="cancel" style="border:0">Cancel</button>
+</div></div>
+
+<div class="mback" id="m-extup"><div class="modal">
+  <h2>Upload to job folder</h2>
+  <div class="card-sub" style="margin-bottom:10px">For paper field notes: scan them with your camera/scan app first, then send the scans and collector files here — they file into the job folder like app notes do.</div>
+  <div class="field"><label>Job #</label><input class="mono" id="ex-job" placeholder="26-3568" autocapitalize="characters"></div>
+  <div class="field" style="margin-top:10px"><label>Field date (last day on the notes)</label><input type="date" class="mono" id="ex-date"></div>
+  <div style="display:flex;gap:10px;margin-top:14px">
+    <button class="btn ghost" id="ex-cancel" style="flex:1">Cancel</button>
+    <button class="btn" id="ex-go" style="flex:1">Pick files…</button>
+  </div>
 </div></div>
 
 <div class="mback" id="m-msup"><div class="modal">
@@ -1189,6 +1201,7 @@ $('res-list').addEventListener('click',async e=>{
 async function renderHome(){
   notes=(await store.list()).sort((a,b)=>b.updated-a.updated);
   $('home-sub').textContent='Elevate Land Surveying Ltd. · build '+BUILD+' — tap for what’s new';
+  try{msSyncUI();}catch(e){}
   const el=$('home-list');
   if(!notes.length){el.innerHTML='<div class="empty">No notes yet.<br>Tap <b>New note</b> to start today’s field book page.</div>';return;}
   el.innerHTML=notes.map(n=>`
@@ -3824,7 +3837,7 @@ $('m-export').addEventListener('click',async e=>{
   if(k==='msonly'){pkgMode='msonly';pkgFiles=[];$('file-zip').value='';$('file-zip').click();}
 });
 /* ================= Microsoft 365 upload ================= */
-const M365={client:'',tenant:'',host:'elevatelandsurveying.sharepoint.com',site:'/sites/JobFiles',
+const M365={client:'e143d511-8c89-4a13-99b7-352f573035b6',tenant:'2d73cd36-e487-4b47-87d9-4eb3b239507e',host:'elevatelandsurveying.sharepoint.com',site:'/sites/JobFiles',
   redirect:'https://finnyelevate.github.io/Field-Notes-app/',live:false};
 const msDev=()=>{try{return localStorage.getItem('efn-msdev')==='1';}catch(e){return false;}};
 const m365Ready=()=>!!(M365.client&&M365.tenant);
@@ -3956,6 +3969,7 @@ async function msUpload(destPath,file,onProg){
 function msSyncUI(){
   const on=m365Ready()&&(M365.live||msDev());
   document.querySelectorAll('[data-ex=ms],[data-ex=msonly]').forEach(b=>b.style.display=on?'flex':'none');
+  const eb=$('b-extup'); if(eb)eb.style.display=on?'flex':'none';
   const st=$('ms-state'); if(!st)return;
   st.style.display=on?'block':'none';
   if(!on)return;
@@ -3965,15 +3979,16 @@ function msSyncUI(){
   const o=$('ms-out'); if(o)o.onclick=e2=>{e2.stopPropagation();msSignOut();};
 }
 let muFails=[], muDest=null;
-async function msUploadFlow(files,withPdf){
+async function msUploadFlow(files,withPdf,jobOv,dateOv){
   if(!navigator.onLine){toast('No signal \u2014 connect to data or Wi\u2011Fi and try again. WhatsApp/ZIP still works offline.');return;}
   if(!msSignedIn()){msLogin();return;}
   busy(true);
   try{
     const list=files.slice();
     if(withPdf){const p=await buildPdf();list.unshift(new File([p.blob],p.name,{type:'application/pdf'}));}
-    const dest=await msDest(note.job,noteDays().slice(-1)[0]);   // dated folder = LAST field day on the note
-    muDest=dest; muFails=[];
+    const dest=await msDest(jobOv!==undefined?jobOv:note.job,
+      dateOv!==undefined?dateOv:noteDays().slice(-1)[0]);   // dated folder = LAST field day
+    muDest=dest; muFails=[]; muCtx=(jobOv!==undefined)?[jobOv,dateOv]:null;
     $('mu-dest').innerHTML=dest.inbox
       ?'\u26a0 '+esc(dest.reason)+' \u2014 files are going to <b>Field Inbox</b>; the office will file them.'
       :'\u2192 <b>'+esc(dest.job)+'</b> \u203a Field \u203a Data \u203a '+esc(dest.path.split('/').pop());
@@ -4001,7 +4016,7 @@ async function msUploadFlow(files,withPdf){
     $('mu-close').textContent=muFails.length?('Done \u2014 '+muFails.length+' failed'):'Done \u2713';
     $('mu-retry').style.display=muFails.length?'block':'none';
     if(!muFails.length){
-      note.exported=Date.now();clearTimeout(saveT);store.put(note).catch(()=>{});setSave('Saved \u2713 '+nowT());
+      if(jobOv===undefined&&note){note.exported=Date.now();clearTimeout(saveT);store.put(note).catch(()=>{});setSave('Saved \u2713 '+nowT());}
       toast(dest.inbox?'Files uploaded to Field Inbox.':('Uploaded to '+dest.job+' \u2014 job folder updated.'));
     }
   }catch(err){
@@ -4011,8 +4026,25 @@ async function msUploadFlow(files,withPdf){
   }
 }
 $('mu-close').onclick=()=>{$('m-msup').classList.remove('on');};
-$('mu-retry').onclick=()=>{const f=muFails.slice();$('m-msup').classList.remove('on');if(f.length)msUploadFlow(f,false);};
-let pkgFiles=[], pkgMode='zip';
+let muCtx=null;
+$('mu-retry').onclick=()=>{const f=muFails.slice();$('m-msup').classList.remove('on');
+  if(f.length)msUploadFlow(f,false,muCtx?muCtx[0]:undefined,muCtx?muCtx[1]:undefined);};
+let pkgFiles=[], pkgMode='zip', extJob='', extDate='';
+$('b-extup').onclick=()=>{
+  try{$('ex-job').value=localStorage.getItem('efn-extjob')||'';}catch(e){$('ex-job').value='';}
+  $('ex-date').value=new Date().toISOString().slice(0,10);
+  $('m-extup').classList.add('on');
+  setTimeout(()=>$('ex-job').focus(),80);
+};
+$('ex-cancel').onclick=()=>$('m-extup').classList.remove('on');
+$('ex-go').onclick=()=>{
+  const j=$('ex-job').value.trim();
+  if(!j){toast('Enter the job number first.');return;}
+  extJob=j; extDate=$('ex-date').value||new Date().toISOString().slice(0,10);
+  try{localStorage.setItem('efn-extjob',j);}catch(e){}
+  $('m-extup').classList.remove('on');
+  pkgMode='msext'; pkgFiles=[]; $('file-zip').value=''; $('file-zip').click();
+};
 function pkRender(){
   $('pk-list').innerHTML=pkgFiles.map((f,i)=>`
     <div style="display:flex;gap:10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)">
@@ -4022,7 +4054,7 @@ function pkRender(){
   const n=pkgFiles.length;
   const lbl=pkgMode==='zip'?'Build package':pkgMode==='ms'?'Upload PDF + files':'Upload files';
   $('pk-build').textContent=n?(lbl+' ('+(pkgMode==='ms'?n+1:n)+')'):lbl;
-  $('pk-build').disabled=(pkgMode==='msonly'&&!n);
+  $('pk-build').disabled=((pkgMode==='msonly'||pkgMode==='msext')&&!n);
 }
 $('pk-list').addEventListener('click',e=>{
   const b=e.target.closest('[data-pkx]');if(!b)return;
@@ -4039,6 +4071,7 @@ $('pk-cancel').onclick=()=>{$('m-pkg').classList.remove('on');pkgFiles=[];};
 $('pk-build').onclick=async()=>{
   $('m-pkg').classList.remove('on');
   const files=pkgFiles;pkgFiles=[];
+  if(pkgMode==='msext'){msUploadFlow(files,false,extJob,extDate);return;}
   if(pkgMode==='ms'||pkgMode==='msonly'){msUploadFlow(files,pkgMode==='ms');return;}
   busy(true);
   try{
@@ -4097,7 +4130,7 @@ $('eb-open').onclick=()=>{
     if(q.get('code')&&m365Ready()){
       const okx=await msExchange(q.get('code'));
       history.replaceState(null,'',location.pathname);
-      if(okx){const t=msTokRaw();toast('Microsoft sign-in done'+(t&&t.name?' \u2014 '+t.name:'')+'. Tap Export again to upload.');}
+      if(okx){const t=msTokRaw();toast('Microsoft sign-in done'+(t&&t.name?' \u2014 '+t.name:'')+'. Tap your upload again to continue.');}
       else toast('Microsoft sign-in didn\u2019t complete \u2014 try again.');
     }else if(q.get('error')){
       history.replaceState(null,'',location.pathname);
