@@ -147,6 +147,8 @@ input,select,textarea{font:inherit;color:var(--ink)}
 /* ---------- modal ---------- */
 .mback{position:fixed;inset:0;background:rgba(10,14,12,.6);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .mback.on{display:flex}
+.vu-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)}
+.vu-row .vgo{font-size:17px;text-decoration:none;padding:4px 8px;flex:none}
 .modal{background:var(--paper);border-radius:18px 18px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom) + 20px);width:100%;max-width:560px}
 .modal h2{font-size:16px;letter-spacing:.03em;margin-bottom:14px}
 .mrow{display:flex;gap:10px;margin-top:14px}
@@ -251,6 +253,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
         <textarea id="f-summary" rows="3" style="resize:vertical" placeholder="What got done, what's left, anything the office should know"></textarea>
         <button class="mic" data-mic="f-summary">🎙</button></div></div>
     </div>
+    <button class="btn ghost" id="b-vu-note" style="width:100%;display:none;margin-bottom:4px">📂 View job uploads — what the office posted</button>
     <div class="eyebrow" style="color:#9DB3A6;margin:16px 4px 8px">Pages</div>
     <div id="page-list"></div>
     <button class="btn ghost" id="b-add-page" style="width:100%">＋ Add page</button>
@@ -432,6 +435,16 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <div style="display:flex;gap:10px">
     <button class="btn ghost" id="mu-close" style="flex:1">Cancel</button>
     <button class="btn" id="mu-go" style="flex:1">Upload</button>
+  </div>
+</div></div>
+
+<div class="mback" id="m-msvu" style="z-index:21"><div class="modal">
+  <h2 id="vu-title">Job uploads</h2>
+  <div class="card-sub" id="vu-sub" style="margin-bottom:8px;line-height:1.5"></div>
+  <div id="vu-list" style="max-height:48vh;overflow:auto;margin-bottom:12px"></div>
+  <div style="display:flex;gap:10px">
+    <button class="btn ghost" id="vu-back" style="flex:1;display:none">‹ Back</button>
+    <button class="btn ghost" id="vu-close" style="flex:1">Close</button>
   </div>
 </div></div>
 
@@ -1330,6 +1343,7 @@ $('b-new').onclick=()=>{
   $('n-wx').innerHTML=WX.map(w=>`<button class="chip" data-nwx="${w}">${w}</button>`).join('');
   ['n-job','n-crew','n-purpose'].forEach(i=>$(i).classList.remove('miss'));
   $('n-jobchk').style.display='none';
+  nAuto={addr:'',city:''};
   $('m-new').classList.add('on');
   setTimeout(()=>$('n-job').focus(),80);
 };
@@ -4038,6 +4052,7 @@ function msSyncUI(){
   const on=m365Ready()&&(M365.live||msDev());
   const sec=$('ex-ms-sec'); if(sec)sec.style.display=on?'block':'none';
   const eb=$('b-extup'); if(eb)eb.style.display=on?'flex':'none';
+  const vb=$('b-vu-note'); if(vb)vb.style.display=on?'flex':'none';
   const st=$('ms-state'); if(!st)return;
   if(!on)return;
   const t=msTokRaw();
@@ -4095,7 +4110,7 @@ async function msJobLookup(jobStr){
       warn:'Several jobs end in -'+res.seq+' ('+res.ambiguous.join(', ')+') \u2014 type the full number.'};
     if(res.missing)return {num:jp.num||jp.seq, missing:true};
     const info=await msDetailsLines(res.base,res.num);
-    return info?{num:res.num, typed:res.typed, info}:{num:res.num, missing:true};
+    return info?{num:res.num, typed:res.typed, base:res.base, info}:{num:res.num, base:res.base, missing:true};
   }catch(e){return null;}
 }
 function wireJobCheck(inputId,hintId,fill){
@@ -4107,36 +4122,104 @@ function wireJobCheck(inputId,hintId,fill){
     if(my!==seq)return;                       // stale lookup — field changed meanwhile
     if(!res){el.style.display='none';return;}
     el.style.display='block';
+    const vlink=res.base?' \u00b7 <a class="vu-link" style="text-decoration:underline;cursor:pointer;white-space:nowrap">\ud83d\udcc2 View uploads</a>':'';
     if(res.missing){
-      el.innerHTML='\u26a0 '+(res.warn?esc(res.warn):'No job details found for <b>'+esc(res.num)+'</b> \u2014 check the number.');
+      el.innerHTML='\u26a0 '+(res.warn?esc(res.warn):'No job details found for <b>'+esc(res.num)+'</b> \u2014 check the number.')+vlink;
       el.style.color='var(--danger)';
+      if(fill)fill(null);
     }else{
       el.innerHTML='<b>'+esc(res.num)+'</b>'+(res.typed&&res.typed!==res.num?' <span style="color:var(--danger);font-weight:700">(you typed '+esc(res.typed)+')</span>':'')+': '+msInfoHtml(res.info);
       el.style.color='var(--green,#5E9478)';
       if(fill)fill(res.info);
     }
+    if(!res.missing)el.innerHTML+=vlink;
+    const vl=el.querySelector('.vu-link');
+    if(vl)vl.onclick=ev=>{ev.stopPropagation();msOpenUploads($(inputId).value.trim());};
   };
   $(inputId).addEventListener('change',run);
   $(inputId).addEventListener('blur',run);
 }
+let nAuto={addr:'',city:''};
 wireJobCheck('n-job','n-jobchk',info=>{
-  // pre-fill ONLY empty fields
-  if(info.addr){
+  // fill empty fields OR fields still holding OUR last auto-fill (crew corrected the
+  // job # -> swap in the new job's address, or clear when the new job is unknown);
+  // anything the crew typed or edited by hand is never touched
+  const A=$('n-addr'),C=$('n-city');
+  const freeA=!A.value.trim()||A.value===nAuto.addr;
+  const freeC=!C.value.trim()||C.value===nAuto.city;
+  let addr='',city='';
+  if(info&&info.addr){
     const parts=info.addr.split(',').map(x=>x.trim()).filter(Boolean);
-    const city=parts.slice(1).filter(x=>!/\d/.test(x)).join(', ');
-    if(!$('n-addr').value.trim())$('n-addr').value=parts[0]||info.addr;
-    if(city&&!$('n-city').value.trim())$('n-city').value=city;
-    return;
+    city=parts.slice(1).filter(x=>!/\d/.test(x)).join(', ');
+    addr=parts[0]||info.addr;
+  }else if(info){
+    // older free-text files: street-ish line -> address, next clean line -> city
+    const street=info.lines.find(l=>/^\d+\s+/.test(l));
+    if(street){addr=street;
+      const after=info.lines[info.lines.indexOf(street)+1];
+      if(after&&!/\d/.test(after)&&!/british columbia/i.test(after))city=after;}
   }
-  // older free-text files: street-ish line -> address, next clean line -> city
-  const street=info.lines.find(l=>/^\d+\s+/.test(l));
-  if(street&&!$('n-addr').value.trim())$('n-addr').value=street;
-  if(street){
-    const after=info.lines[info.lines.indexOf(street)+1];
-    if(after&&!/\d/.test(after)&&!/british columbia/i.test(after)&&!$('n-city').value.trim())$('n-city').value=after;
-  }
+  if(freeA&&(addr||nAuto.addr)){A.value=addr;nAuto.addr=addr;}
+  if(freeC&&(city||nAuto.city)){C.value=city;nAuto.city=city;}
 });
 wireJobCheck('ex-job','ex-jobchk',null);
+// ---- Field/Uploads viewer: what the office posted for the job ----
+let vuStack=[];
+async function msOpenUploads(jobStr){
+  if(!navigator.onLine){toast('No signal \u2014 connect to data or Wi\u2011Fi and try again.');return;}
+  if(!msSignedIn()){msLogin();return;}
+  vuStack=[];
+  $('vu-title').textContent='Job uploads';
+  $('vu-sub').textContent='Checking\u2026';$('vu-list').innerHTML='';
+  $('vu-back').style.display='none';
+  $('m-msvu').classList.add('on');
+  try{
+    const res=await msResolveJob(jobStr);
+    if(!res){$('vu-sub').textContent='Type a job number first.';return;}
+    if(res.ambiguous){$('vu-sub').textContent='\u26a0 Several jobs end in -'+res.seq+' \u2014 type the full number.';return;}
+    if(res.missing){$('vu-sub').textContent='\u26a0 Job folder '+(res.typed||'')+' not found \u2014 check the number.';return;}
+    $('vu-title').textContent=res.num+' \u2014 Uploads';
+    await vuShow(res.base+'/Field/Uploads');
+  }catch(e){$('vu-sub').textContent='Couldn\u2019t reach SharePoint \u2014 try again on better signal.';}
+}
+async function vuShow(path){
+  $('vu-sub').textContent='Checking\u2026';$('vu-list').innerHTML='';
+  $('vu-back').style.display=vuStack.length?'block':'none';
+  const d=await msDriveId();
+  const r=await gfetch('/drives/'+d+'/root:/'+encPath(path)+'?$expand=children($select=name,folder,file,size,lastModifiedDateTime,webUrl)');
+  if(r.status===404){$('vu-sub').textContent='Nothing posted for this job yet (no Field/Uploads folder).';return;}
+  if(!r.ok)throw new Error('SharePoint error ('+r.status+')');
+  const it=await r.json();
+  const kids=(it.children||[]).slice().sort((a,b)=>{
+    const f=(b.folder?1:0)-(a.folder?1:0); if(f)return f;
+    return String(b.lastModifiedDateTime||'').localeCompare(String(a.lastModifiedDateTime||''));
+  });
+  const fd=t0=>{if(!t0)return'';const t=new Date(t0);return isNaN(t)?'':t.toLocaleDateString(undefined,{month:'short',day:'numeric'});};
+  $('vu-sub').innerHTML='What the office posted for this job \u2014 newest first.'+
+    (it.webUrl?' <a href="'+esc(it.webUrl)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open in OneDrive \u2197</a>':'');
+  if(!kids.length){$('vu-list').innerHTML='<div class="card-sub" style="padding:10px 4px">Empty \u2014 nothing in this folder.</div>';return;}
+  $('vu-list').innerHTML=kids.map((k,i)=>{
+    const sub=k.folder
+      ?(fd(k.lastModifiedDateTime)+(k.folder.childCount!=null?' \u00b7 '+k.folder.childCount+' item'+(k.folder.childCount===1?'':'s'):''))
+      :((k.size!=null?(k.size/1048576).toFixed(1)+' MB \u00b7 ':'')+fd(k.lastModifiedDateTime));
+    return '<div class="vu-row" data-vi="'+i+'" style="cursor:pointer">'+
+      '<span style="font-size:17px;flex:none">'+(k.folder?'\ud83d\udcc1':'\ud83d\udcc4')+'</span>'+
+      '<span class="card-sub" style="flex:1;line-height:1.4;word-break:break-all"><b>'+esc(k.name)+'</b><br><span style="opacity:.8">'+sub+'</span></span>'+
+      (k.webUrl?'<a class="vgo" href="'+esc(k.webUrl)+'" target="_blank" rel="noopener">\u2197</a>':'')+
+      '</div>';
+  }).join('');
+  $('vu-list').querySelectorAll('[data-vi]').forEach(row=>{
+    row.onclick=e=>{
+      if(e.target.closest('a'))return;
+      const k=kids[+row.dataset.vi];
+      if(k.folder){vuStack.push(path);vuShow(path+'/'+k.name).catch(()=>{$('vu-sub').textContent='Couldn\u2019t open that folder \u2014 try again.';});}
+      else if(k.webUrl)window.open(k.webUrl,'_blank');
+    };
+  });
+}
+$('vu-back').onclick=()=>{const p=vuStack.pop();if(p)vuShow(p).catch(()=>{$('vu-sub').textContent='Couldn\u2019t load \u2014 try again.';});};
+$('vu-close').onclick=()=>{$('m-msvu').classList.remove('on');};
+$('b-vu-note').onclick=()=>{msOpenUploads((($('f-job').value||'').trim())||(note&&note.job)||'');};
 let muPend=null;
 async function msUploadFlow(files,withPdf,jobOv,dateOv){
   if(!navigator.onLine){toast('No signal \u2014 connect to data or Wi\u2011Fi and try again. WhatsApp/ZIP still works offline.');return;}
