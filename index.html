@@ -147,6 +147,23 @@ input,select,textarea{font:inherit;color:var(--ink)}
 /* ---------- modal ---------- */
 .mback{position:fixed;inset:0;background:rgba(10,14,12,.6);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .mback.on{display:flex}
+#fm-wrap{position:relative;flex:1;overflow:hidden;background:#e5e7eb;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#fm-tiles{position:absolute;left:0;top:0}
+#fm-cv{position:absolute;left:0;top:0;pointer-events:none}
+#fm-by{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.8);font-size:9px;padding:1px 5px;color:#333;max-width:100%;z-index:3}
+#fm-note{position:absolute;left:8px;top:8px;right:8px;background:rgba(255,255,255,.93);font-size:12px;padding:5px 8px;border-radius:8px;z-index:3;color:#24312B;display:none}
+#fm-foot{background:var(--paper);padding:6px 10px calc(env(safe-area-inset-bottom) + 8px);border-top:1px solid var(--line);max-height:34vh;overflow-y:auto}
+#fm-lay{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12.5px}
+.fm-cb{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.fm-cb input{width:16px;height:16px;accent-color:var(--green,#5E9478)}
+#fm-lay .fmseg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+#fm-lay .fmseg button{border:0;background:transparent;padding:3px 9px;font-size:12.5px;color:inherit}
+#fm-lay .fmseg button.on{background:var(--green,#5E9478);color:#fff}
+#fm-lay .fm-add{padding:3px 9px;font-size:12.5px;width:auto;margin:0;display:inline-flex}
+#fm-info{font-size:13px;line-height:1.45;margin-top:6px;border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;display:none;word-break:break-word}
+#fm-leg{font-size:12px;margin-top:6px;line-height:1.5}
+.fm-chip{display:inline-flex;align-items:center;gap:5px;margin:0 8px 2px 0}
+.fm-chip i{display:inline-block;width:11px;height:11px;border-radius:2px}
 .vu-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)}
 .vu-row .vgo{font-size:17px;text-decoration:none;padding:4px 8px;flex:none}
 .modal{background:var(--paper);border-radius:18px 18px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom) + 20px);width:100%;max-width:560px}
@@ -228,6 +245,10 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
     <button class="bicon" id="b-del-note">🗑</button>
   </div>
   <div class="scroll">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn ghost" id="b-fmap" style="flex:1">🗺 Site map</button>
+      <button class="btn ghost" id="b-vu-note" style="flex:1;display:none">📂 Job uploads</button>
+    </div>
     <div class="paper">
       <div class="eyebrow">Header — P 1</div>
       <div class="frow">
@@ -253,7 +274,6 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
         <textarea id="f-summary" rows="3" style="resize:vertical" placeholder="What got done, what's left, anything the office should know"></textarea>
         <button class="mic" data-mic="f-summary">🎙</button></div></div>
     </div>
-    <button class="btn ghost" id="b-vu-note" style="width:100%;display:none;margin-bottom:4px">📂 View job uploads — what the office posted</button>
     <div class="eyebrow" style="color:#9DB3A6;margin:16px 4px 8px">Pages</div>
     <div id="page-list"></div>
     <button class="btn ghost" id="b-add-page" style="width:100%">＋ Add page</button>
@@ -263,6 +283,23 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div>
 
 <!-- ============ SETUP EDITOR ============ -->
+<div class="view" id="v-fmap">
+  <div class="bar">
+    <button class="bicon" id="fm-back">‹</button>
+    <h1 style="font-size:16px">Site map<span class="sub" id="fm-sub"></span></h1>
+    <button class="bicon" id="fm-zi">＋</button>
+    <button class="bicon" id="fm-zo">−</button>
+    <button class="bicon" id="fm-loc" title="centre on me">📍</button>
+  </div>
+  <div id="fm-wrap"><div id="fm-tiles"></div><canvas id="fm-cv"></canvas>
+    <div id="fm-by"></div><div id="fm-note"></div></div>
+  <div id="fm-foot">
+    <div id="fm-lay"></div>
+    <div id="fm-info"></div>
+    <div id="fm-leg"></div>
+  </div>
+</div>
+
 <div class="view" id="v-setup">
   <div class="bar">
     <button class="bicon" id="b-back-note">‹</button>
@@ -525,7 +562,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 33</h2>
+  <h2>What’s new — build 34</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -689,9 +726,10 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=33;
+const BUILD=34;
 const NEWS=[
- ['\ud83d\udd27','Groundwork for job-folder upload','Behind the scenes this build carries the plumbing for sending field notes and data straight into the SharePoint job folder from the app. Nothing changes for you yet \u2014 the buttons appear once the office finishes the Microsoft setup. WhatsApp sharing works exactly as before.']
+ ['\ud83d\uddfa','Site map on every note','Open \ud83d\uddfa Site map on a note: the site on an aerial photo with ParcelMap BC lot lines, house numbers, PID and plan labels, and the province\u2019s control monuments (green geodetic, purple benchmarks \u2014 tap one for its record). A blue dot shows where you stand. Needs signal.'],
+ ['\ud83d\udccc','Your points on the aerial','\uff0b Points on the map loads a job\u2019s .msz or points file (UTM jobs) over the photo \u2014 control and found pins highlighted, so you can walk to the legal. Phones signed in to Microsoft also see pins for our existing jobs.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -4220,6 +4258,312 @@ async function vuShow(path){
 $('vu-back').onclick=()=>{const p=vuStack.pop();if(p)vuShow(p).catch(()=>{$('vu-sub').textContent='Couldn\u2019t load \u2014 try again.';});};
 $('vu-close').onclick=()=>{$('m-msvu').classList.remove('on');};
 $('b-vu-note').onclick=()=>{msOpenUploads((($('f-job').value||'').trim())||(note&&note.job)||'');};
+
+/* ================= Build 34: Site map =================
+   Ported from Elevate Office's PM job map (1.44–1.46.1) so both apps draw the same thing from the same public sources:
+   Esri aerial / OSM tiles, ParcelMap BC lot lines (WMS) + PID/plan labels (WFS), civic numbers (BC Address Geocoder),
+   provincial control monuments (GeoNetBC, MASCOT fallback; destroyed/unpublished left out), street names.
+   Field additions: the phone's GPS position, pinch zoom, and job pins read from the jobs master with the crew's
+   Microsoft sign-in (nothing confidential lives in this file). Points files must be NAD83(CSRS) UTM zone 10. */
+const FM_BASE={esri:{n:'Aerial',u:'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',max:19,by:'Imagery: Esri, Maxar, Earthstar Geographics'},
+ osm:{n:'Street',u:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',max:19,by:'© OpenStreetMap contributors'}};
+const FM_LOTS='https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?service=WMS&version=1.1.1&request=GetMap&layers=pub%3AWHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW&styles=&format=image%2Fpng&transparent=true&srs=EPSG%3A3857&width=256&height=256&bbox=';
+const FM_NAMESU='https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
+const FM_WFS='https://openmaps.gov.bc.ca/geo/pub/';
+const FM_LAY={lab:['WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW'],mon:['WHSE_REFERENCE.SRV_GEODETIC_CONTROL_SP','WHSE_REFERENCE.MASCOT_GEODETIC_CONTROL'],adr:['geocoder']};
+const FM_MINZ={lab:18,mon:15,adr:18},FM_MAX={lab:1200,mon:500,adr:900};
+const FM_CONTROL={};'CONP CP IP LP MON MONUMENT OAP OCC OCM OCN OCNT OCONP OCP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OMAG OMON OPCON OPIPE OPM OPP OPPIPE ORBR ORLT ORP OSC OSM OSP OSPK RP'.split(' ').forEach(k=>{FM_CONTROL[k]=1;});
+const FM_PINS={};'IP LP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OPIPE OPPIPE ORBR ORP RP'.split(' ').forEach(k=>{FM_PINS[k]=1;});
+const FM_COL=['#d6336c','#7048e8','#e8590c','#0b7285','#5c940d','#862e9c'];
+let FM={z:19,c:null,base:'esri',key:'',imgs:{},geo:null,gps:null,watch:null,sets:[],msg:[],selW:null,fail:0,ok:0,all:false,tap:0,tapAt:[0,0],say:'',onv:{}};
+let FMZ={ver:0,joinKey:'',monSel:null,
+ lab:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0},
+ mon:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0,more:false},
+ adr:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0}};
+let FMJ={rows:null,busy:false,err:''};
+try{const b0=localStorage.getItem('efn-fmbase');if(b0&&FM_BASE[b0])FM.base=b0;}catch(e){}
+const fmOn=k=>{if(FM.onv[k]===undefined){FM.onv[k]=true;try{if(localStorage.getItem('efn-fm'+k)==='0')FM.onv[k]=false;}catch(e){}}return FM.onv[k];};
+const fmSet=(k,v)=>{FM.onv[k]=!!v;try{localStorage.setItem('efn-fm'+k,v?'1':'0');}catch(e){}fmDraw();};
+/* UTM (GRS80) -> latitude / longitude in degrees (same maths as the Office app) */
+function fmLL(E,N,zone){const a=6378137,f=1/298.257222101,k0=0.9996,e2=f*(2-f),ep2=e2/(1-e2),x=E-500000,M=N/k0,mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2*e2*e2/256)),e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+ const p=mu+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu)+(21*e1*e1/16-55*Math.pow(e1,4)/32)*Math.sin(4*mu)+(151*e1*e1*e1/96)*Math.sin(6*mu)+(1097*Math.pow(e1,4)/512)*Math.sin(8*mu);
+ const s=Math.sin(p),c=Math.cos(p),t=Math.tan(p),C=ep2*c*c,T=t*t,N1=a/Math.sqrt(1-e2*s*s),R=a*(1-e2)/Math.pow(1-e2*s*s,1.5),D=x/(N1*k0);
+ const lat=p-(N1*t/R)*(D*D/2-(5+3*T+10*C-4*C*C-9*ep2)*Math.pow(D,4)/24+(61+90*T+298*C+45*T*T-252*ep2-3*C*C)*Math.pow(D,6)/720);
+ const lng=(D-(1+2*T+C)*D*D*D/6+(5-2*C+28*T-3*C*C+8*ep2+24*T*T)*Math.pow(D,5)/120)/c;return {lat:lat*180/Math.PI,lng:(zone*6-183)+lng*180/Math.PI};}
+/* latitude / longitude -> position on the web-map world at zoom 0 (0..256) */
+function fmW(lat,lng){const s=Math.sin(lat*Math.PI/180);return [(lng+180)/360*256,(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*256];}
+function fmLatOfW(c){const n=Math.PI-2*Math.PI*c[1]/256;return 180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n)));}
+function fmXY(w,W,H){const s=Math.pow(2,FM.z);return [(w[0]-FM.c[0])*s+W/2,(w[1]-FM.c[1])*s+H/2];}
+function fmWLL(w){return [fmLatOfW(w),w[0]/256*360-180];}
+function fmView(W,H){const s=Math.pow(2,FM.z),a=fmWLL([FM.c[0]-W/2/s,FM.c[1]+H/2/s]),b=fmWLL([FM.c[0]+W/2/s,FM.c[1]-H/2/s]);return [a[0],a[1],b[0],b[1]];}
+function fmDist(a,b){const r=Math.PI/180,x=(b.lng-a.lng)*r*Math.cos((a.lat+b.lat)/2*r),y=(b.lat-a.lat)*r;return Math.sqrt(x*x+y*y)*6371000;}
+function fmFrom(p){ /* "42 m from you" when there's a GPS fix, else from the site */
+ if(FM.gps)return ' <span style="opacity:.75">('+Math.round(fmDist(FM.gps,p))+' m from you)</span>';
+ if(FM.geo)return ' <span style="opacity:.75">('+Math.round(fmDist(FM.geo,p))+' m from the site)</span>';return '';}
+function fmSize(){const box=$('fm-wrap');return [box.clientWidth||360,box.clientHeight||520];}
+/* ---- lot labels, civic numbers, monuments: read for the area in view ---- */
+function fmRingIn(p,R){let c=false;for(let i=0,j=R.length-1;i<R.length;j=i++){if((R[i][1]>p[1])!==(R[j][1]>p[1])&&p[0]<(R[j][0]-R[i][0])*(p[1]-R[i][1])/(R[j][1]-R[i][1])+R[i][0])c=!c;}return c;}
+function fmRingArea(R){let a=0;for(let i=0,j=R.length-1;i<R.length;j=i++)a+=R[j][0]*R[i][1]-R[i][0]*R[j][1];return a/2;}
+function fmLabelPt(R){let a=0,cx=0,cy=0;for(let i=0,j=R.length-1;i<R.length;j=i++){const f=R[j][0]*R[i][1]-R[i][0]*R[j][1];a+=f;cx+=(R[j][0]+R[i][0])*f;cy+=(R[j][1]+R[i][1])*f;}
+ if(Math.abs(a)<1e-18)return R[0].slice();const c=[cx/(3*a),cy/(3*a)];if(fmRingIn(c,R))return c;
+ const xs=[];for(let i2=0,j2=R.length-1;i2<R.length;j2=i2++){if((R[i2][1]>c[1])!==(R[j2][1]>c[1]))xs.push((R[j2][0]-R[i2][0])*(c[1]-R[i2][1])/(R[j2][1]-R[i2][1])+R[i2][0]);}
+ xs.sort((p,q)=>p-q);let best=null;for(let k=0;k+1<xs.length;k+=2){if(!best||xs[k+1]-xs[k]>best[1]-best[0])best=[xs[k],xs[k+1]];}return best?[(best[0]+best[1])/2,c[1]]:c;}
+/* which monuments to show: the province's symbol type. 1 and 5 = published geodetic, 2 and 3 = published benchmarks (vertical).
+   7 = destroyed, 4 and 6 = not published, blank = unknown: not shown (Finny's ruling, Office 1.46.1). */
+function fmMonKind(p){const t=String(p.SYMBOL_TYPE!=null?p.SYMBOL_TYPE:(p.SYMBOLOGY_TYPE!=null?p.SYMBOLOGY_TYPE:'')).trim();return t==='1'||t==='5'?'good':t==='2'||t==='3'?'vert':'';}
+function fmzUrl(k,lay,bb){if(k==='adr')return 'https://geocoder.api.gov.bc.ca/sites/within.json?bbox='+[bb[1],bb[0],bb[3],bb[2]].map(v=>v.toFixed(6)).join(',')+'&maxResults='+FM_MAX.adr+'&outputSRS=4326';
+ return FM_WFS+lay+'/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=pub:'+lay+'&outputFormat=application%2Fjson&count='+FM_MAX[k]+'&srsName=EPSG:4326&bbox='+bb.map(v=>v.toFixed(6)).join(',')+',urn:ogc:def:crs:EPSG::4326';}
+function fmzParse(k,J){let out=[];FMZ.ver++;((J&&J.features)||[]).forEach(f=>{const p=f.properties||{},g=f.geometry;if(!g)return;
+  if(k==='mon'){if(g.type!=='Point')return;const lng=g.coordinates[0],lat=g.coordinates[1];if(!isFinite(lat)||!isFinite(lng))return;
+   const st=fmMonKind(p);if(!st)return;
+   out.push({st,gcm:String(p.GCM_NUMBER==null?'':p.GCM_NUMBER).trim(),tab:String(p.TABLET_MARKING||'').trim(),tag:String(p.MARKER_TAG||'').trim(),mun:String(p.MUNICIPALITY_NAME||'').trim(),url:String(p.GEONETBC_GCM_QUERY_URL||p.MASCOTW_GCM_QUERY_URL||'').trim(),lat,lng,w:fmW(lat,lng)});return;}
+  if(k==='adr'){if(g.type!=='Point')return;const lo=g.coordinates[0],la=g.coordinates[1],num=String(p.civicNumber==null?'':p.civicNumber).trim()+String(p.civicNumberSuffix||'').trim();if(!num||!isFinite(la)||!isFinite(lo))return;
+   out.push({num,st:[p.streetName,p.streetType,p.streetDirection].filter(Boolean).join(' '),w:fmW(la,lo)});return;}
+  const cls=String(p.PARCEL_CLASS||'').trim(),pid=String(p.PID_FORMATTED||'').trim(),plan=String(p.PLAN_NUMBER||'').trim(),strata=/strata/i.test(cls);if(!pid&&!strata)return;
+  const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];let bestR=null,bestA=0;
+  polys.forEach(P=>{if(!P||!P[0]||P[0].length<4)return;const R=P[0].map(c=>fmW(c[1],c[0])),a=Math.abs(fmRingArea(R));if(a>bestA){bestA=a;bestR=R;}});if(!bestR)return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;bestR.forEach(c=>{if(c[0]<x0)x0=c[0];if(c[0]>x1)x1=c[0];if(c[1]<y0)y0=c[1];if(c[1]>y1)y1=c[1];});
+  out.push({l1:strata&&!pid?cls:pid,l2:plan,w:fmLabelPt(bestR),bw:x1-x0,bh:y1-y0,R:bestR,bb:[x0,y0,x1,y1]});});
+ if(k==='adr'){const seen={},u=[];out.forEach(a=>{const key=a.num+'|'+a.st+'|'+Math.round(a.w[0]*2e5)+'|'+Math.round(a.w[1]*2e5);if(seen[key])return;seen[key]=1;u.push(a);});out=u;}
+ return out;}
+/* which civic numbers sit on which lot (worked out once for each pair of loads) */
+function fmzJoin(){const key=FMZ.ver+'|'+FMZ.lab.f.length+'|'+FMZ.adr.f.length;if(FMZ.joinKey===key)return;FMZ.joinKey=key;
+ FMZ.lab.f.forEach(f=>{f.nums=[];});FMZ.adr.f.forEach(a=>{a.lot=null;
+  for(let i=0;i<FMZ.lab.f.length;i++){const f=FMZ.lab.f[i];if(!f.bb||a.w[0]<f.bb[0]||a.w[0]>f.bb[2]||a.w[1]<f.bb[1]||a.w[1]>f.bb[3])continue;if(fmRingIn(a.w,f.R)){a.lot=f;if(f.nums.indexOf(a.num)<0)f.nums.push(a.num);break;}}});
+ FMZ.lab.f.forEach(f=>{f.nums.sort((p,q)=>parseInt(p,10)-parseInt(q,10));f.l0=f.nums.length?f.nums.slice(0,2).join(', ')+(f.nums.length>2?' +'+(f.nums.length-2):''):'';});}
+function fmzNeed(k,W,H){const o=FMZ[k],v=fmView(W,H),inb=B=>B&&v[0]>=B[0]&&v[1]>=B[1]&&v[2]<=B[2]&&v[3]<=B[3];if(inb(o.box)||inb(o.want))return;if(o.failAt&&Date.now()-o.failAt<20000)return;
+ const dy=(v[2]-v[0])*0.5,dx=(v[3]-v[1])*0.5,bb=[v[0]-dy,v[1]-dx,v[2]+dy,v[3]+dx];o.want=bb;
+ clearTimeout(o.t);const my=++o.seq;o.t=setTimeout(()=>{if(my!==o.seq)return;if(typeof fetch!=='function'||!fmOn(k)||FM.z<FM_MINZ[k]){o.want=null;return;}const lays=FM_LAY[k];
+  const go=i=>fetch(fmzUrl(k,lays[i],bb)).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(J=>{if(!J||!J.features)throw new Error('no features');return J;}).catch(e=>{if(i+1<lays.length)return go(i+1);throw e;});
+  go(0).then(J=>{if(my!==o.seq)return;o.want=null;o.f=fmzParse(k,J);o.more=(J.features||[]).length>=FM_MAX[k];o.box=bb;o.err='';o.failAt=0;fmDraw();},e=>{if(my!==o.seq)return;o.want=null;o.err=String((e&&e.message)||e);o.failAt=Date.now();fmDraw();});},350);}
+function fmText(g,t,x,y,dark){g.lineJoin='round';g.lineWidth=3;g.strokeStyle=dark?'rgba(255,255,255,.9)':'rgba(0,0,0,.85)';g.strokeText(t,x,y);g.fillStyle=dark?'#111':'#fff';g.fillText(t,x,y);}
+function fmzDraw(g,W,H){const s=Math.pow(2,FM.z),dark=FM.base!=='esri';
+ const labOn=fmOn('lab')&&FM.z>=FM_MINZ.lab,adrOn=fmOn('adr')&&FM.z>=FM_MINZ.adr;
+ if(labOn)fmzNeed('lab',W,H);if(adrOn)fmzNeed('adr',W,H);if(labOn&&adrOn)fmzJoin();
+ const lines=(L,q,rot)=>{g.save();g.translate(q[0],q[1]);if(rot)g.rotate(-Math.PI/2);L.forEach((t,i)=>{g.font=(t.b?'bold 12.5px':'bold 11px')+' sans-serif';fmText(g,t.s,0,(i-(L.length-1)/2)*13,dark);});g.restore();};
+ if(labOn){g.save();g.textAlign='center';g.textBaseline='middle';
+  FMZ.lab.f.forEach(f=>{const q=fmXY(f.w,W,H);f.drew=false;if(q[0]<-40||q[1]<-20||q[0]>W+40||q[1]>H+20)return;const wp=f.bw*s,hp=f.bh*s,all=[];
+   if(adrOn&&f.l0)all.push({s:f.l0,b:true});if(f.l1)all.push({s:f.l1});if(f.l2)all.push({s:f.l2});if(!all.length)return;
+   /* everything if it fits, else without the plan, else the first line alone; turned on its side on a narrow lot */
+   const tries=[all,all.length>2?all.slice(0,2):null,all.length>1?all.slice(0,1):null].filter(Boolean);
+   for(let i=0;i<tries.length;i++){const L=tries[i];g.font='bold 12.5px sans-serif';const tw=Math.max.apply(null,L.map(t=>g.measureText(t.s).width))+6,th=L.length*13+2;
+    if(wp>=tw&&hp>=th){lines(L,q,false);f.drew=adrOn&&!!f.l0;return;}if(hp>=tw&&wp>=th){lines(L,q,true);f.drew=adrOn&&!!f.l0;return;}}});g.restore();}
+ if(adrOn){g.save();g.textAlign='center';g.textBaseline='middle';g.font='bold 12.5px sans-serif';const put=[];
+  FMZ.adr.f.forEach(a=>{if(labOn&&a.lot&&a.lot.drew)return;const q=fmXY(a.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;
+   if(put.some(p=>Math.abs(p[0]-q[0])<26&&Math.abs(p[1]-q[1])<12))return;put.push(q);fmText(g,a.num,q[0],q[1],dark);});g.restore();}
+ if(fmOn('mon')&&FM.z>=FM_MINZ.mon){fmzNeed('mon',W,H);g.save();g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';
+  FMZ.mon.f.forEach(m=>{const q=fmXY(m.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;const r=FMZ.monSel===m?9:7;
+   g.beginPath();g.moveTo(q[0],q[1]-r);g.lineTo(q[0]+r*0.9,q[1]+r*0.7);g.lineTo(q[0]-r*0.9,q[1]+r*0.7);g.closePath();g.fillStyle=m.st==='vert'?'#c084fc':'#22c55e';g.fill();g.lineWidth=FMZ.monSel===m?2.5:1.5;g.strokeStyle=FMZ.monSel===m?'#111':'#064e3b';g.stroke();
+   if(FM.z>=17){const t=m.tab||m.gcm;if(t)fmText(g,t,q[0]+r+3,q[1],dark);}});g.restore();}}
+function fmInfo(h){const el=$('fm-info');if(!el)return;el.style.display=h?'block':'none';el.innerHTML=h||'';}
+function fmMonPick(at){if(!fmOn('mon')||FM.z<FM_MINZ.mon||!FMZ.mon.f.length)return false;const [W,H]=fmSize();let best=null,bd=16;
+ FMZ.mon.f.forEach(m=>{const q=fmXY(m.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<=bd){bd=d;best=m;}});if(!best)return false;FMZ.monSel=best;FM.selW=null;
+ const u=/^https:\/\//i.test(best.url)?best.url:'';
+ fmInfo('<b>Monument '+esc(best.tab||best.gcm)+'</b>'+(best.gcm&&best.tab?' · GCM '+esc(best.gcm):'')+(best.st==='vert'?' · vertical benchmark':' · geodetic, published')+(best.tag?' · '+esc(best.tag):'')+(best.mun?' · '+esc(best.mun):'')+fmFrom(best)+
+  (u?' <a href="'+esc(u)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open its record ↗</a>':'')+'<br><span style="opacity:.75">Provincial control monument — coordinates and elevation are on its record.</span>');
+ fmDraw();return true;}
+/* ---- street names over the aerial ---- */
+function fmNames(tl,W,H,want){if(!fmOn('names')||FM.base!=='esri')return;const tz=Math.max(0,Math.min(18,Math.round(FM.z))),wpt=256/Math.pow(2,tz),s=Math.pow(2,FM.z),nmax=Math.pow(2,tz);
+ const x0=Math.floor((FM.c[0]-W/2/s)/wpt),x1=Math.floor((FM.c[0]+W/2/s)/wpt),y0=Math.floor((FM.c[1]-H/2/s)/wpt),y1=Math.floor((FM.c[1]+H/2/s)/wpt);if((x1-x0+1)*(y1-y0+1)>80)return;
+ for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){if(y<0||y>=nmax)continue;const xx=((x%nmax)+nmax)%nmax,key='n|'+tz+'|'+x+'|'+y;want[key]=1;let im=FM.imgs[key];
+  if(!im){im=document.createElement('img');im.draggable=false;im.alt='';im.style.position='absolute';im.style.zIndex='2';im.style.pointerEvents='none';const i2=im;im.onerror=()=>{i2.style.display='none';};im.src=FM_NAMESU.replace('{z}',tz).replace('{x}',xx).replace('{y}',y);FM.imgs[key]=im;tl.appendChild(im);}
+  const l=Math.round((x*wpt-FM.c[0])*s+W/2),t=Math.round((y*wpt-FM.c[1])*s+H/2);im.style.left=l+'px';im.style.top=t+'px';im.style.width=(Math.round(((x+1)*wpt-FM.c[0])*s+W/2)-l)+'px';im.style.height=(Math.round(((y+1)*wpt-FM.c[1])*s+H/2)-t)+'px';}}
+/* ---- points from a job's .msz / .mbz or a points text file (UTM zone 10 only) ---- */
+function fmZipEntries(buf){const u8=new Uint8Array(buf),dv=new DataView(buf);let eocd=-1;
+ for(let i=u8.length-22;i>=Math.max(0,u8.length-65557);i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}}
+ if(eocd<0)throw new Error('isn’t a readable package');
+ const count=dv.getUint16(eocd+10,true),td=new TextDecoder(),out=[];let p=dv.getUint32(eocd+16,true);
+ for(let k=0;k<count;k++){if(dv.getUint32(p,true)!==0x02014b50)break;
+  const nlen=dv.getUint16(p+28,true),elen=dv.getUint16(p+30,true),clen=dv.getUint16(p+32,true);
+  out.push({name:td.decode(u8.subarray(p+46,p+46+nlen)),method:dv.getUint16(p+10,true),csize:dv.getUint32(p+20,true),usize:dv.getUint32(p+24,true),loff:dv.getUint32(p+42,true)});
+  p+=46+nlen+elen+clen;}
+ return out;}
+function fmZipRead(buf,e){const u8=new Uint8Array(buf),dv=new DataView(buf),q=e.loff;
+ if(dv.getUint32(q,true)!==0x04034b50)return Promise.reject(new Error('has a damaged entry'));
+ const start=q+30+dv.getUint16(q+26,true)+dv.getUint16(q+28,true),data=u8.slice(start,start+e.csize);
+ if(e.method===0)return Promise.resolve(data);
+ if(e.method!==8)return Promise.reject(new Error('uses a compression this phone can’t read'));
+ if(typeof DecompressionStream==='undefined')return Promise.reject(new Error('can’t be opened on this phone’s browser — export a points .txt instead'));
+ const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(data);w.close();
+ return new Response(ds.readable).arrayBuffer().then(ab=>new Uint8Array(ab));}
+function fmDbfRows(u8){const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength),nrec=dv.getUint32(4,true),hl=dv.getUint16(8,true),rl=dv.getUint16(10,true);
+ const td=new TextDecoder('latin1'),fields=[];let pos=32,off=1;
+ while(pos<hl&&u8[pos]!==0x0D){const nm=td.decode(u8.subarray(pos,pos+11)).split('\0')[0];fields.push({name:nm,len:u8[pos+16],off});off+=u8[pos+16];pos+=32;}
+ const clean=t=>(t||'').replace(/[\x00-\x1f]/g,'').trim(),rows=[];
+ for(let r=0;r<nrec;r++){const b=hl+r*rl;if(b+rl>u8.length)break;if(u8[b]===0x2A)continue;const o={};fields.forEach(f=>{o[f.name]=td.decode(u8.subarray(b+f.off,b+f.off+f.len));});
+  const num=clean(o.NUM);if(!num)continue;const N=parseFloat(o.NORTH),E=parseFloat(o.EAST),Z=parseFloat(o.ELEVATION);if(isNaN(N)||isNaN(E))continue;
+  rows.push({pt:num,N,E,Z:isNaN(Z)?0:Z,desc:clean(o.DESC)});}
+ return rows;}
+function fmTextRows(text){const out=[];String(text||'').replace(/\r/g,'').split('\n').forEach(l=>{if(!l.trim())return;const f=l.split(',').length>=4?l.split(','):l.trim().split(/\s+/);if(f.length<4)return;const N=parseFloat(f[1]),E=parseFloat(f[2]),Z=parseFloat(f[3]);if(isNaN(N)||isNaN(E))return;out.push({pt:String(f[0]).trim(),N,E,Z,desc:f.slice(4).join(',').trim()});});return out;}
+async function fmReadPts(file){const name=file.name||'points';
+ if(/\.msd$/i.test(name))throw new Error('is a legacy .msd project — the office can convert it to .msz');
+ if(/\.(msz|mbz)$/i.test(name)){const buf=await file.arrayBuffer(),prim=fmZipEntries(buf).filter(e=>/(^|\/)db_coord\.dbf$/i.test(e.name))[0];if(!prim)throw new Error('has no coordinate database (db_coord.dbf) inside');
+  return fmDbfRows(await fmZipRead(buf,prim));}
+ if(/\.(txt|csv|asc)$/i.test(name))return fmTextRows(await file.text());
+ throw new Error('isn’t a points file — pick a .msz / .mbz, or a points .txt / .csv / .asc');}
+function fmBuildSet(name,rows){const pts=rows.map(r=>{const d=String(r.desc||'').trim(),code=(d.split(/[\s,]+/)[0]||'').toUpperCase();return {pt:r.pt,N:r.N,E:r.E,Z:r.Z,desc:d,code,cls:FM_CONTROL[code]?(FM_PINS[code]?'pin':'ctl'):'topo'};});
+ if(!pts.length)return {err:'has no points'};
+ const es=pts.map(p=>p.E).sort((a,b)=>a-b),ns=pts.map(p=>p.N).sort((a,b)=>a-b),mE=es[es.length>>1],mN=ns[ns.length>>1];
+ if(!(mE>250000&&mE<750000&&mN>5300000&&mN<6700000))return {err:'isn’t in UTM, so it can’t be shown on the map'};
+ let off=0;pts.forEach(p=>{if(Math.abs(p.E-mE)>20000||Math.abs(p.N-mN)>20000){p.far=true;off++;return;}const g=fmLL(p.E,p.N,10);p.lat=g.lat;p.lng=g.lng;p.w=fmW(g.lat,g.lng);});
+ if(off>pts.length*0.2)return {err:'mixes UTM and other coordinates ('+off+' of '+pts.length+' points are somewhere else), so it isn’t shown'};
+ const c=fmLL(mE,mN,10);return {name,pts:pts.filter(p=>p.w),n:pts.length,off,lat:c.lat,lng:c.lng,nc:pts.filter(p=>p.w&&p.cls==='ctl').length,np:pts.filter(p=>p.w&&p.cls==='pin').length};}
+async function fmAddFiles(files){const S=FM.sets,msgs=[];
+ for(const f of files){const nm=f.name||'points';
+  try{const X=fmBuildSet(nm,await fmReadPts(f));if(X.err){msgs.push({bad:true,t:'<b>'+esc(nm)+'</b> '+esc(X.err)+'.'});continue;}
+   const ref=FM.geo||FM.gps,km=ref?fmDist(ref,X)/1000:0;X.col=FM_COL[S.filter(x=>x.name!==nm).length%FM_COL.length];
+   const at=S.findIndex(x=>x.name===nm);if(at>=0){X.col=S[at].col;S[at]=X;}else S.push(X);
+   if(km>2){X.hold=true;msgs.push({bad:true,t:'<b>'+esc(nm)+'</b> is in UTM but its points are about '+(km<10?km.toFixed(1):Math.round(km))+' km from '+(FM.geo?'this site':'you')+' — is it the right job’s file? <a data-fmshow="'+esc(nm)+'" style="text-decoration:underline">Show it anyway</a> · <a data-fmx="'+esc(nm)+'" style="text-decoration:underline">Remove</a>'});}
+   else{if(!X.nc&&!X.np)msgs.push({t:'<b>'+esc(nm)+'</b>: '+X.n+' points, none on the control layer — tick “Every point” to see them.'});
+    if(!FM.geo&&!FM.gps){FM.c=fmW(X.lat,X.lng);FM.z=18;}}
+  }catch(e){msgs.push({bad:true,t:'<b>'+esc(nm)+'</b> '+esc((e&&e.message)||'couldn’t be read')+'.'});}}
+ FM.msg=msgs;fmLegDraw();fmDraw();}
+function fmVisible(){const out=[];FM.sets.forEach(s=>{if(s.hold)return;s.pts.forEach(p=>{if(FM.all||p.cls!=='topo')out.push({p,s});});});return out;}
+function fmLegDraw(){const el=$('fm-leg');if(!el)return;const S=FM.sets;let h='';
+ if(S.length){h+=S.map(s=>'<span class="fm-chip"><i style="background:'+s.col+'"></i>'+esc(s.name)+' — '+s.nc+' control, '+s.np+' pin'+(s.np===1?'':'s')+(s.hold?' (not shown)':'')+' <a data-fmx="'+esc(s.name)+'" style="text-decoration:underline">remove</a></span>').join('')+
+   '<label class="fm-cb"><input type="checkbox" id="fm-all" '+(FM.all?'checked':'')+'> Every point</label> <span style="opacity:.75">▲ control · ● pin / post · tap one for details</span>';}
+ FM.msg.forEach(m=>{h+='<div style="margin-top:4px'+(m.bad?';color:var(--danger)':'')+'">'+m.t+'</div>';});
+ el.innerHTML=h;
+ const a=$('fm-all');if(a)a.onchange=()=>{FM.all=a.checked;fmDraw();};
+ el.querySelectorAll('[data-fmx]').forEach(b=>{b.onclick=()=>{FM.sets=FM.sets.filter(s=>s.name!==b.dataset.fmx);FM.msg=[];FM.selW=null;fmInfo('');fmLegDraw();fmDraw();};});
+ el.querySelectorAll('[data-fmshow]').forEach(b=>{b.onclick=()=>{const s=FM.sets.find(x=>x.name===b.dataset.fmshow);if(!s)return;s.hold=false;FM.msg=[];FM.c=fmW(s.lat,s.lng);FM.z=17;fmLegDraw();fmDraw();};});}
+function fmPtsDraw(g,W,H){const L=fmVisible(),rank={topo:0,pin:1,ctl:2};L.sort((a,b)=>rank[a.p.cls]-rank[b.p.cls]);const lab=FM.z>=18;
+ L.forEach(x=>{const p=x.p,q=fmXY(p.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;const sel=FM.selW===p.w;
+  g.lineWidth=sel?3:1.5;g.strokeStyle=sel?'#111':'#fff';g.fillStyle=x.s.col;g.beginPath();
+  if(p.cls==='ctl'){g.moveTo(q[0],q[1]-7);g.lineTo(q[0]+6.5,q[1]+5);g.lineTo(q[0]-6.5,q[1]+5);g.closePath();}else g.arc(q[0],q[1],p.cls==='pin'?4.5:2.2,0,7);
+  g.fill();if(p.cls!=='topo'||sel)g.stroke();
+  if(p.cls!=='topo'&&(lab||sel)){const t=p.pt+(FM.z>=19.5&&p.code?' '+p.code:'');g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';g.lineJoin='round';g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(t,q[0]+8,q[1]);g.fillStyle='#fff';g.fillText(t,q[0]+8,q[1]);}});}
+function fmPtsPick(at){if(!FM.sets.length)return false;const [W,H]=fmSize();let best=null,bd=16;const rank={ctl:0,pin:1,topo:2};
+ fmVisible().forEach(x=>{const q=fmXY(x.p.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<=16&&(!best||rank[x.p.cls]<rank[best.p.cls]||(rank[x.p.cls]===rank[best.p.cls]&&d<bd))){best=x;bd=d;}});
+ if(!best)return false;const p=best.p;FM.selW=p.w;FMZ.monSel=null;
+ fmInfo('<b>'+esc(String(p.pt))+'</b> '+esc(p.desc||'(no description)')+' — '+(p.cls==='ctl'?'survey control':p.cls==='pin'?'found pin / post':'shot')+' · from <b>'+esc(best.s.name)+'</b>'+fmFrom(p)+'<br><span class="mono">N '+p.N.toFixed(3)+'  E '+p.E.toFixed(3)+(isFinite(p.Z)?'  Z '+p.Z.toFixed(3):'')+'</span>');
+ fmDraw();return true;}
+/* ---- our existing jobs: read from the jobs master in SharePoint with the crew's Microsoft sign-in ---- */
+function fmCsvRows(text){const out=[];let row=[],cur='',q=false;
+ for(let i=0;i<text.length;i++){const ch=text[i];
+  if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
+  else if(ch==='"')q=true;else if(ch===','){row.push(cur);cur='';}
+  else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);cur='';if(row.some(c=>c.trim()!==''))out.push(row);row=[];}
+  else cur+=ch;}
+ if(cur!==''||row.length){row.push(cur);if(row.some(c=>c.trim()!==''))out.push(row);}
+ return out;}
+async function fmJobsNeed(){if(FMJ.rows!==null||FMJ.busy)return;
+ if(!(m365Ready()&&msSignedIn()&&navigator.onLine))return;
+ try{const c=JSON.parse(localStorage.getItem('efn-jobsm')||'null');if(c&&c.rows&&Date.now()-c.t<20*3600*1000){FMJ.rows=c.rows.map(j=>Object.assign({w:fmW(j.lat,j.lng)},j));return;}}catch(e){}
+ FMJ.busy=true;
+ try{const d=await msDriveId(),r=await gfetch('/drives/'+d+'/root:/'+encPath('Elev_Jobs_Master.csv')+':/content');
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const rows=fmCsvRows(await r.text()),hd=(rows.shift()||[]).map(h=>String(h).replace(/^﻿/,'').trim().toLowerCase()),ci=n=>hd.findIndex(h=>h.indexOf(n)>=0);
+  const ji=ci('job'),si=ci('site'),la=ci('latitude'),lo=ci('longitude');if(ji<0||la<0||lo<0)throw new Error('columns not found');
+  const out=[];rows.forEach(r2=>{const lat=parseFloat(r2[la]),lng=parseFloat(r2[lo]);if(!isFinite(lat)||!isFinite(lng))return;out.push({job:String(r2[ji]||'').trim(),site:si>=0?String(r2[si]||'').trim().replace(/,\s*BC,\s*Canada\s*$/i,''):'',lat,lng});});
+  try{localStorage.setItem('efn-jobsm',JSON.stringify({t:Date.now(),rows:out}));}catch(e){}
+  FMJ.rows=out.map(j=>Object.assign({w:fmW(j.lat,j.lng)},j));FMJ.err='';
+ }catch(e){FMJ.err=String((e&&e.message)||e);FMJ.rows=[];setTimeout(()=>{if(FMJ.err)FMJ.rows=null;},60000);}
+ FMJ.busy=false;fmDraw();}
+function fmJobsDraw(g,W,H){if(!fmOn('jobs'))return;fmJobsNeed();(FMJ.rows||[]).forEach(j=>{const q=fmXY(j.w,W,H);if(q[0]<-30||q[1]<-10||q[0]>W+30||q[1]>H+30)return;
+  g.beginPath();g.moveTo(q[0],q[1]);g.lineTo(q[0],q[1]-9);g.lineWidth=2;g.strokeStyle='#1d4ed8';g.stroke();
+  g.beginPath();g.arc(q[0],q[1]-14,5.5,0,7);g.fillStyle='#3b82f6';g.fill();g.lineWidth=1.5;g.strokeStyle='#fff';g.stroke();
+  if(FM.z>=18){g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';g.lineJoin='round';g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(j.job,q[0]+9,q[1]-14);g.fillStyle='#bfdbfe';g.fillText(j.job,q[0]+9,q[1]-14);}});}
+function fmJobsPick(at){if(!fmOn('jobs')||!(FMJ.rows||[]).length)return false;const [W,H]=fmSize();let best=null,bd=18;
+ FMJ.rows.forEach(j=>{const q=fmXY(j.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-14-at[1]);if(d<bd){bd=d;best=j;}});if(!best)return false;
+ const here=FMJ.rows.filter(j=>Math.abs(j.lat-best.lat)<1e-6&&Math.abs(j.lng-best.lng)<1e-6);FM.selW=best.w;FMZ.monSel=null;
+ fmInfo(here.map(j=>'<div><b>Job '+esc(j.job)+'</b>'+(j.site?' — '+esc(j.site):'')+'</div>').join('')+'<span style="opacity:.75">One of our jobs'+fmFrom(best).replace(/<[^>]+>/g,'')+'</span>');
+ fmDraw();return true;}
+/* ---- the map itself ---- */
+function fmNote(){const el=$('fm-note');if(!el)return;const t=FM.say||(FM.fail>3&&!FM.ok?'The background isn’t loading — no signal, or this network blocks it. The map needs mobile data or Wi‑Fi.':'');
+ el.style.display=t?'block':'none';el.textContent=t;}
+function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box||!tl||!cv||!FM.c||!$('v-fmap').classList.contains('on'))return;
+ const [W,H]=fmSize(),B=FM_BASE[FM.base]||FM_BASE.esri;
+ /* tiles: the photo is used at its own best zoom and stretched beyond it */
+ const tz=Math.max(0,Math.min(B.max,Math.round(FM.z))),wpt=256/Math.pow(2,tz),s=Math.pow(2,FM.z),nmax=Math.pow(2,tz),want={};
+ const x0=Math.floor((FM.c[0]-W/2/s)/wpt),x1=Math.floor((FM.c[0]+W/2/s)/wpt),y0=Math.floor((FM.c[1]-H/2/s)/wpt),y1=Math.floor((FM.c[1]+H/2/s)/wpt);
+ const put=(key,url,x,y,op,zi)=>{want[key]=1;let im=FM.imgs[key];
+  if(!im){im=document.createElement('img');im.draggable=false;im.alt='';im.style.position='absolute';im.style.opacity=op;im.style.zIndex=zi;im.style.pointerEvents='none';const i2=im;
+   im.onerror=()=>{i2.style.display='none';if(key.charAt(0)==='b'){FM.fail++;fmNote();}};im.onload=()=>{if(key.charAt(0)==='b'){FM.ok++;fmNote();}};im.src=url;FM.imgs[key]=im;tl.appendChild(im);}
+  const px=(v,c0,half)=>Math.round((v*wpt-c0)*s+half),l=px(x,FM.c[0],W/2),t=px(y,FM.c[1],H/2);im.style.left=l+'px';im.style.top=t+'px';im.style.width=(px(x+1,FM.c[0],W/2)-l)+'px';im.style.height=(px(y+1,FM.c[1],H/2)-t)+'px';};
+ if((x1-x0+1)*(y1-y0+1)<=80)for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){if(y<0||y>=nmax)continue;const xx=((x%nmax)+nmax)%nmax;
+   put('b|'+FM.base+'|'+tz+'|'+x+'|'+y,B.u.replace('{z}',tz).replace('{x}',xx).replace('{y}',y),x,y,1,0);
+   if(fmOn('lots')&&tz>=15){const m=20037508.342789244,w0=2*m/nmax;put('l|'+tz+'|'+x+'|'+y,FM_LOTS+[(-m+xx*w0).toFixed(3),(m-(y+1)*w0).toFixed(3),(-m+(xx+1)*w0).toFixed(3),(m-y*w0).toFixed(3)].join('%2C'),x,y,0.75,1);}}
+ fmNames(tl,W,H,want);
+ Object.keys(FM.imgs).forEach(k=>{if(!want[k]){const im=FM.imgs[k];if(im.parentNode)im.parentNode.removeChild(im);delete FM.imgs[k];}});
+ const by=$('fm-by');if(by)by.textContent=[B.by,fmOn('lots')?'Lots: ParcelMap BC':'',fmOn('mon')&&FM.z>=FM_MINZ.mon?(FMZ.mon.err?'Monuments couldn’t be loaded':'Monuments: GeoBC'+(FMZ.mon.more?' (zoom in for all)':'')):'',fmOn('adr')&&FM.z>=FM_MINZ.adr?(FMZ.adr.err?'Addresses couldn’t be loaded':'Addresses: BC Geocoder'):''].filter(Boolean).join(' · ');
+ if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+ const g=cv.getContext&&cv.getContext('2d');if(!g){fmNote();return;}g.clearRect(0,0,W,H);
+ fmzDraw(g,W,H);fmJobsDraw(g,W,H);fmPtsDraw(g,W,H);
+ /* the note's site: green point */
+ if(FM.geo&&FM.geo.w){const q=fmXY(FM.geo.w,W,H);g.beginPath();g.arc(q[0],q[1],7,0,7);g.fillStyle='#16a34a';g.fill();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();}
+ /* where the phone is: blue dot with its accuracy circle */
+ const lat0=fmLatOfW(FM.c),mpp=156543.03392*Math.cos(lat0*Math.PI/180)/Math.pow(2,FM.z);
+ if(FM.gps){const q=fmXY(fmW(FM.gps.lat,FM.gps.lng),W,H),r=Math.min(160,(FM.gps.acc||0)/mpp);
+  if(r>9){g.beginPath();g.arc(q[0],q[1],r,0,7);g.fillStyle='rgba(37,99,235,.13)';g.fill();g.lineWidth=1;g.strokeStyle='rgba(37,99,235,.5)';g.stroke();}
+  g.beginPath();g.arc(q[0],q[1],7,0,7);g.fillStyle='#2563eb';g.fill();g.lineWidth=3;g.strokeStyle='#fff';g.stroke();}
+ if(FM.selW){const q2=fmXY(FM.selW,W,H);g.beginPath();g.arc(q2[0],q2[1],13,0,7);g.lineWidth=2.5;g.strokeStyle='#22d3ee';g.stroke();}
+ /* scale bar */
+ const nice=[1,2,5,10,20,50,100,200,500,1000,2000,5000];let len=nice[0];nice.forEach(v=>{if(v/mpp<=120)len=v;});const bw=len/mpp;
+ const byH=((by&&by.offsetHeight)||14)+6;g.fillStyle='rgba(255,255,255,.85)';g.fillRect(8,H-byH-22,bw+12,20);g.fillStyle='#111';g.fillRect(14,H-byH-8,bw,3);g.font='11px sans-serif';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(len>=1000?len/1000+' km':len+' m',14,H-byH-11);
+ fmNote();}
+function fmZoomTo(z1,at){const [W,H]=fmSize(),z0=FM.z;z1=Math.max(8,Math.min(22,z1));if(z1===z0||!FM.c)return;
+ if(at){const s0=Math.pow(2,z0),s1=Math.pow(2,z1),wx=FM.c[0]+(at[0]-W/2)/s0,wy=FM.c[1]+(at[1]-H/2)/s0;FM.c=[wx-(at[0]-W/2)/s1,wy-(at[1]-H/2)/s1];}FM.z=z1;fmDraw();}
+function fmZoom(d,at){fmZoomTo(FM.z+d,at);}
+function fmPick(at){if(fmPtsPick(at))return;if(fmMonPick(at))return;if(fmJobsPick(at))return;FM.selW=null;FMZ.monSel=null;fmInfo('');fmDraw();}
+function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.dataset.wired='1';
+ const P=new Map();let drag=null,moved=false,pinch=null;
+ const pos=e=>{const r=box.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+ box.addEventListener('pointerdown',e=>{try{box.setPointerCapture(e.pointerId);}catch(x){}P.set(e.pointerId,pos(e));
+  if(P.size===1){drag={at:pos(e),c:FM.c.slice()};moved=false;}
+  else if(P.size===2){const a=[...P.values()];pinch={d0:Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])||1,z0:FM.z};drag=null;moved=true;}});
+ box.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;P.set(e.pointerId,pos(e));
+  if(pinch&&P.size===2){const a=[...P.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);if(d>10)fmZoomTo(pinch.z0+Math.log(d/pinch.d0)/Math.LN2,[(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2]);}
+  else if(drag){const p=pos(e),s=Math.pow(2,FM.z),dx=p[0]-drag.at[0],dy=p[1]-drag.at[1];if(Math.abs(dx)+Math.abs(dy)>4)moved=true;if(moved){FM.c=[drag.c[0]-dx/s,drag.c[1]-dy/s];fmDraw();}}});
+ box.addEventListener('pointerup',e=>{const was=P.has(e.pointerId);P.delete(e.pointerId);if(P.size<2)pinch=null;
+  if(was&&drag&&!moved){const p=pos(e),t=Date.now();
+   if(t-FM.tap<320&&Math.hypot(p[0]-FM.tapAt[0],p[1]-FM.tapAt[1])<26){FM.tap=0;fmZoom(1,p);}else{FM.tap=t;FM.tapAt=p;fmPick(p);}}
+  if(!P.size)drag=null;});
+ box.addEventListener('pointercancel',e=>{P.delete(e.pointerId);if(P.size<2)pinch=null;if(!P.size)drag=null;});
+ box.addEventListener('wheel',e=>{e.preventDefault();fmZoom(e.deltaY<0?0.5:-0.5,pos(e));},{passive:false});}
+function fmLayRow(){const cb=(k,lab)=>'<label class="fm-cb"><input type="checkbox" data-fmk="'+k+'" '+(fmOn(k)?'checked':'')+'> '+lab+'</label>';
+ $('fm-lay').innerHTML='<span class="fmseg">'+['esri','osm'].map(k=>'<button class="'+(FM.base===k?'on':'')+'" data-fmb="'+k+'">'+FM_BASE[k].n+'</button>').join('')+'</span>'+
+  cb('lots','Lots')+cb('adr','House #s')+cb('lab','PID / plan')+cb('mon','Monuments')+cb('names','Streets')+cb('jobs','Our jobs')+
+  '<label class="btn ghost fm-add">＋ Points<input type="file" id="fm-file" accept=".msz,.mbz,.txt,.csv,.asc" multiple hidden></label>';
+ $('fm-lay').querySelectorAll('[data-fmk]').forEach(c=>{c.onchange=()=>fmSet(c.dataset.fmk,c.checked);});
+ $('fm-lay').querySelectorAll('[data-fmb]').forEach(b=>{b.onclick=()=>{FM.base=b.dataset.fmb;FM.fail=0;FM.ok=0;try{localStorage.setItem('efn-fmbase',FM.base);}catch(e){}fmLayRow();fmDraw();};});
+ const f=$('fm-file');f.onchange=()=>{if(f.files&&f.files.length)fmAddFiles([...f.files]);f.value='';};}
+async function fmGeo(a){
+ try{const c=JSON.parse(localStorage.getItem('efn-geo')||'{}');if(c[a])return c[a];}catch(e){}
+ try{const r=await fetch('https://geocoder.api.gov.bc.ca/addresses.json?maxResults=1&outputSRS=4326&addressString='+encodeURIComponent(a+(/\bbc\b|british columbia/i.test(a)?'':', BC')));
+  if(!r.ok)return null;const J=await r.json(),f=J.features&&J.features[0];if(!f||!f.geometry||!f.geometry.coordinates)return null;
+  const g={lat:+f.geometry.coordinates[1],lng:+f.geometry.coordinates[0]};if(!isFinite(g.lat)||!isFinite(g.lng))return null;
+  if(f.properties&&f.properties.score!=null&&+f.properties.score<50)return null;
+  try{const c=JSON.parse(localStorage.getItem('efn-geo')||'{}'),ks=Object.keys(c);if(ks.length>60)delete c[ks[0]];c[a]=g;localStorage.setItem('efn-geo',JSON.stringify(c));}catch(e){}
+  return g;}catch(e){return null;}}
+function fmGpsStart(){if(FM.watch!=null||!navigator.geolocation)return;
+ try{FM.watch=navigator.geolocation.watchPosition(p=>{const first=!FM.gps;FM.gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0};
+   if(first&&!FM.geo){FM.c=fmW(FM.gps.lat,FM.gps.lng);FM.z=19;}fmDraw();},()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}catch(e){FM.watch=null;}}
+function fmGpsStop(){if(FM.watch!=null&&navigator.geolocation){try{navigator.geolocation.clearWatch(FM.watch);}catch(e){}}FM.watch=null;}
+async function fmOpen(){show('v-fmap');fmWire();fmLayRow();fmLegDraw();fmInfo('');FM.say='';FM.fail=0;FM.ok=0;
+ const addr=[($('f-addr')||{}).value,($('f-city')||{}).value].map(x=>String(x||'').trim()).filter(Boolean).join(', ');
+ const job=String(($('f-job')||{}).value||(note&&note.job)||'').trim();
+ $('fm-sub').textContent=[job,addr].filter(Boolean).join(' · ');
+ if(!navigator.onLine)FM.say='No signal — the map needs mobile data or Wi‑Fi. It will fill in when you’re connected.';
+ fmGpsStart();
+ const key=addr||'(gps)';
+ if(FM.key!==key){FM.key=key;FM.geo=null;FM.c=null;
+  if(addr&&navigator.onLine){const g=await fmGeo(addr);if(g){FM.geo={lat:g.lat,lng:g.lng,w:fmW(g.lat,g.lng)};FM.c=FM.geo.w.slice();FM.z=19;}
+   else FM.say='Couldn’t place “'+addr+'” on the map — showing your GPS position instead.';}
+  else if(!addr)FM.say='No site address on this note yet — showing your GPS position.';}
+ if(!FM.c&&FM.gps){FM.c=fmW(FM.gps.lat,FM.gps.lng);FM.z=19;}
+ if(!FM.c){FM.c=fmW(49.14,-122.85);FM.z=11;}   /* Lower Mainland until an address or a GPS fix lands */
+ fmDraw();}
+$('b-fmap').onclick=()=>{fmOpen();};
+$('fm-back').onclick=()=>{fmGpsStop();show('v-note');};
+$('fm-zi').onclick=()=>fmZoom(1);
+$('fm-zo').onclick=()=>fmZoom(-1);
+$('fm-loc').onclick=()=>{
+ if(FM.gps){FM.c=fmW(FM.gps.lat,FM.gps.lng);if(FM.z<18)FM.z=19;FM.say='';fmDraw();}
+ else if(FM.geo){FM.c=FM.geo.w.slice();fmDraw();toast('No GPS fix yet — centred on the site. Check location is allowed for this app.');}
+ else toast('No GPS fix yet — check that location is allowed for this app.');};
+window.addEventListener('resize',()=>{if($('v-fmap').classList.contains('on'))fmDraw();});
+
 let muPend=null;
 async function msUploadFlow(files,withPdf,jobOv,dateOv){
   if(!navigator.onLine){toast('No signal \u2014 connect to data or Wi\u2011Fi and try again. WhatsApp/ZIP still works offline.');return;}
