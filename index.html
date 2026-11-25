@@ -152,6 +152,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 #fm-cv{position:absolute;left:0;top:0;pointer-events:none}
 #fm-by{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.8);font-size:9px;padding:1px 5px;color:#333;max-width:100%;z-index:3}
 #fm-note{position:absolute;left:8px;top:8px;right:8px;background:rgba(255,255,255,.93);font-size:12px;padding:5px 8px;border-radius:8px;z-index:3;color:#24312B;display:none}
+#fm-hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(20,28,24,.78);color:#fff;font-size:12px;padding:3px 10px;border-radius:999px;z-index:3;white-space:nowrap;display:none;pointer-events:none}
 #fm-foot{background:var(--paper);padding:6px 10px calc(env(safe-area-inset-bottom) + 8px);border-top:1px solid var(--line);max-height:34vh;overflow-y:auto}
 #fm-lay{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12.5px}
 .fm-cb{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
@@ -292,7 +293,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
     <button class="bicon" id="fm-loc" title="centre on me">📍</button>
   </div>
   <div id="fm-wrap"><div id="fm-tiles"></div><canvas id="fm-cv"></canvas>
-    <div id="fm-by"></div><div id="fm-note"></div></div>
+    <div id="fm-by"></div><div id="fm-note"></div><div id="fm-hint"></div></div>
   <div id="fm-foot">
     <div id="fm-lay"></div>
     <div id="fm-info"></div>
@@ -728,7 +729,7 @@ const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
 const BUILD=34;
 const NEWS=[
- ['\ud83d\uddfa','Site map on every note','Open \ud83d\uddfa Site map on a note: the site on an aerial photo with ParcelMap BC lot lines, house numbers, PID and plan labels, and the province\u2019s control monuments (green geodetic, purple benchmarks \u2014 tap one for its record). A blue dot shows where you stand. Needs signal.'],
+ ['\ud83d\uddfa','Site map on every note','Open \ud83d\uddfa Site map on a note: the site on an aerial photo with ParcelMap BC lot lines, house numbers, PID and plan labels, and the province\u2019s control monuments (green geodetic, purple benchmarks, red destroyed \u2014 tap one for its record). A blue dot shows where you stand. Needs signal.'],
  ['\ud83d\udccc','Your points on the aerial','\uff0b Points on the map loads a job\u2019s .msz or points file (UTM jobs) over the photo \u2014 control and found pins highlighted, so you can walk to the legal. Phones signed in to Microsoft also see pins for our existing jobs.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
@@ -4271,7 +4272,7 @@ const FM_LOTS='https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABR
 const FM_NAMESU='https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
 const FM_WFS='https://openmaps.gov.bc.ca/geo/pub/';
 const FM_LAY={lab:['WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW'],mon:['WHSE_REFERENCE.SRV_GEODETIC_CONTROL_SP','WHSE_REFERENCE.MASCOT_GEODETIC_CONTROL'],adr:['geocoder']};
-const FM_MINZ={lab:18,mon:15,adr:18},FM_MAX={lab:1200,mon:500,adr:900};
+const FM_MINZ={lab:18,mon:14,adr:18},FM_MAX={lab:1200,mon:1000,adr:900};
 const FM_CONTROL={};'CONP CP IP LP MON MONUMENT OAP OCC OCM OCN OCNT OCONP OCP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OMAG OMON OPCON OPIPE OPM OPP OPPIPE ORBR ORLT ORP OSC OSM OSP OSPK RP'.split(' ').forEach(k=>{FM_CONTROL[k]=1;});
 const FM_PINS={};'IP LP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OPIPE OPPIPE ORBR ORP RP'.split(' ').forEach(k=>{FM_PINS[k]=1;});
 const FM_COL=['#d6336c','#7048e8','#e8590c','#0b7285','#5c940d','#862e9c'];
@@ -4309,8 +4310,8 @@ function fmLabelPt(R){let a=0,cx=0,cy=0;for(let i=0,j=R.length-1;i<R.length;j=i+
  const xs=[];for(let i2=0,j2=R.length-1;i2<R.length;j2=i2++){if((R[i2][1]>c[1])!==(R[j2][1]>c[1]))xs.push((R[j2][0]-R[i2][0])*(c[1]-R[i2][1])/(R[j2][1]-R[i2][1])+R[i2][0]);}
  xs.sort((p,q)=>p-q);let best=null;for(let k=0;k+1<xs.length;k+=2){if(!best||xs[k+1]-xs[k]>best[1]-best[0])best=[xs[k],xs[k+1]];}return best?[(best[0]+best[1])/2,c[1]]:c;}
 /* which monuments to show: the province's symbol type. 1 and 5 = published geodetic, 2 and 3 = published benchmarks (vertical).
-   7 = destroyed, 4 and 6 = not published, blank = unknown: not shown (Finny's ruling, Office 1.46.1). */
-function fmMonKind(p){const t=String(p.SYMBOL_TYPE!=null?p.SYMBOL_TYPE:(p.SYMBOLOGY_TYPE!=null?p.SYMBOLOGY_TYPE:'')).trim();return t==='1'||t==='5'?'good':t==='2'||t==='3'?'vert':'';}
+   7 = destroyed: drawn RED like ParcelMap BC's legend, with its own tick box (Finny, 2026-11-25). 4 and 6 = not published, blank = unknown: not shown. */
+function fmMonKind(p){const t=String(p.SYMBOL_TYPE!=null?p.SYMBOL_TYPE:(p.SYMBOLOGY_TYPE!=null?p.SYMBOLOGY_TYPE:'')).trim();return t==='1'||t==='5'?'good':t==='2'||t==='3'?'vert':t==='7'?'dead':'';}
 function fmzUrl(k,lay,bb){if(k==='adr')return 'https://geocoder.api.gov.bc.ca/sites/within.json?bbox='+[bb[1],bb[0],bb[3],bb[2]].map(v=>v.toFixed(6)).join(',')+'&maxResults='+FM_MAX.adr+'&outputSRS=4326';
  return FM_WFS+lay+'/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=pub:'+lay+'&outputFormat=application%2Fjson&count='+FM_MAX[k]+'&srsName=EPSG:4326&bbox='+bb.map(v=>v.toFixed(6)).join(',')+',urn:ogc:def:crs:EPSG::4326';}
 function fmzParse(k,J){let out=[];FMZ.ver++;((J&&J.features)||[]).forEach(f=>{const p=f.properties||{},g=f.geometry;if(!g)return;
@@ -4341,26 +4342,29 @@ function fmzDraw(g,W,H){const s=Math.pow(2,FM.z),dark=FM.base!=='esri';
  const labOn=fmOn('lab')&&FM.z>=FM_MINZ.lab,adrOn=fmOn('adr')&&FM.z>=FM_MINZ.adr;
  if(labOn)fmzNeed('lab',W,H);if(adrOn)fmzNeed('adr',W,H);if(labOn&&adrOn)fmzJoin();
  const lines=(L,q,rot)=>{g.save();g.translate(q[0],q[1]);if(rot)g.rotate(-Math.PI/2);L.forEach((t,i)=>{g.font=(t.b?'bold 12.5px':'bold 11px')+' sans-serif';fmText(g,t.s,0,(i-(L.length-1)/2)*13,dark);});g.restore();};
+ const used=[];
  if(labOn){g.save();g.textAlign='center';g.textBaseline='middle';
   FMZ.lab.f.forEach(f=>{const q=fmXY(f.w,W,H);f.drew=false;if(q[0]<-40||q[1]<-20||q[0]>W+40||q[1]>H+20)return;const wp=f.bw*s,hp=f.bh*s,all=[];
    if(adrOn&&f.l0)all.push({s:f.l0,b:true});if(f.l1)all.push({s:f.l1});if(f.l2)all.push({s:f.l2});if(!all.length)return;
    /* everything if it fits, else without the plan, else the first line alone; turned on its side on a narrow lot */
    const tries=[all,all.length>2?all.slice(0,2):null,all.length>1?all.slice(0,1):null].filter(Boolean);
    for(let i=0;i<tries.length;i++){const L=tries[i];g.font='bold 12.5px sans-serif';const tw=Math.max.apply(null,L.map(t=>g.measureText(t.s).width))+6,th=L.length*13+2;
-    if(wp>=tw&&hp>=th){lines(L,q,false);f.drew=adrOn&&!!f.l0;return;}if(hp>=tw&&wp>=th){lines(L,q,true);f.drew=adrOn&&!!f.l0;return;}}});g.restore();}
+    const fits=(bw2,bh2)=>{const r=[q[0]-bw2/2,q[1]-bh2/2,q[0]+bw2/2,q[1]+bh2/2];if(used.some(u=>r[0]<u[2]&&r[2]>u[0]&&r[1]<u[3]&&r[3]>u[1]))return false;used.push(r);return true;};
+    if(wp>=tw&&hp>=th&&fits(tw,th)){lines(L,q,false);f.drew=adrOn&&!!f.l0;return;}if(hp>=tw&&wp>=th&&fits(th,tw)){lines(L,q,true);f.drew=adrOn&&!!f.l0;return;}}});g.restore();}
  if(adrOn){g.save();g.textAlign='center';g.textBaseline='middle';g.font='bold 12.5px sans-serif';const put=[];
   FMZ.adr.f.forEach(a=>{if(labOn&&a.lot&&a.lot.drew)return;const q=fmXY(a.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;
-   if(put.some(p=>Math.abs(p[0]-q[0])<26&&Math.abs(p[1]-q[1])<12))return;put.push(q);fmText(g,a.num,q[0],q[1],dark);});g.restore();}
+   if(put.some(p=>Math.abs(p[0]-q[0])<26&&Math.abs(p[1]-q[1])<12))return;const hw=g.measureText(a.num).width/2+3;if(used.some(u=>q[0]-hw<u[2]&&q[0]+hw>u[0]&&q[1]-7<u[3]&&q[1]+7>u[1]))return;put.push(q);fmText(g,a.num,q[0],q[1],dark);});g.restore();}
  if(fmOn('mon')&&FM.z>=FM_MINZ.mon){fmzNeed('mon',W,H);g.save();g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';
-  FMZ.mon.f.forEach(m=>{const q=fmXY(m.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;const r=FMZ.monSel===m?9:7;
-   g.beginPath();g.moveTo(q[0],q[1]-r);g.lineTo(q[0]+r*0.9,q[1]+r*0.7);g.lineTo(q[0]-r*0.9,q[1]+r*0.7);g.closePath();g.fillStyle=m.st==='vert'?'#c084fc':'#22c55e';g.fill();g.lineWidth=FMZ.monSel===m?2.5:1.5;g.strokeStyle=FMZ.monSel===m?'#111':'#064e3b';g.stroke();
+  const dead=fmOn('dead');
+  FMZ.mon.f.slice().sort((a,b)=>(a.st==='dead'?0:1)-(b.st==='dead'?0:1)).forEach(m=>{if(m.st==='dead'&&!dead)return;const q=fmXY(m.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;const r=FMZ.monSel===m?9:7;
+   g.beginPath();g.moveTo(q[0],q[1]-r);g.lineTo(q[0]+r*0.9,q[1]+r*0.7);g.lineTo(q[0]-r*0.9,q[1]+r*0.7);g.closePath();g.fillStyle=m.st==='dead'?'#ef4444':m.st==='vert'?'#c084fc':'#22c55e';g.fill();g.lineWidth=FMZ.monSel===m?2.5:1.5;g.strokeStyle=FMZ.monSel===m?'#111':m.st==='dead'?'#7f1d1d':'#064e3b';g.stroke();
    if(FM.z>=17){const t=m.tab||m.gcm;if(t)fmText(g,t,q[0]+r+3,q[1],dark);}});g.restore();}}
 function fmInfo(h){const el=$('fm-info');if(!el)return;el.style.display=h?'block':'none';el.innerHTML=h||'';}
 function fmMonPick(at){if(!fmOn('mon')||FM.z<FM_MINZ.mon||!FMZ.mon.f.length)return false;const [W,H]=fmSize();let best=null,bd=16;
- FMZ.mon.f.forEach(m=>{const q=fmXY(m.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<=bd){bd=d;best=m;}});if(!best)return false;FMZ.monSel=best;FM.selW=null;
+ FMZ.mon.f.forEach(m=>{if(m.st==='dead'&&!fmOn('dead'))return;const q=fmXY(m.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<bd||(d===bd&&best&&best.st==='dead'&&m.st!=='dead')){bd=d;best=m;}});if(!best)return false;FMZ.monSel=best;FM.selW=null;
  const u=/^https:\/\//i.test(best.url)?best.url:'';
- fmInfo('<b>Monument '+esc(best.tab||best.gcm)+'</b>'+(best.gcm&&best.tab?' · GCM '+esc(best.gcm):'')+(best.st==='vert'?' · vertical benchmark':' · geodetic, published')+(best.tag?' · '+esc(best.tag):'')+(best.mun?' · '+esc(best.mun):'')+fmFrom(best)+
-  (u?' <a href="'+esc(u)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open its record ↗</a>':'')+'<br><span style="opacity:.75">Provincial control monument — coordinates and elevation are on its record.</span>');
+ fmInfo('<b>Monument '+esc(best.tab||best.gcm)+'</b>'+(best.gcm&&best.tab?' · GCM '+esc(best.gcm):'')+(best.st==='dead'?' · <b style="color:var(--danger)">DESTROYED</b>':best.st==='vert'?' · vertical benchmark':' · geodetic, published')+(best.tag?' · '+esc(best.tag):'')+(best.mun?' · '+esc(best.mun):'')+fmFrom(best)+
+  (u?' <a href="'+esc(u)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open its record ↗</a>':'')+'<br><span style="opacity:.75">'+(best.st==='dead'?'The province lists this monument as destroyed — don’t expect to find it or rely on it.':'Provincial control monument — coordinates and elevation are on its record.')+'</span>');
  fmDraw();return true;}
 /* ---- street names over the aerial ---- */
 function fmNames(tl,W,H,want){if(!fmOn('names')||FM.base!=='esri')return;const tz=Math.max(0,Math.min(18,Math.round(FM.z))),wpt=256/Math.pow(2,tz),s=Math.pow(2,FM.z),nmax=Math.pow(2,tz);
@@ -4423,6 +4427,7 @@ function fmLegDraw(){const el=$('fm-leg');if(!el)return;const S=FM.sets;let h=''
  if(S.length){h+=S.map(s=>'<span class="fm-chip"><i style="background:'+s.col+'"></i>'+esc(s.name)+' — '+s.nc+' control, '+s.np+' pin'+(s.np===1?'':'s')+(s.hold?' (not shown)':'')+' <a data-fmx="'+esc(s.name)+'" style="text-decoration:underline">remove</a></span>').join('')+
    '<label class="fm-cb"><input type="checkbox" id="fm-all" '+(FM.all?'checked':'')+'> Every point</label> <span style="opacity:.75">▲ control · ● pin / post · tap one for details</span>';}
  FM.msg.forEach(m=>{h+='<div style="margin-top:4px'+(m.bad?';color:var(--danger)':'')+'">'+m.t+'</div>';});
+ h+='<div style="margin-top:4px;opacity:.8">Monuments: <span style="color:#16a34a">▲</span> geodetic · <span style="color:#a855f7">▲</span> benchmark · <span style="color:#ef4444">▲</span> destroyed · tap one for its record</div>';
  el.innerHTML=h;
  const a=$('fm-all');if(a)a.onchange=()=>{FM.all=a.checked;fmDraw();};
  el.querySelectorAll('[data-fmx]').forEach(b=>{b.onclick=()=>{FM.sets=FM.sets.filter(s=>s.name!==b.dataset.fmx);FM.msg=[];FM.selW=null;fmInfo('');fmLegDraw();fmDraw();};});
@@ -4470,8 +4475,14 @@ function fmJobsPick(at){if(!fmOn('jobs')||!(FMJ.rows||[]).length)return false;co
  fmInfo(here.map(j=>'<div><b>Job '+esc(j.job)+'</b>'+(j.site?' — '+esc(j.site):'')+'</div>').join('')+'<span style="opacity:.75">One of our jobs'+fmFrom(best).replace(/<[^>]+>/g,'')+'</span>');
  fmDraw();return true;}
 /* ---- the map itself ---- */
+function fmHint(){ /* a ticked layer that this zoom is too far out to draw */
+ const far=[],near=[];if(fmOn('lots')&&Math.round(FM.z)<15)far.push('lot lines');if(fmOn('mon')&&FM.z<FM_MINZ.mon)far.push('monuments');
+ if(fmOn('adr')&&FM.z<FM_MINZ.adr)near.push('house numbers');if(fmOn('lab')&&FM.z<FM_MINZ.lab)near.push('PIDs');
+ if(far.length)return 'Zoom in to see '+far.join(' and ');
+ if(near.length&&FM.z>=16)return 'Zoom in closer for '+near.join(' and ');return '';}
 function fmNote(){const el=$('fm-note');if(!el)return;const t=FM.say||(FM.fail>3&&!FM.ok?'The background isn’t loading — no signal, or this network blocks it. The map needs mobile data or Wi‑Fi.':'');
- el.style.display=t?'block':'none';el.textContent=t;}
+ el.style.display=t?'block':'none';el.textContent=t;
+ const h=$('fm-hint');if(h){const ht=t?'':fmHint();h.style.display=ht?'block':'none';h.textContent=ht;}}
 function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box||!tl||!cv||!FM.c||!$('v-fmap').classList.contains('on'))return;
  const [W,H]=fmSize(),B=FM_BASE[FM.base]||FM_BASE.esri;
  /* tiles: the photo is used at its own best zoom and stretched beyond it */
@@ -4491,7 +4502,9 @@ function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box|
  const g=cv.getContext&&cv.getContext('2d');if(!g){fmNote();return;}g.clearRect(0,0,W,H);
  fmzDraw(g,W,H);fmJobsDraw(g,W,H);fmPtsDraw(g,W,H);
  /* the note's site: green point */
- if(FM.geo&&FM.geo.w){const q=fmXY(FM.geo.w,W,H);g.beginPath();g.arc(q[0],q[1],7,0,7);g.fillStyle='#16a34a';g.fill();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();}
+ if(FM.geo&&FM.geo.w){const q=fmXY(FM.geo.w,W,H);g.beginPath();g.moveTo(q[0],q[1]);g.lineTo(q[0],q[1]-14);g.lineWidth=4;g.strokeStyle='#fff';g.stroke();g.lineWidth=2;g.strokeStyle='#7c2d12';g.stroke();
+  g.beginPath();g.arc(q[0],q[1]-20,7,0,7);g.fillStyle='#f97316';g.fill();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();
+  g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';fmText(g,'SITE',q[0]+11,q[1]-20,FM.base!=='esri');}
  /* where the phone is: blue dot with its accuracy circle */
  const lat0=fmLatOfW(FM.c),mpp=156543.03392*Math.cos(lat0*Math.PI/180)/Math.pow(2,FM.z);
  if(FM.gps){const q=fmXY(fmW(FM.gps.lat,FM.gps.lng),W,H),r=Math.min(160,(FM.gps.acc||0)/mpp);
@@ -4523,18 +4536,18 @@ function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.d
  box.addEventListener('wheel',e=>{e.preventDefault();fmZoom(e.deltaY<0?0.5:-0.5,pos(e));},{passive:false});}
 function fmLayRow(){const cb=(k,lab)=>'<label class="fm-cb"><input type="checkbox" data-fmk="'+k+'" '+(fmOn(k)?'checked':'')+'> '+lab+'</label>';
  $('fm-lay').innerHTML='<span class="fmseg">'+['esri','osm'].map(k=>'<button class="'+(FM.base===k?'on':'')+'" data-fmb="'+k+'">'+FM_BASE[k].n+'</button>').join('')+'</span>'+
-  cb('lots','Lots')+cb('adr','House #s')+cb('lab','PID / plan')+cb('mon','Monuments')+cb('names','Streets')+cb('jobs','Our jobs')+
+  cb('lots','Lots')+cb('adr','House #s')+cb('lab','PID / plan')+cb('mon','Monuments')+cb('dead','Destroyed')+cb('names','Streets')+cb('jobs','Our jobs')+
   '<label class="btn ghost fm-add">＋ Points<input type="file" id="fm-file" accept=".msz,.mbz,.txt,.csv,.asc" multiple hidden></label>';
  $('fm-lay').querySelectorAll('[data-fmk]').forEach(c=>{c.onchange=()=>fmSet(c.dataset.fmk,c.checked);});
  $('fm-lay').querySelectorAll('[data-fmb]').forEach(b=>{b.onclick=()=>{FM.base=b.dataset.fmb;FM.fail=0;FM.ok=0;try{localStorage.setItem('efn-fmbase',FM.base);}catch(e){}fmLayRow();fmDraw();};});
  const f=$('fm-file');f.onchange=()=>{if(f.files&&f.files.length)fmAddFiles([...f.files]);f.value='';};}
 async function fmGeo(a){
- try{const c=JSON.parse(localStorage.getItem('efn-geo')||'{}');if(c[a])return c[a];}catch(e){}
+ try{const c=JSON.parse(localStorage.getItem('efn-geo2')||'{}');if(c[a])return c[a];}catch(e){}
  try{const r=await fetch('https://geocoder.api.gov.bc.ca/addresses.json?maxResults=1&outputSRS=4326&addressString='+encodeURIComponent(a+(/\bbc\b|british columbia/i.test(a)?'':', BC')));
   if(!r.ok)return null;const J=await r.json(),f=J.features&&J.features[0];if(!f||!f.geometry||!f.geometry.coordinates)return null;
   const g={lat:+f.geometry.coordinates[1],lng:+f.geometry.coordinates[0]};if(!isFinite(g.lat)||!isFinite(g.lng))return null;
   if(f.properties&&f.properties.score!=null&&+f.properties.score<50)return null;
-  try{const c=JSON.parse(localStorage.getItem('efn-geo')||'{}'),ks=Object.keys(c);if(ks.length>60)delete c[ks[0]];c[a]=g;localStorage.setItem('efn-geo',JSON.stringify(c));}catch(e){}
+  try{const c=JSON.parse(localStorage.getItem('efn-geo2')||'{}'),ks=Object.keys(c);if(ks.length>60)delete c[ks[0]];c[a]=g;localStorage.setItem('efn-geo2',JSON.stringify(c));}catch(e){}
   return g;}catch(e){return null;}}
 function fmGpsStart(){if(FM.watch!=null||!navigator.geolocation)return;
  try{FM.watch=navigator.geolocation.watchPosition(p=>{const first=!FM.gps;FM.gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0};

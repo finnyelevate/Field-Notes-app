@@ -1,4 +1,4 @@
-const CACHE='efn-v6';
+const CACHE='efn-v7';
 const ASSETS=['./','index.html','manifest.json','icon-192.png','icon-512.png',
  'lib/jspdf.umd.min.js',
  'lib/jszip.min.js',
@@ -13,6 +13,10 @@ self.addEventListener('activate',e=>{
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const url=new URL(e.request.url);
+  // Only the app's own files are ours to cache. Map tiles, map data (WMS/WFS), the geocoder and Microsoft Graph go straight
+  // to the network: their answers differ only by query string, and the cache below matches with ignoreSearch — so a saved
+  // answer for one area / folder / address would be replayed for every other one (Build 34 bug, fixed 34.1).
+  if(url.origin!==self.location.origin)return;
   const isShell=e.request.mode==='navigate'||url.pathname.endsWith('/index.html')||
     url.pathname.endsWith('/sw.js')||url.pathname.endsWith('/manifest.json')||url.pathname.endsWith('/resources.json');
   if(isShell){
