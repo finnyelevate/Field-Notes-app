@@ -153,6 +153,14 @@ input,select,textarea{font:inherit;color:var(--ink)}
 #fm-by{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.8);font-size:9px;padding:1px 5px;color:#333;max-width:100%;z-index:3}
 #fm-note{position:absolute;left:8px;top:8px;right:8px;background:rgba(255,255,255,.93);font-size:12px;padding:5px 8px;border-radius:8px;z-index:3;color:#24312B;display:none}
 #fm-hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(20,28,24,.78);color:#fff;font-size:12px;padding:3px 10px;border-radius:999px;z-index:3;white-space:nowrap;display:none;pointer-events:none}
+#fm-go{position:absolute;left:8px;right:8px;top:8px;background:rgba(15,23,20,.92);color:#fff;border-radius:14px;padding:8px 10px;z-index:4;display:none;align-items:center;gap:10px}
+#fm-go-arrow{flex:none;transition:transform .15s linear}
+#fm-go-txt{flex:1;font-size:15px;line-height:1.3}
+#fm-go-txt b{font-size:20px}
+#fm-go-txt span{font-size:11.5px;opacity:.8}
+#fm-go-x{flex:none;border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:999px;width:36px;height:36px;font-size:16px}
+.fm-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.fm-acts a{border:1.5px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;text-decoration:none;color:inherit;cursor:pointer;white-space:nowrap}
 #fm-foot{background:var(--paper);padding:6px 10px calc(env(safe-area-inset-bottom) + 8px);border-top:1px solid var(--line);max-height:34vh;overflow-y:auto}
 #fm-lay{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12.5px}
 .fm-cb{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
@@ -161,7 +169,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 #fm-lay .fmseg button{border:0;background:transparent;padding:3px 9px;font-size:12.5px;color:inherit}
 #fm-lay .fmseg button.on{background:var(--green,#5E9478);color:#fff}
 #fm-lay .fm-add{padding:3px 9px;font-size:12.5px;width:auto;margin:0;display:inline-flex}
-#fm-info{font-size:13px;line-height:1.45;margin-top:6px;border:1.5px solid var(--line);border-radius:10px;padding:7px 9px;display:none;word-break:break-word}
+#fm-info{position:absolute;left:8px;right:8px;bottom:30px;z-index:4;background:var(--paper);color:var(--ink,#24312B);font-size:13px;line-height:1.45;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;display:none;word-break:break-word;max-height:46%;overflow-y:auto;box-shadow:0 4px 18px rgba(0,0,0,.35);cursor:auto;touch-action:auto;user-select:text;-webkit-user-select:text}
 #fm-leg{font-size:12px;margin-top:6px;line-height:1.5}
 .fm-chip{display:inline-flex;align-items:center;gap:5px;margin:0 8px 2px 0}
 .fm-chip i{display:inline-block;width:11px;height:11px;border-radius:2px}
@@ -293,10 +301,9 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
     <button class="bicon" id="fm-loc" title="centre on me">📍</button>
   </div>
   <div id="fm-wrap"><div id="fm-tiles"></div><canvas id="fm-cv"></canvas>
-    <div id="fm-by"></div><div id="fm-note"></div><div id="fm-hint"></div></div>
+    <div id="fm-by"></div><div id="fm-note"></div><div id="fm-hint"></div><div id="fm-go"><svg id="fm-go-arrow" viewBox="0 0 24 24" width="46" height="46"><path d="M12 2 L20 21 L12 16.5 L4 21 Z" fill="#fff"/></svg><div id="fm-go-txt"></div><button id="fm-go-x" aria-label="Stop">✕</button></div><div id="fm-info"></div></div>
   <div id="fm-foot">
     <div id="fm-lay"></div>
-    <div id="fm-info"></div>
     <div id="fm-leg"></div>
   </div>
 </div>
@@ -476,6 +483,16 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   </div>
 </div></div>
 
+<div class="mback" id="m-fmtype" style="z-index:22"><div class="modal">
+  <h2>Add a point by coordinates</h2>
+  <div class="card-sub" style="margin-bottom:10px;line-height:1.5">UTM zone 10, NAD83(CSRS) — the same coordinates as a UTM job’s points file. You can paste a pair such as <span class="mono">5438812.345 514508.120</span>, or a whole points-file line, into the Northing box.</div>
+  <div class="frow"><div class="field"><label>Northing</label><input id="ft-n" inputmode="decimal" autocomplete="off"></div>
+  <div class="field"><label>Easting</label><input id="ft-e" inputmode="decimal" autocomplete="off"></div></div>
+  <div class="field"><label>Label (optional)</label><input id="ft-l" autocomplete="off" placeholder="e.g. OIP NE cnr"></div>
+  <div class="card-sub" id="ft-msg" style="display:none;margin:8px 0 0;line-height:1.4"></div>
+  <div style="display:flex;gap:10px;margin-top:12px"><button class="btn ghost" id="ft-cancel" style="flex:1">Cancel</button><button class="btn" id="ft-add" style="flex:1">Add to map</button></div>
+</div></div>
+
 <div class="mback" id="m-msvu" style="z-index:21"><div class="modal">
   <h2 id="vu-title">Job uploads</h2>
   <div class="card-sub" id="vu-sub" style="margin-bottom:8px;line-height:1.5"></div>
@@ -563,7 +580,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 </div></div>
 
 <div class="mback" id="m-news"><div class="modal" style="max-height:84vh;overflow-y:auto">
-  <h2>What’s new — build 34</h2>
+  <h2>What’s new — build 35</h2>
   <canvas id="news-cv" width="500" height="150" style="width:100%;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 12px"></canvas>
   <div id="news-list"></div>
   <button class="btn" id="news-ok" style="width:100%;margin-top:14px">Got it</button>
@@ -727,10 +744,11 @@ function plw(){const p=gpg();return p&&p.orient==='l'?LH:LW;}
 function plh(){const p=gpg();return p&&p.orient==='l'?LW:LH;}
 const WX=['Sun','Cloud','Rain','Snow','Fog','Wind'];
 const SETF=[['st','⊼ @'],['bs','BS'],['hi','HI'],['ht','HT'],['dh','ΔH'],['dv','ΔV'],['qual','QUAL']];
-const BUILD=34;
+const BUILD=35;
 const NEWS=[
- ['\ud83d\uddfa','Site map on every note','Open \ud83d\uddfa Site map on a note: the site on an aerial photo with ParcelMap BC lot lines, house numbers, PID and plan labels, and the province\u2019s control monuments (green geodetic, purple benchmarks, red destroyed \u2014 tap one for its record). A blue dot shows where you stand. Needs signal.'],
- ['\ud83d\udccc','Your points on the aerial','\uff0b Points on the map loads a job\u2019s .msz or points file (UTM jobs) over the photo \u2014 control and found pins highlighted, so you can walk to the legal. Phones signed in to Microsoft also see pins for our existing jobs.']
+ ['\ud83e\udded','Go to a point','On the Site map, tap any point, monument or job pin, then Go to: a big arrow and the distance, turning as you turn. Drive there opens your maps app. Phone GPS gets you to the right corner of the lot \u2014 not onto the pin.'],
+ ['\u2328\ufe0f','Type a coordinate','Type N, E on the map drops a point from a UTM northing and easting \u2014 or paste the pair \u2014 with no file needed. Typed points stay with the note.'],
+ ['\u3030\ufe0f','Interest lines look different','Rights-of-way, covenants and easements are now light-blue lines with their own tick box, so they can\u2019t be mistaken for the orange lot lines. Tap one for its plan number.']
 ];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const $=id=>document.getElementById(id);
@@ -4272,7 +4290,7 @@ const FM_LOTS='https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABR
 const FM_NAMESU='https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
 const FM_WFS='https://openmaps.gov.bc.ca/geo/pub/';
 const FM_LAY={lab:['WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW'],mon:['WHSE_REFERENCE.SRV_GEODETIC_CONTROL_SP','WHSE_REFERENCE.MASCOT_GEODETIC_CONTROL'],adr:['geocoder']};
-const FM_MINZ={lab:18,mon:14,adr:18},FM_MAX={lab:1200,mon:1000,adr:900};
+const FM_MINZ={lab:18,mon:14,adr:18,int:16},FM_MAX={lab:1200,mon:1000,adr:900};
 const FM_CONTROL={};'CONP CP IP LP MON MONUMENT OAP OCC OCM OCN OCNT OCONP OCP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OMAG OMON OPCON OPIPE OPM OPP OPPIPE ORBR ORLT ORP OSC OSM OSP OSPK RP'.split(' ').forEach(k=>{FM_CONTROL[k]=1;});
 const FM_PINS={};'IP LP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OPIPE OPPIPE ORBR ORP RP'.split(' ').forEach(k=>{FM_PINS[k]=1;});
 const FM_COL=['#d6336c','#7048e8','#e8590c','#0b7285','#5c940d','#862e9c'];
@@ -4312,7 +4330,8 @@ function fmLabelPt(R){let a=0,cx=0,cy=0;for(let i=0,j=R.length-1;i<R.length;j=i+
 /* which monuments to show: the province's symbol type. 1 and 5 = published geodetic, 2 and 3 = published benchmarks (vertical).
    7 = destroyed: drawn RED like ParcelMap BC's legend, with its own tick box (Finny, 2026-11-25). 4 and 6 = not published, blank = unknown: not shown. */
 function fmMonKind(p){const t=String(p.SYMBOL_TYPE!=null?p.SYMBOL_TYPE:(p.SYMBOLOGY_TYPE!=null?p.SYMBOLOGY_TYPE:'')).trim();return t==='1'||t==='5'?'good':t==='2'||t==='3'?'vert':t==='7'?'dead':'';}
-function fmzUrl(k,lay,bb){if(k==='adr')return 'https://geocoder.api.gov.bc.ca/sites/within.json?bbox='+[bb[1],bb[0],bb[3],bb[2]].map(v=>v.toFixed(6)).join(',')+'&maxResults='+FM_MAX.adr+'&outputSRS=4326';
+function fmzUrl(k,lay,bb){
+ if(k==='adr')return 'https://geocoder.api.gov.bc.ca/sites/within.json?bbox='+[bb[1],bb[0],bb[3],bb[2]].map(v=>v.toFixed(6)).join(',')+'&maxResults='+FM_MAX.adr+'&outputSRS=4326';
  return FM_WFS+lay+'/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=pub:'+lay+'&outputFormat=application%2Fjson&count='+FM_MAX[k]+'&srsName=EPSG:4326&bbox='+bb.map(v=>v.toFixed(6)).join(',')+',urn:ogc:def:crs:EPSG::4326';}
 function fmzParse(k,J){let out=[];FMZ.ver++;((J&&J.features)||[]).forEach(f=>{const p=f.properties||{},g=f.geometry;if(!g)return;
   if(k==='mon'){if(g.type!=='Point')return;const lng=g.coordinates[0],lat=g.coordinates[1];if(!isFinite(lat)||!isFinite(lng))return;
@@ -4359,12 +4378,16 @@ function fmzDraw(g,W,H){const s=Math.pow(2,FM.z),dark=FM.base!=='esri';
   FMZ.mon.f.slice().sort((a,b)=>(a.st==='dead'?0:1)-(b.st==='dead'?0:1)).forEach(m=>{if(m.st==='dead'&&!dead)return;const q=fmXY(m.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;const r=FMZ.monSel===m?9:7;
    g.beginPath();g.moveTo(q[0],q[1]-r);g.lineTo(q[0]+r*0.9,q[1]+r*0.7);g.lineTo(q[0]-r*0.9,q[1]+r*0.7);g.closePath();g.fillStyle=m.st==='dead'?'#ef4444':m.st==='vert'?'#c084fc':'#22c55e';g.fill();g.lineWidth=FMZ.monSel===m?2.5:1.5;g.strokeStyle=FMZ.monSel===m?'#111':m.st==='dead'?'#7f1d1d':'#064e3b';g.stroke();
    if(FM.z>=17){const t=m.tab||m.gcm;if(t)fmText(g,t,q[0]+r+3,q[1],dark);}});g.restore();}}
-function fmInfo(h){const el=$('fm-info');if(!el)return;el.style.display=h?'block':'none';el.innerHTML=h||'';}
+function fmInfo(h,tgt){const el=$('fm-info');if(!el)return;FM.cand=h&&tgt?tgt:null;
+ const acts=FM.cand?'<div class="fm-acts"><a data-fmgo>\u27a4 Go to</a><a href="'+esc(fmMapsUrl(tgt))+'" target="_blank" rel="noopener">Drive there \u2197</a>'+(tgt.typed!=null?'<a data-fmtrm="'+tgt.typed+'">Remove this point</a>':'')+'</div>':'';
+ el.style.display=h?'block':'none';el.innerHTML=(h||'')+acts;
+ const go=el.querySelector('[data-fmgo]');if(go)go.onclick=()=>fmGoStart(FM.cand);
+ const rm=el.querySelector('[data-fmtrm]');if(rm)rm.onclick=()=>fmTypedRemove(+rm.getAttribute('data-fmtrm'));}
 function fmMonPick(at){if(!fmOn('mon')||FM.z<FM_MINZ.mon||!FMZ.mon.f.length)return false;const [W,H]=fmSize();let best=null,bd=16;
  FMZ.mon.f.forEach(m=>{if(m.st==='dead'&&!fmOn('dead'))return;const q=fmXY(m.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<bd||(d===bd&&best&&best.st==='dead'&&m.st!=='dead')){bd=d;best=m;}});if(!best)return false;FMZ.monSel=best;FM.selW=null;
  const u=/^https:\/\//i.test(best.url)?best.url:'';
  fmInfo('<b>Monument '+esc(best.tab||best.gcm)+'</b>'+(best.gcm&&best.tab?' · GCM '+esc(best.gcm):'')+(best.st==='dead'?' · <b style="color:var(--danger)">DESTROYED</b>':best.st==='vert'?' · vertical benchmark':' · geodetic, published')+(best.tag?' · '+esc(best.tag):'')+(best.mun?' · '+esc(best.mun):'')+fmFrom(best)+
-  (u?' <a href="'+esc(u)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open its record ↗</a>':'')+'<br><span style="opacity:.75">'+(best.st==='dead'?'The province lists this monument as destroyed — don’t expect to find it or rely on it.':'Provincial control monument — coordinates and elevation are on its record.')+'</span>');
+  (u?' <a href="'+esc(u)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open its record ↗</a>':'')+'<br><span style="opacity:.75">'+(best.st==='dead'?'The province lists this monument as destroyed — don’t expect to find it or rely on it.':'Provincial control monument — coordinates and elevation are on its record.')+'</span>',{lat:best.lat,lng:best.lng,label:'monument '+(best.tab||best.gcm)});
  fmDraw();return true;}
 /* ---- street names over the aerial ---- */
 function fmNames(tl,W,H,want){if(!fmOn('names')||FM.base!=='esri')return;const tz=Math.max(0,Math.min(18,Math.round(FM.z))),wpt=256/Math.pow(2,tz),s=Math.pow(2,FM.z),nmax=Math.pow(2,tz);
@@ -4424,24 +4447,24 @@ async function fmAddFiles(files){const S=FM.sets,msgs=[];
  FM.msg=msgs;fmLegDraw();fmDraw();}
 function fmVisible(){const out=[];FM.sets.forEach(s=>{if(s.hold)return;s.pts.forEach(p=>{if(FM.all||p.cls!=='topo')out.push({p,s});});});return out;}
 function fmLegDraw(){const el=$('fm-leg');if(!el)return;const S=FM.sets;let h='';
- if(S.length){h+=S.map(s=>'<span class="fm-chip"><i style="background:'+s.col+'"></i>'+esc(s.name)+' — '+s.nc+' control, '+s.np+' pin'+(s.np===1?'':'s')+(s.hold?' (not shown)':'')+' <a data-fmx="'+esc(s.name)+'" style="text-decoration:underline">remove</a></span>').join('')+
+ if(S.length){h+=S.map(s=>'<span class="fm-chip"><i style="background:'+s.col+'"></i>'+esc(s.name)+' — '+(s.typed?s.pts.length+' point'+(s.pts.length===1?'':'s')+', kept with this note':s.nc+' control, '+s.np+' pin'+(s.np===1?'':'s'))+(s.hold?' (not shown)':'')+' <a data-fmx="'+esc(s.name)+'" style="text-decoration:underline">'+(s.typed?'clear all':'remove')+'</a></span>').join('')+
    '<label class="fm-cb"><input type="checkbox" id="fm-all" '+(FM.all?'checked':'')+'> Every point</label> <span style="opacity:.75">▲ control · ● pin / post · tap one for details</span>';}
  FM.msg.forEach(m=>{h+='<div style="margin-top:4px'+(m.bad?';color:var(--danger)':'')+'">'+m.t+'</div>';});
- h+='<div style="margin-top:4px;opacity:.8">Monuments: <span style="color:#16a34a">▲</span> geodetic · <span style="color:#a855f7">▲</span> benchmark · <span style="color:#ef4444">▲</span> destroyed · tap one for its record</div>';
+ h+='<div style="margin-top:4px;opacity:.8"><span style="color:#16a34a">▲</span> geodetic · <span style="color:#a855f7">▲</span> benchmark · <span style="color:#ef4444">▲</span> destroyed · <span style="color:#e09000;font-weight:800">━</span> lot line · <span style="color:#06b6d4;font-weight:800">━</span> interest line · <span style="color:#ca8a04">◆</span> typed · tap anything for details</div>';
  el.innerHTML=h;
  const a=$('fm-all');if(a)a.onchange=()=>{FM.all=a.checked;fmDraw();};
- el.querySelectorAll('[data-fmx]').forEach(b=>{b.onclick=()=>{FM.sets=FM.sets.filter(s=>s.name!==b.dataset.fmx);FM.msg=[];FM.selW=null;fmInfo('');fmLegDraw();fmDraw();};});
+ el.querySelectorAll('[data-fmx]').forEach(b=>{b.onclick=()=>{if(note&&FM.sets.some(x=>x.typed&&x.name===b.dataset.fmx)){note.mapPts=[];store.put(note).catch(()=>{});}FM.sets=FM.sets.filter(s=>s.name!==b.dataset.fmx);FM.msg=[];FM.selW=null;fmInfo('');fmLegDraw();fmDraw();};});
  el.querySelectorAll('[data-fmshow]').forEach(b=>{b.onclick=()=>{const s=FM.sets.find(x=>x.name===b.dataset.fmshow);if(!s)return;s.hold=false;FM.msg=[];FM.c=fmW(s.lat,s.lng);FM.z=17;fmLegDraw();fmDraw();};});}
-function fmPtsDraw(g,W,H){const L=fmVisible(),rank={topo:0,pin:1,ctl:2};L.sort((a,b)=>rank[a.p.cls]-rank[b.p.cls]);const lab=FM.z>=18;
+function fmPtsDraw(g,W,H){const L=fmVisible(),rank={topo:0,pin:1,typed:1,ctl:2};L.sort((a,b)=>rank[a.p.cls]-rank[b.p.cls]);const lab=FM.z>=18;
  L.forEach(x=>{const p=x.p,q=fmXY(p.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;const sel=FM.selW===p.w;
   g.lineWidth=sel?3:1.5;g.strokeStyle=sel?'#111':'#fff';g.fillStyle=x.s.col;g.beginPath();
-  if(p.cls==='ctl'){g.moveTo(q[0],q[1]-7);g.lineTo(q[0]+6.5,q[1]+5);g.lineTo(q[0]-6.5,q[1]+5);g.closePath();}else g.arc(q[0],q[1],p.cls==='pin'?4.5:2.2,0,7);
+  if(p.cls==='ctl'){g.moveTo(q[0],q[1]-7);g.lineTo(q[0]+6.5,q[1]+5);g.lineTo(q[0]-6.5,q[1]+5);g.closePath();}else if(p.cls==='typed'){g.moveTo(q[0],q[1]-7.5);g.lineTo(q[0]+7.5,q[1]);g.lineTo(q[0],q[1]+7.5);g.lineTo(q[0]-7.5,q[1]);g.closePath();}else g.arc(q[0],q[1],p.cls==='pin'?4.5:2.2,0,7);
   g.fill();if(p.cls!=='topo'||sel)g.stroke();
   if(p.cls!=='topo'&&(lab||sel)){const t=p.pt+(FM.z>=19.5&&p.code?' '+p.code:'');g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';g.lineJoin='round';g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(t,q[0]+8,q[1]);g.fillStyle='#fff';g.fillText(t,q[0]+8,q[1]);}});}
-function fmPtsPick(at){if(!FM.sets.length)return false;const [W,H]=fmSize();let best=null,bd=16;const rank={ctl:0,pin:1,topo:2};
+function fmPtsPick(at){if(!FM.sets.length)return false;const [W,H]=fmSize();let best=null,bd=16;const rank={ctl:0,pin:1,typed:1,topo:2};
  fmVisible().forEach(x=>{const q=fmXY(x.p.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<=16&&(!best||rank[x.p.cls]<rank[best.p.cls]||(rank[x.p.cls]===rank[best.p.cls]&&d<bd))){best=x;bd=d;}});
  if(!best)return false;const p=best.p;FM.selW=p.w;FMZ.monSel=null;
- fmInfo('<b>'+esc(String(p.pt))+'</b> '+esc(p.desc||'(no description)')+' — '+(p.cls==='ctl'?'survey control':p.cls==='pin'?'found pin / post':'shot')+' · from <b>'+esc(best.s.name)+'</b>'+fmFrom(p)+'<br><span class="mono">N '+p.N.toFixed(3)+'  E '+p.E.toFixed(3)+(isFinite(p.Z)?'  Z '+p.Z.toFixed(3):'')+'</span>');
+ fmInfo('<b>'+esc(String(p.pt))+'</b> '+esc(p.desc||'(no description)')+' — '+(p.cls==='ctl'?'survey control':p.cls==='pin'?'found pin / post':p.cls==='typed'?'typed coordinate':'shot')+' · from <b>'+esc(best.s.name)+'</b>'+fmFrom(p)+'<br><span class="mono">N '+p.N.toFixed(3)+'  E '+p.E.toFixed(3)+(isFinite(p.Z)?'  Z '+p.Z.toFixed(3):'')+'</span>',{lat:p.lat,lng:p.lng,label:'point '+p.pt,typed:p.ti});
  fmDraw();return true;}
 /* ---- our existing jobs: read from the jobs master in SharePoint with the crew's Microsoft sign-in ---- */
 function fmCsvRows(text){const out=[];let row=[],cur='',q=false;
@@ -4472,11 +4495,79 @@ function fmJobsDraw(g,W,H){if(!fmOn('jobs'))return;fmJobsNeed();(FMJ.rows||[]).f
 function fmJobsPick(at){if(!fmOn('jobs')||!(FMJ.rows||[]).length)return false;const [W,H]=fmSize();let best=null,bd=18;
  FMJ.rows.forEach(j=>{const q=fmXY(j.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-14-at[1]);if(d<bd){bd=d;best=j;}});if(!best)return false;
  const here=FMJ.rows.filter(j=>Math.abs(j.lat-best.lat)<1e-6&&Math.abs(j.lng-best.lng)<1e-6);FM.selW=best.w;FMZ.monSel=null;
- fmInfo(here.map(j=>'<div><b>Job '+esc(j.job)+'</b>'+(j.site?' — '+esc(j.site):'')+'</div>').join('')+'<span style="opacity:.75">One of our jobs'+fmFrom(best).replace(/<[^>]+>/g,'')+'</span>');
+ fmInfo(here.map(j=>'<div><b>Job '+esc(j.job)+'</b>'+(j.site?' — '+esc(j.site):'')+'</div>').join('')+'<span style="opacity:.75">One of our jobs'+fmFrom(best).replace(/<[^>]+>/g,'')+'</span>',{lat:best.lat,lng:best.lng,label:'job '+best.job});
  fmDraw();return true;}
 /* ---- the map itself ---- */
+/* ---- Build 35: interest lines (rights-of-way, covenants, easements) — SAME CONSTANTS AS OFFICE 1.47.0 ----
+   (project doc claude/office-build-1.47.0-spec.md, "Interest lines — constants for Field to copy")
+   Lot tiles are asked for without the province's Interest parcel class; a second set of tiles has ONLY that class and is
+   tinted light blue with a CSS filter (the province draws every parcel in one orange, rgb(224,144,0) -> rgb(0,240,240),
+   checked on real tiles 2026-11-25). A tap that hits nothing else asks the province what interest is under the finger. */
+const FM_INT_FILTER='hue-rotate(150deg) saturate(1.6) brightness(1.25)';
+function fmIntKind(n){n=String(n||'').trim();if(!n||n==='Interest')return 'Interest (covenant, easement or other — the kind is on the plan)';return n.replace(/\bRoW\b/g,'right of way');}
+function fmIntLookup(at){if(!fmOn('lots')||!fmOn('int')||FM.z<FM_MINZ.int||typeof fetch!=='function'||!navigator.onLine)return;
+ const [W,H]=fmSize(),s=Math.pow(2,FM.z),ll=fmWLL([FM.c[0]+(at[0]-W/2)/s,FM.c[1]+(at[1]-H/2)/s]),lat=ll[0],lng=ll[1],eLng=4/(256*s)*360,eLat=eLng*Math.cos(lat*Math.PI/180),my=FM.intSeq,lay=FM_LAY.lab[0];
+ fetch(FM_WFS+lay+'/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=pub:'+lay+'&outputFormat=application%2Fjson&count=12&srsName=EPSG:4326&propertyName=PID,PLAN_NUMBER,PARCEL_NAME,PARCEL_CLASS,OWNER_TYPE&CQL_FILTER='+encodeURIComponent("PARCEL_CLASS='Interest' AND BBOX(SHAPE,"+[lng-eLng,lat-eLat,lng+eLng,lat+eLat].map(v=>v.toFixed(7)).join(',')+",'EPSG:4326')"))
+  .then(r=>r.ok?r.json():null).then(J=>{if(my!==FM.intSeq||!J||!J.features||!J.features.length)return;   /* something else was tapped meanwhile, or nothing there */
+   const seen={},L=[];J.features.forEach(f=>{const p=f.properties||{},k=String(p.PARCEL_NAME||'')+'|'+String(p.PLAN_NUMBER||'');if(seen[k])return;seen[k]=1;L.push(esc(fmIntKind(p.PARCEL_NAME))+(p.PLAN_NUMBER?' · plan <b>'+esc(String(p.PLAN_NUMBER).trim())+'</b>':''));});
+   fmInfo('<b>Interest parcel'+(L.length>1?'s':'')+' here</b> (not a lot line): '+L.join('; ')+'<br><span style="opacity:.75">Only interests ParcelMap BC has drawn appear on the map.</span>');}).catch(()=>{});}
+function fmSitePick(at){if(!FM.geo||!FM.geo.w)return false;const [W,H]=fmSize(),q=fmXY(FM.geo.w,W,H);if(Math.hypot(q[0]-at[0],q[1]-20-at[1])>16&&Math.hypot(q[0]-at[0],q[1]-at[1])>10)return false;
+ FM.selW=FM.geo.w;FMZ.monSel=null;fmInfo('<b>Site</b> — '+esc(FM.key)+fmFrom(FM.geo)+'<br><span style="opacity:.75">Where the province’s address finder places this note’s site address.</span>',{lat:FM.geo.lat,lng:FM.geo.lng,label:'the site'});fmDraw();return true;}
+/* ---- Build 35: type or paste a UTM coordinate; typed points are kept with the note (note.mapPts) ---- */
+function fmTypedParse(nTxt,eTxt){const a=String(nTxt||'').trim(),b=String(eTxt||'').trim();let N,E,Z=NaN,pt='',desc='';
+ if(!b){const cf=a.split(',').map(x=>x.trim());
+  if(cf.length>=4&&isFinite(parseFloat(cf[1]))&&isFinite(parseFloat(cf[2]))){pt=cf[0];N=parseFloat(cf[1]);E=parseFloat(cf[2]);Z=parseFloat(cf[3]);desc=cf.slice(4).join(',').trim();}
+  else{const m=a.match(/-?\d+(?:\.\d+)?/g)||[];if(m.length<2)return {err:'Enter a northing and an easting.'};N=parseFloat(m[0]);E=parseFloat(m[1]);}}
+ else{N=parseFloat(a.replace(/[^0-9.\-]/g,''));E=parseFloat(b.replace(/[^0-9.\-]/g,''));}
+ if(!isFinite(N)||!isFinite(E))return {err:'Enter a northing and an easting.'};
+ const okN=v=>v>5300000&&v<6700000,okE=v=>v>250000&&v<750000;let swapped=false;
+ if(!(okN(N)&&okE(E))){if(okN(E)&&okE(N)){const t=N;N=E;E=t;swapped=true;}
+  else return {err:'That isn’t a UTM zone 10 position (a northing is about 5,4xx,xxx and an easting about 5xx,xxx). Local or assumed coordinates can’t be placed on the map.'};}
+ return {N,E,Z,pt,desc,swapped};}
+function fmTypedSync(){FM.sets=FM.sets.filter(s=>!s.typed);const L=(note&&note.mapPts)||[];if(!L.length)return;
+ const pts=L.map((r,i)=>{const g=fmLL(r.E,r.N,10),d=String(r.desc||'').trim();return {pt:r.pt,N:r.N,E:r.E,Z:r.Z==null?NaN:r.Z,desc:d,code:(d.split(/[\s,]+/)[0]||'').toUpperCase(),cls:'typed',ti:i,lat:g.lat,lng:g.lng,w:fmW(g.lat,g.lng)};});
+ FM.sets.unshift({name:'Typed coordinates',typed:true,col:'#fde047',pts,n:pts.length,nc:0,np:0,lat:pts[0].lat,lng:pts[0].lng});}
+function fmTypeOpen(){if(!note){toast('Open a note first.');return;}['ft-n','ft-e','ft-l'].forEach(id=>{$(id).value='';});FM.tpt='';const m=$('ft-msg');m.style.display='none';m.textContent='';$('m-fmtype').classList.add('on');try{$('ft-n').focus();}catch(e){}}
+function fmTypedAdd(){const r=fmTypedParse($('ft-n').value,$('ft-e').value),msg=$('ft-msg');
+ if(r.err){msg.style.display='block';msg.style.color='var(--danger)';msg.textContent=r.err;return;}
+ if(!note)return;const L=note.mapPts||(note.mapPts=[]),lab=String($('ft-l').value||'').trim();
+ let pt=r.pt||FM.tpt||'';if(!pt||L.some(x=>x.pt===pt)){let n=L.length+1;while(L.some(x=>x.pt==='T'+n))n++;pt='T'+n;}
+ L.push({pt,N:r.N,E:r.E,Z:isFinite(r.Z)?r.Z:null,desc:lab||r.desc||''});store.put(note).catch(()=>{});
+ fmTypedSync();const p=FM.sets[0].pts[L.length-1];FM.c=p.w.slice();if(FM.z<18)FM.z=19;FM.selW=p.w;FMZ.monSel=null;
+ $('m-fmtype').classList.remove('on');fmLegDraw();fmDraw();
+ fmInfo('<b>'+esc(pt)+'</b> '+esc(p.desc||'(no label)')+' — typed coordinate'+(r.swapped?' <span style="color:var(--danger)">(northing and easting were the other way round — swapped)</span>':'')+fmFrom(p)+'<br><span class="mono">N '+p.N.toFixed(3)+'  E '+p.E.toFixed(3)+'</span>',{lat:p.lat,lng:p.lng,label:'point '+pt,typed:p.ti});}
+function fmTypedRemove(i){if(!note||!note.mapPts)return;note.mapPts.splice(i,1);store.put(note).catch(()=>{});fmTypedSync();FM.selW=null;fmInfo('');fmLegDraw();fmDraw();}
+/* ---- Build 35: directions — "Drive there" hands off to the phone's maps app; "Go to" is an arrow + distance ---- */
+function fmMapsUrl(t){const ll=t.lat.toFixed(6)+','+t.lng.toFixed(6);return /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent||'')?'https://maps.apple.com/?daddr='+ll+'&dirflg=d':'https://www.google.com/maps/dir/?api=1&destination='+ll;}
+function fmBearing(a,b){const r=Math.PI/180,y=Math.sin((b.lng-a.lng)*r)*Math.cos(b.lat*r),x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lng-a.lng)*r);return (Math.atan2(y,x)/r+360)%360;}
+/* which way the crew is facing: direction of travel while walking (steadier), else the phone's compass */
+function fmHeading(){const t=Date.now();if(FM.course&&t-FM.course.t<3500)return {v:FM.course.v,src:'walk'};if(FM.compass&&t-FM.compass.t<3000)return {v:FM.compass.v,src:'compass'};return null;}
+function fmCompassOn(){if(FM.compassOn)return;FM.compassOn=true;
+ const h=e=>{let hd=null;if(typeof e.webkitCompassHeading==='number'&&isFinite(e.webkitCompassHeading))hd=e.webkitCompassHeading;else if(e.absolute&&typeof e.alpha==='number'&&isFinite(e.alpha))hd=360-e.alpha;if(hd==null)return;
+  const sa=(window.screen&&screen.orientation&&screen.orientation.angle)||0;FM.compass={v:(hd+sa+360)%360,t:Date.now()};if(FM.go&&Date.now()-(FM.goT||0)>120)fmGoDraw();};
+ window.addEventListener('deviceorientationabsolute',h);window.addEventListener('deviceorientation',h);}
+function fmGoStart(t){if(!t)return;FM.go={lat:t.lat,lng:t.lng,label:t.label||'the point',w:fmW(t.lat,t.lng)};
+ /* iPhones ask before giving the compass, and only from a tap — this runs inside the Go to tap */
+ try{const D=window.DeviceOrientationEvent;if(D&&typeof D.requestPermission==='function'){D.requestPermission().then(r=>{if(r==='granted')fmCompassOn();fmGoDraw();}).catch(()=>{fmGoDraw();});}else fmCompassOn();}catch(e){}
+ fmDraw();}
+function fmGoStop(){FM.go=null;fmGoDraw();fmDraw();}
+function fmGoDraw(){const el=$('fm-go');if(!el)return;FM.goT=Date.now();const on=!!FM.go;el.style.display=on?'flex':'none';
+ ['fm-note','fm-hint'].forEach(id=>{const x=$(id);if(x)x.style.top=on?'76px':'8px';});if(!on)return;
+ const ar=$('fm-go-arrow'),tx=$('fm-go-txt');
+ if(!FM.gps){ar.style.visibility='hidden';tx.innerHTML='<b>Waiting for GPS…</b><br><span>to '+esc(FM.go.label)+'</span>';return;}
+ const d=fmDist(FM.gps,FM.go),near=d<=Math.max(3,Math.min(FM.gps.acc||0,15)),dt=d<1000?Math.round(d)+' m':(d/1000).toFixed(2)+' km';
+ if(near){ar.style.visibility='hidden';tx.innerHTML='<b>Within GPS accuracy</b> — look around<br><span>about '+dt+' to '+esc(FM.go.label)+'</span>';return;}
+ const h=fmHeading(),ang=(fmBearing(FM.gps,FM.go)-(h?h.v:0)+360)%360;ar.style.visibility='visible';ar.style.transform='rotate('+ang.toFixed(0)+'deg)';ar.setAttribute('data-ang',ang.toFixed(0));
+ tx.innerHTML='<b>'+dt+'</b> to '+esc(FM.go.label)+'<br><span>'+(h?(h.src==='walk'?'arrow follows the way you’re walking':'arrow follows the way the phone points'):'no compass — arrow is as on the map (north up)')+'</span>';}
+['pointerdown','pointermove','pointerup','pointercancel','wheel','dblclick'].forEach(t=>{$('fm-info').addEventListener(t,e=>e.stopPropagation());$('fm-go').addEventListener(t,e=>e.stopPropagation());});
+$('fm-go-x').onclick=fmGoStop;
+$('ft-cancel').onclick=()=>{$('m-fmtype').classList.remove('on');};
+$('ft-add').onclick=fmTypedAdd;
+/* pasting "N E" or a points-file line into the Northing box fills both boxes */
+$('ft-n').addEventListener('paste',()=>setTimeout(()=>{if($('ft-e').value.trim())return;const r=fmTypedParse($('ft-n').value,'');if(r.err)return;$('ft-n').value=r.N.toFixed(3);$('ft-e').value=r.E.toFixed(3);if(r.desc&&!$('ft-l').value)$('ft-l').value=r.desc;FM.tpt=r.pt||'';
+ if(r.swapped){const m=$('ft-msg');m.style.display='block';m.style.color='';m.textContent='Northing and easting were the other way round — swapped.';}},0));
 function fmHint(){ /* a ticked layer that this zoom is too far out to draw */
- const far=[],near=[];if(fmOn('lots')&&Math.round(FM.z)<15)far.push('lot lines');if(fmOn('mon')&&FM.z<FM_MINZ.mon)far.push('monuments');
+ const far=[],near=[];if((fmOn('lots')||fmOn('int'))&&Math.round(FM.z)<15)far.push('lot lines');if(fmOn('mon')&&FM.z<FM_MINZ.mon)far.push('monuments');
  if(fmOn('adr')&&FM.z<FM_MINZ.adr)near.push('house numbers');if(fmOn('lab')&&FM.z<FM_MINZ.lab)near.push('PIDs');
  if(far.length)return 'Zoom in to see '+far.join(' and ');
  if(near.length&&FM.z>=16)return 'Zoom in closer for '+near.join(' and ');return '';}
@@ -4488,13 +4579,15 @@ function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box|
  /* tiles: the photo is used at its own best zoom and stretched beyond it */
  const tz=Math.max(0,Math.min(B.max,Math.round(FM.z))),wpt=256/Math.pow(2,tz),s=Math.pow(2,FM.z),nmax=Math.pow(2,tz),want={};
  const x0=Math.floor((FM.c[0]-W/2/s)/wpt),x1=Math.floor((FM.c[0]+W/2/s)/wpt),y0=Math.floor((FM.c[1]-H/2/s)/wpt),y1=Math.floor((FM.c[1]+H/2/s)/wpt);
- const put=(key,url,x,y,op,zi)=>{want[key]=1;let im=FM.imgs[key];
-  if(!im){im=document.createElement('img');im.draggable=false;im.alt='';im.style.position='absolute';im.style.opacity=op;im.style.zIndex=zi;im.style.pointerEvents='none';const i2=im;
+ const put=(key,url,x,y,op,zi,flt)=>{want[key]=1;let im=FM.imgs[key];
+  if(!im){im=document.createElement('img');im.draggable=false;im.alt='';im.style.position='absolute';im.style.opacity=op;im.style.zIndex=zi;if(flt)im.style.filter=flt;im.style.pointerEvents='none';const i2=im;
    im.onerror=()=>{i2.style.display='none';if(key.charAt(0)==='b'){FM.fail++;fmNote();}};im.onload=()=>{if(key.charAt(0)==='b'){FM.ok++;fmNote();}};im.src=url;FM.imgs[key]=im;tl.appendChild(im);}
   const px=(v,c0,half)=>Math.round((v*wpt-c0)*s+half),l=px(x,FM.c[0],W/2),t=px(y,FM.c[1],H/2);im.style.left=l+'px';im.style.top=t+'px';im.style.width=(px(x+1,FM.c[0],W/2)-l)+'px';im.style.height=(px(y+1,FM.c[1],H/2)-t)+'px';};
  if((x1-x0+1)*(y1-y0+1)<=80)for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){if(y<0||y>=nmax)continue;const xx=((x%nmax)+nmax)%nmax;
    put('b|'+FM.base+'|'+tz+'|'+x+'|'+y,B.u.replace('{z}',tz).replace('{x}',xx).replace('{y}',y),x,y,1,0);
-   if(fmOn('lots')&&tz>=15){const m=20037508.342789244,w0=2*m/nmax;put('l|'+tz+'|'+x+'|'+y,FM_LOTS+[(-m+xx*w0).toFixed(3),(m-(y+1)*w0).toFixed(3),(-m+(xx+1)*w0).toFixed(3),(m-y*w0).toFixed(3)].join('%2C'),x,y,0.75,1);}}
+   if(tz>=15&&(fmOn('lots')||fmOn('int'))){const m=20037508.342789244,w0=2*m/nmax,bq=FM_LOTS+[(-m+xx*w0).toFixed(3),(m-(y+1)*w0).toFixed(3),(-m+(xx+1)*w0).toFixed(3),(m-y*w0).toFixed(3)].join('%2C')+'&CQL_FILTER=';
+    if(fmOn('lots'))put('l|'+tz+'|'+x+'|'+y,bq+encodeURIComponent("PARCEL_CLASS<>'Interest'"),x,y,0.75,1);
+    if(fmOn('int'))put('i|'+tz+'|'+x+'|'+y,bq+encodeURIComponent("PARCEL_CLASS='Interest'"),x,y,1,1,FM_INT_FILTER);}}
  fmNames(tl,W,H,want);
  Object.keys(FM.imgs).forEach(k=>{if(!want[k]){const im=FM.imgs[k];if(im.parentNode)im.parentNode.removeChild(im);delete FM.imgs[k];}});
  const by=$('fm-by');if(by)by.textContent=[B.by,fmOn('lots')?'Lots: ParcelMap BC':'',fmOn('mon')&&FM.z>=FM_MINZ.mon?(FMZ.mon.err?'Monuments couldn’t be loaded':'Monuments: GeoBC'+(FMZ.mon.more?' (zoom in for all)':'')):'',fmOn('adr')&&FM.z>=FM_MINZ.adr?(FMZ.adr.err?'Addresses couldn’t be loaded':'Addresses: BC Geocoder'):''].filter(Boolean).join(' · ');
@@ -4510,15 +4603,17 @@ function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box|
  if(FM.gps){const q=fmXY(fmW(FM.gps.lat,FM.gps.lng),W,H),r=Math.min(160,(FM.gps.acc||0)/mpp);
   if(r>9){g.beginPath();g.arc(q[0],q[1],r,0,7);g.fillStyle='rgba(37,99,235,.13)';g.fill();g.lineWidth=1;g.strokeStyle='rgba(37,99,235,.5)';g.stroke();}
   g.beginPath();g.arc(q[0],q[1],7,0,7);g.fillStyle='#2563eb';g.fill();g.lineWidth=3;g.strokeStyle='#fff';g.stroke();}
+ if(FM.go){const qt=fmXY(FM.go.w,W,H);if(FM.gps){const qg=fmXY(fmW(FM.gps.lat,FM.gps.lng),W,H);g.save();g.setLineDash([8,6]);g.beginPath();g.moveTo(qg[0],qg[1]);g.lineTo(qt[0],qt[1]);g.lineWidth=5;g.strokeStyle='rgba(0,0,0,.55)';g.stroke();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();g.restore();}
+  g.beginPath();g.arc(qt[0],qt[1],11,0,7);g.lineWidth=4.5;g.strokeStyle='rgba(0,0,0,.6)';g.stroke();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();}
  if(FM.selW){const q2=fmXY(FM.selW,W,H);g.beginPath();g.arc(q2[0],q2[1],13,0,7);g.lineWidth=2.5;g.strokeStyle='#22d3ee';g.stroke();}
  /* scale bar */
  const nice=[1,2,5,10,20,50,100,200,500,1000,2000,5000];let len=nice[0];nice.forEach(v=>{if(v/mpp<=120)len=v;});const bw=len/mpp;
  const byH=((by&&by.offsetHeight)||14)+6;g.fillStyle='rgba(255,255,255,.85)';g.fillRect(8,H-byH-22,bw+12,20);g.fillStyle='#111';g.fillRect(14,H-byH-8,bw,3);g.font='11px sans-serif';g.textAlign='left';g.textBaseline='alphabetic';g.fillText(len>=1000?len/1000+' km':len+' m',14,H-byH-11);
- fmNote();}
+ fmNote();fmGoDraw();}
 function fmZoomTo(z1,at){const [W,H]=fmSize(),z0=FM.z;z1=Math.max(8,Math.min(22,z1));if(z1===z0||!FM.c)return;
  if(at){const s0=Math.pow(2,z0),s1=Math.pow(2,z1),wx=FM.c[0]+(at[0]-W/2)/s0,wy=FM.c[1]+(at[1]-H/2)/s0;FM.c=[wx-(at[0]-W/2)/s1,wy-(at[1]-H/2)/s1];}FM.z=z1;fmDraw();}
 function fmZoom(d,at){fmZoomTo(FM.z+d,at);}
-function fmPick(at){if(fmPtsPick(at))return;if(fmMonPick(at))return;if(fmJobsPick(at))return;FM.selW=null;FMZ.monSel=null;fmInfo('');fmDraw();}
+function fmPick(at){FM.intSeq=(FM.intSeq||0)+1;if(fmPtsPick(at))return;if(fmMonPick(at))return;if(fmJobsPick(at))return;if(fmSitePick(at))return;FM.selW=null;FMZ.monSel=null;fmInfo('');fmDraw();fmIntLookup(at);}
 function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.dataset.wired='1';
  const P=new Map();let drag=null,moved=false,pinch=null;
  const pos=e=>{const r=box.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
@@ -4536,10 +4631,11 @@ function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.d
  box.addEventListener('wheel',e=>{e.preventDefault();fmZoom(e.deltaY<0?0.5:-0.5,pos(e));},{passive:false});}
 function fmLayRow(){const cb=(k,lab)=>'<label class="fm-cb"><input type="checkbox" data-fmk="'+k+'" '+(fmOn(k)?'checked':'')+'> '+lab+'</label>';
  $('fm-lay').innerHTML='<span class="fmseg">'+['esri','osm'].map(k=>'<button class="'+(FM.base===k?'on':'')+'" data-fmb="'+k+'">'+FM_BASE[k].n+'</button>').join('')+'</span>'+
-  cb('lots','Lots')+cb('adr','House #s')+cb('lab','PID / plan')+cb('mon','Monuments')+cb('dead','Destroyed')+cb('names','Streets')+cb('jobs','Our jobs')+
-  '<label class="btn ghost fm-add">＋ Points<input type="file" id="fm-file" accept=".msz,.mbz,.txt,.csv,.asc" multiple hidden></label>';
+  cb('lots','Lots')+cb('int','Interest lines')+cb('adr','House #s')+cb('lab','PID / plan')+cb('mon','Monuments')+cb('dead','Destroyed')+cb('names','Streets')+cb('jobs','Our jobs')+
+  '<label class="btn ghost fm-add">＋ Points<input type="file" id="fm-file" accept=".msz,.mbz,.txt,.csv,.asc" multiple hidden></label><button class="btn ghost fm-add" id="fm-type">Type N, E</button>';
  $('fm-lay').querySelectorAll('[data-fmk]').forEach(c=>{c.onchange=()=>fmSet(c.dataset.fmk,c.checked);});
  $('fm-lay').querySelectorAll('[data-fmb]').forEach(b=>{b.onclick=()=>{FM.base=b.dataset.fmb;FM.fail=0;FM.ok=0;try{localStorage.setItem('efn-fmbase',FM.base);}catch(e){}fmLayRow();fmDraw();};});
+ $('fm-type').onclick=fmTypeOpen;
  const f=$('fm-file');f.onchange=()=>{if(f.files&&f.files.length)fmAddFiles([...f.files]);f.value='';};}
 async function fmGeo(a){
  try{const c=JSON.parse(localStorage.getItem('efn-geo2')||'{}');if(c[a])return c[a];}catch(e){}
@@ -4550,10 +4646,10 @@ async function fmGeo(a){
   try{const c=JSON.parse(localStorage.getItem('efn-geo2')||'{}'),ks=Object.keys(c);if(ks.length>60)delete c[ks[0]];c[a]=g;localStorage.setItem('efn-geo2',JSON.stringify(c));}catch(e){}
   return g;}catch(e){return null;}}
 function fmGpsStart(){if(FM.watch!=null||!navigator.geolocation)return;
- try{FM.watch=navigator.geolocation.watchPosition(p=>{const first=!FM.gps;FM.gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0};
+ try{FM.watch=navigator.geolocation.watchPosition(p=>{const first=!FM.gps;FM.gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0};if(typeof p.coords.heading==='number'&&isFinite(p.coords.heading)&&p.coords.speed>0.7)FM.course={v:p.coords.heading,t:Date.now()};
    if(first&&!FM.geo){FM.c=fmW(FM.gps.lat,FM.gps.lng);FM.z=19;}fmDraw();},()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}catch(e){FM.watch=null;}}
 function fmGpsStop(){if(FM.watch!=null&&navigator.geolocation){try{navigator.geolocation.clearWatch(FM.watch);}catch(e){}}FM.watch=null;}
-async function fmOpen(){show('v-fmap');fmWire();fmLayRow();fmLegDraw();fmInfo('');FM.say='';FM.fail=0;FM.ok=0;
+async function fmOpen(){show('v-fmap');fmWire();fmTypedSync();fmLayRow();fmLegDraw();fmInfo('');FM.say='';FM.fail=0;FM.ok=0;
  const addr=[($('f-addr')||{}).value,($('f-city')||{}).value].map(x=>String(x||'').trim()).filter(Boolean).join(', ');
  const job=String(($('f-job')||{}).value||(note&&note.job)||'').trim();
  $('fm-sub').textContent=[job,addr].filter(Boolean).join(' · ');
@@ -4568,7 +4664,7 @@ async function fmOpen(){show('v-fmap');fmWire();fmLayRow();fmLegDraw();fmInfo(''
  if(!FM.c){FM.c=fmW(49.14,-122.85);FM.z=11;}   /* Lower Mainland until an address or a GPS fix lands */
  fmDraw();}
 $('b-fmap').onclick=()=>{fmOpen();};
-$('fm-back').onclick=()=>{fmGpsStop();show('v-note');};
+$('fm-back').onclick=()=>{fmGpsStop();FM.go=null;fmGoDraw();show('v-note');};
 $('fm-zi').onclick=()=>fmZoom(1);
 $('fm-zo').onclick=()=>fmZoom(-1);
 $('fm-loc').onclick=()=>{
