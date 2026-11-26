@@ -1,5 +1,17 @@
 # Elevate Field — Changelog
 
+## Build 35.3 — 2026-11-26 (all crews)
+Only `index.html` and this file changed. `sw.js` is the same as 34.1.
+- **Our control stands out in its own colour on the Site map** (Finny, on the Office map: "Usually, all of our control is in a green color. It might help it stick out a little bit more from the map… even the pt# text / desc text color of the control match that color… if you're already using green for monuments, maybe some other color, just a color so we know what's what"). Follows **Office 1.48.2**, same colours:
+  - **Magenta symbols** for traverse hubs, control nails and spikes — the 12 codes AutoMap puts on the CONTROL layer: OCN, OCNT, OPM, ORLT, OSPK, OCC, OIB, OMAG, ORBR, OSC, OSM, OSP. Magenta rather than green because green, purple and red are already the province's monuments.
+  - **The point number beside each is a lighter pink** of the same colour.
+  - **Pins and posts stay black with the white edge** (iron posts, lead plugs, the various posts, our control monuments — the PINS-layer symbols), with white point numbers.
+  - Legend line under the map: "our control (magenta) and found pins (black) are drawn as on your plans · tap one for its legend name".
+- Nothing else changed: against the live Build 35.2 the differences are the two colour constants, the ink in the symbol's second pass, the label colour and that legend line. Symbol shapes, sizes and tap wording are as 35.2. The What's-new card is not shown again (still Build 35).
+- Tests: Site map suite 145 checks (7 new: the two colours, exactly the 12 CONTROL codes take magenta, pixel checks that a hub is magenta and an iron post still black, pink number beside control and white beside a pin); real-browser-with-service-worker 9; note-loss 23; symbol snap 20; storage 12 — all green. Symbol sheet and a phone-sized map re-rendered and checked by eye on a stand-in background.
+- **Not re-run: the 116-check upload suite** (still to be rebuilt before the upload go-live build). The upload code is untouched.
+- Not checked: magenta on a real air photo on a phone in daylight; Office 1.48.2 itself (colours taken from its project notes).
+
 ## Build 35.2 — 2026-11-26 (all crews)
 Only `index.html` and this file changed. `sw.js` is the same as 34.1.
 - **Control symbols redrawn to match the plan and the frame legend** (Finny, on the Office map: "Seem a little goofy… All of these seem to have a circle around them… a little bit big as well and kind of crowding up the picture"; then "See the latest build and update accordingly"). The Site map now follows **Office 1.48.1** — same table, same drawing rules:

@@ -4448,7 +4448,7 @@ async function fmAddFiles(files){const S=FM.sets,msgs=[];
 function fmVisible(){const out=[];FM.sets.forEach(s=>{if(s.hold)return;s.pts.forEach(p=>{if(FM.all||p.cls!=='topo')out.push({p,s});});});return out;}
 function fmLegDraw(){const el=$('fm-leg');if(!el)return;const S=FM.sets;let h='';
  if(S.length){h+=S.map(s=>'<span class="fm-chip"><i style="background:'+s.col+'"></i>'+esc(s.name)+' — '+(s.typed?s.pts.length+' point'+(s.pts.length===1?'':'s')+', kept with this note':s.nc+' control, '+s.np+' pin'+(s.np===1?'':'s'))+(s.hold?' (not shown)':'')+' <a data-fmx="'+esc(s.name)+'" style="text-decoration:underline">'+(s.typed?'clear all':'remove')+'</a></span>').join('')+
-   '<label class="fm-cb"><input type="checkbox" id="fm-all" '+(FM.all?'checked':'')+'> Every point</label> <span style="opacity:.75">control and posts are drawn as on your plans · tap one for its legend name</span>';}
+   '<label class="fm-cb"><input type="checkbox" id="fm-all" '+(FM.all?'checked':'')+'> Every point</label> <span style="opacity:.75">our control (magenta) and found pins (black) are drawn as on your plans · tap one for its legend name</span>';}
  FM.msg.forEach(m=>{h+='<div style="margin-top:4px'+(m.bad?';color:var(--danger)':'')+'">'+m.t+'</div>';});
  h+='<div style="margin-top:4px;opacity:.8"><span style="color:#16a34a">▲</span> geodetic · <span style="color:#a855f7">▲</span> benchmark · <span style="color:#ef4444">▲</span> destroyed · <span style="color:#e09000;font-weight:800">━</span> lot line · <span style="color:#06b6d4;font-weight:800">━</span> interest line · <span style="color:#ca8a04">◆</span> typed · tap anything for details</div>';
  el.innerHTML=h;
@@ -4470,6 +4470,10 @@ const FM_SYMCODE={"OCN":"ICI_FTH","OCNT":"ICI_FTH","OPM":"ICI_FTH","ORLT":"ICI_F
 const FM_SYMSIZE={"ICI_FSIP":0.57,"ICM_PSIP_WIPEOUT":0.57,"ICI_FLP":0.8,"ICM_PLP_WIPEOUT":0.8,"ICI_FTH":0.83,"ICM_FTH":0.83,"ICM_CM":1,"ICM_CM_WIPEOUT":1,"ICI_FSCP_WIPEOUT":1,"ICI_PSCP_WIPEOUT":1,"ICM_FSCP":1,"ICI_PSCP":1,"ICI_FSC_WIPEOUT":0.86,"ICI_PSC_WIPEOUT":0.86,"ICI_FSRP_WIPEOUT":1,"ICI_PSRP_WIPEOUT":1,"ICM_AP_WIPEOUT":1.42,"OIPNS_WIPEOUT":0.86,"ICM_DIP":1.2,"ICM_RIP":1.2};
 const FM_SYMNAME={"ICI_FSIP":"standard iron post found","ICM_PSIP_WIPEOUT":"standard iron post set","ICI_FLP":"lead plug found","ICM_PLP_WIPEOUT":"lead plug set","ICI_FTH":"traverse hub found","ICM_FTH":"traverse hub found","ICM_CM":"control monument found","ICM_CM_WIPEOUT":"control monument found","ICI_FSCP_WIPEOUT":"standard concrete post found","ICI_PSCP_WIPEOUT":"standard concrete post set","ICM_FSCP":"standard concrete post found","ICI_PSCP":"standard concrete post set","ICI_FSC_WIPEOUT":"standard capped post found","ICI_PSC_WIPEOUT":"standard capped post set","ICI_FSRP_WIPEOUT":"standard rock post found","ICI_PSRP_WIPEOUT":"standard rock post set","ICM_AP_WIPEOUT":"aluminum post","OIPNS_WIPEOUT":"non-standard post","ICM_DIP":"old pattern Dominion iron post","ICM_RIP":""};
 function fmSymFor(code){const n=FM_SYMCODE[String(code||'').toUpperCase()];return n&&FM_SYM[n]?n:null;}
+/* Build 35.3 (Office 1.48.2): our control — the symbols AutoMap puts on the CONTROL layer (hubs, nails, spikes) — in its own colour.
+   Magenta, because green / purple / red are the province's monuments. Pins and posts stay #111. Label beside control takes the tint. */
+const FM_SYMINK={ICI_FTH:'#e600c0',ICM_FTH:'#e600c0'},FM_SYMTINT='#ff9df0';
+function fmSymLabelCol(name){return name&&FM_SYMINK[name]?FM_SYMTINT:'';}
 function fmSymLegend(code){const n=fmSymFor(code);return n&&FM_SYMNAME[n]?FM_SYMNAME[n]:'';}
 /* R = 7 px (the provincial triangles' size) × the legend size. Two passes: white first — 3.1 px under lines and outlines,
    1.8 px round filled shapes, closed outlines filled white (the plan's wipeout) — then the symbol in #111 at 1.3 px.
@@ -4486,7 +4490,7 @@ function fmSym(g,x,y,R,name,ring,sel){const P=FM_SYM[name];if(!P)return false;co
  g.save();g.setLineDash([]);g.lineJoin='round';g.lineCap='round';
  g.fillStyle='#fff';g.strokeStyle='#fff';
  P.forEach(p=>{const t=path(p);if(t==='f'){g.lineWidth=1.8;g.fill('evenodd');g.stroke();}else if(t==='c'){g.lineWidth=3.1;g.fill();g.stroke();}else if(t==='o'){g.lineWidth=3.1;g.stroke();}});
- g.fillStyle='#111';g.strokeStyle='#111';g.lineWidth=1.3;
+ {const ink=FM_SYMINK[name]||'#111';g.fillStyle=ink;g.strokeStyle=ink;}g.lineWidth=1.3;
  P.forEach(p=>{const t=path(p);if(t==='f')g.fill('evenodd');else if(t)g.stroke();});
  if(sel){g.beginPath();g.arc(x,y,r+5,0,2*Math.PI);g.lineWidth=2.5;g.strokeStyle='#22d3ee';g.stroke();}
  g.restore();return true;}
@@ -4498,7 +4502,7 @@ function fmPtsDraw(g,W,H){const L=fmVisible(),rank={topo:0,pin:1,typed:1,ctl:2};
   else{g.lineWidth=sel?3:1.5;g.strokeStyle=sel?'#111':'#fff';g.fillStyle=x.s.col;g.beginPath();
    if(p.cls==='ctl'){g.moveTo(q[0],q[1]-7);g.lineTo(q[0]+6.5,q[1]+5);g.lineTo(q[0]-6.5,q[1]+5);g.closePath();}else if(p.cls==='typed'){g.moveTo(q[0],q[1]-7.5);g.lineTo(q[0]+7.5,q[1]);g.lineTo(q[0],q[1]+7.5);g.lineTo(q[0]-7.5,q[1]);g.closePath();}else g.arc(q[0],q[1],p.cls==='pin'?4.5:2.2,0,7);
    g.fill();if(p.cls!=='topo'||sel)g.stroke();}
-  if(p.cls!=='topo'&&(lab||sel)){const t=p.pt+(FM.z>=19.5&&p.code?' '+p.code:''),dx=sym?(sel?Math.max(10,7*(FM_SYMSIZE[sym]||1)+9):10):8;g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';g.lineJoin='round';g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(t,q[0]+dx,q[1]);g.fillStyle='#fff';g.fillText(t,q[0]+dx,q[1]);}});}
+  if(p.cls!=='topo'&&(lab||sel)){const t=p.pt+(FM.z>=19.5&&p.code?' '+p.code:''),dx=sym?(sel?Math.max(10,7*(FM_SYMSIZE[sym]||1)+9):10):8;g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';g.lineJoin='round';g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(t,q[0]+dx,q[1]);g.fillStyle=fmSymLabelCol(sym)||'#fff';g.fillText(t,q[0]+dx,q[1]);}});}
 function fmPtsPick(at){if(!FM.sets.length)return false;const [W,H]=fmSize();let best=null,bd=16;const rank={ctl:0,pin:1,typed:1,topo:2};
  fmVisible().forEach(x=>{const q=fmXY(x.p.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<=16&&(!best||rank[x.p.cls]<rank[best.p.cls]||(rank[x.p.cls]===rank[best.p.cls]&&d<bd))){best=x;bd=d;}});
  if(!best)return false;const p=best.p;FM.selW=p.w;FMZ.monSel=null;
