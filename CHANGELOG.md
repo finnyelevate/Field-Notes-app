@@ -1,5 +1,34 @@
 # Elevate Field — Changelog
 
+## Build 35.9 — 2026-11-27 (all crews)
+Only `index.html` and this file changed. `sw.js` is the same as 34.1. **Includes 35.8** (Delta and City of Langley), which was not uploaded on its own; 35.7 was live when this was built.
+- **Utilities now also cover the Township of Langley and Burnaby.** Chosen from a count of the jobs master (2,678 jobs since 2020): after Surrey, the Township of Langley is where the most jobs are. Five cities are now covered — Surrey, Delta, City of Langley, Township of Langley, Burnaby — about half of all jobs.
+  - **Township of Langley:** storm mains, leads, connections, manholes, culverts and channels; sanitary mains, leads, connections, manholes and valves; water mains, leads, connections, valves and hydrants. A tap gives type, size, material, **upstream and downstream elevations**, date installed and the as-built number.
+  - **Burnaby:** storm mains, service lines, fittings and catch basins; sanitary **and combined** sewers (mains, service lines, fittings) under the Sanitary box; water mains, service lines and hydrants. A tap gives pipe type, size, length, slope, offset, install date and the as-built number. **Burnaby draws storm in purple and sanitary in brown** — its colours, not ours.
+  - Inside the Township's area, the City of Langley is still answered by the City.
+- Pipe codes such as PVC, VCP and CONC are now left in capitals in the tap info.
+- **Still not covered, and why:** Vancouver and Abbotsford publish their utility data as raw data, not as a ready-made map picture, so they need a different way of drawing (the next piece of work — together they are about 17 % of jobs). The remaining cities are in `claude/field-utilities-by-city.md`.
+- Checked on the real services from Finny's Chrome: Township (Walnut Grove) and Burnaby (Metrotown area) both return pictures and tap answers.
+- Tests: Site map suite 234 checks (5 new, 3 updated); real-browser-with-service-worker 9; note-loss 23; symbol snap 20; storage 12 — all green.
+- **Not re-run: the 116-check upload suite.** The upload code is untouched.
+- **Not checked by eye:** any city's lines over the air photo, or on a real phone.
+
+## Build 35.8 — 2026-11-27 (all crews)
+Only `index.html` and this file changed. `sw.js` is the same as 34.1. Built on 35.7, which is live.
+- **Utilities now cover Delta and the City of Langley as well as Surrey** (Finny: "that order is fine, but eventually we'll want all these municipalities on our resources tab"). Same Utilities tick box, same Storm / Sanitary / Water boxes; the map works out which city you are looking at and asks that city.
+  - **Delta:** storm mains, manholes, catch basins, headwalls, culverts, ditches and service connections; sanitary mains, forcemains, manholes and service connections (Delta's, Metro Vancouver's and private ones); water mains, valves, hydrants and connections. A tap gives pipe size, type and material, and Delta's **offset** (e.g. "9.87S") and **record plan number**.
+  - **City of Langley:** the city's whole storm, sanitary and water groups as the city draws them, including its invert labels when zoomed in. A tap gives size, material, grade, invert, as-built year and the city's ID.
+  - Each city names its fields differently; the tap now understands Surrey's, Delta's and Langley's.
+  - Outside these three the map says "no city data here yet (Surrey, Delta and City of Langley so far)".
+- **City boundaries are rough rectangles.** Right at a boundary (for example Scott Road or 196 Street) the map can ask the wrong city and show nothing — pan a little further into the city and it corrects itself.
+- **Not added yet, and why:**
+  - **Township of Langley** — its map viewer (GeoSource) is known but I have not found a data service behind it that an app can read.
+  - **Abbotsford** — it has moved to a newer kind of map that hands out the data itself, not a ready-made picture, so it needs a different way of drawing. That is a build of its own.
+- Checked on the real services from Finny's Chrome: Delta (Ladner Trunk Road) and City of Langley (Douglas Crescent) both return pictures and tap answers; colours are green for storm, red for sanitary, blue for water in both.
+- Tests: Site map suite 229 checks (6 new: the three cities and which is picked where, Delta's pictures and credit, Delta's field names, City of Langley's pictures from its one service, its field names and the layers asked); real-browser-with-service-worker 9; note-loss 23; symbol snap 20; storage 12 — all green.
+- **Not re-run: the 116-check upload suite** (still to be rebuilt before the upload go-live build). The upload code is untouched.
+- **Not checked by eye:** any of the three cities' lines over the air photo, or on a real phone. Delta's sanitary and water tap answers and Langley's manhole answers were not seen with full details (the test spot returned little), so their wording may be thin until tried on site.
+
 ## Build 35.7 — 2026-11-27 (all crews)
 Only `index.html` and this file changed. `sw.js` is the same as 34.1. **Includes 35.6** (monument coordinates), which was not uploaded on its own.
 - **City utilities on the Site map — Surrey first** (a crew asked for storm and sanitary manholes and the like; Finny: "Let's do Surrey first then we can move towards Langley and Delta, Abbotsford").
