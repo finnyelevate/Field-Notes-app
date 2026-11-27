@@ -172,7 +172,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 #fm-info{position:absolute;left:8px;right:8px;bottom:30px;z-index:4;background:var(--paper);color:var(--ink,#24312B);font-size:13px;line-height:1.45;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;display:none;word-break:break-word;max-height:46%;overflow-y:auto;box-shadow:0 4px 18px rgba(0,0,0,.35);cursor:auto;touch-action:auto;user-select:text;-webkit-user-select:text}
 #fm-leg{font-size:12px;margin-top:6px;line-height:1.5}
 .fm-chip{display:inline-flex;align-items:center;gap:5px;margin:0 8px 2px 0}
-.fm-chip i{display:inline-block;width:11px;height:11px;border-radius:2px}
+.fm-chip i{display:inline-block;width:11px;height:11px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
 .vu-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)}
 .vu-row .vgo{font-size:17px;text-decoration:none;padding:4px 8px;flex:none}
 .modal{background:var(--paper);border-radius:18px 18px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom) + 20px);width:100%;max-width:560px}
@@ -236,6 +236,7 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
     <button class="htab on" data-ht="notes">📓 Notes</button>
     <button class="htab" data-ht="res">📚 Resources</button>
     <button class="htab" data-ht="train">🎓 Training</button>
+    <button class="htab" id="b-hmap" style="flex:0 0 auto;padding:12px 14px">🗺 Map</button>
   </div>
   <div class="scroll" id="home-list"></div>
   <div class="scroll" id="res-list" style="display:none"></div>
@@ -295,7 +296,8 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
 <div class="view" id="v-fmap">
   <div class="bar">
     <button class="bicon" id="fm-back">‹</button>
-    <h1 style="font-size:16px">Site map<span class="sub" id="fm-sub"></span></h1>
+    <h1 style="font-size:16px;min-width:0;overflow:hidden">Site map<span class="sub" id="fm-sub"></span></h1>
+    <button class="bicon" id="fm-find" title="go to an address">🔍</button>
     <button class="bicon" id="fm-zi">＋</button>
     <button class="bicon" id="fm-zo">−</button>
     <button class="bicon" id="fm-loc" title="centre on me">📍</button>
@@ -491,6 +493,14 @@ canvas.gdiag{width:100%;border:1.5px solid var(--line);border-radius:12px;margin
   <div class="field"><label>Label (optional)</label><input id="ft-l" autocomplete="off" placeholder="e.g. OIP NE cnr"></div>
   <div class="card-sub" id="ft-msg" style="display:none;margin:8px 0 0;line-height:1.4"></div>
   <div style="display:flex;gap:10px;margin-top:12px"><button class="btn ghost" id="ft-cancel" style="flex:1">Cancel</button><button class="btn" id="ft-add" style="flex:1">Add to map</button></div>
+</div></div>
+
+<div class="mback" id="m-fmfind" style="z-index:22"><div class="modal">
+  <h2>Go to an address</h2>
+  <div class="card-sub" style="margin-bottom:10px;line-height:1.5">Street address and city, e.g. <span class="mono">16120 96 Ave, Surrey</span>. An intersection works too: <span class="mono">152 St and 68 Ave, Surrey</span>. BC only.</div>
+  <div class="field"><label>Address</label><input id="ff-q" autocomplete="off" autocapitalize="words" enterkeyhint="search" placeholder="number, street, city"></div>
+  <div class="card-sub" id="ff-msg" style="display:none;margin:8px 0 0;line-height:1.4"></div>
+  <div style="display:flex;gap:10px;margin-top:12px"><button class="btn ghost" id="ff-cancel" style="flex:1">Cancel</button><button class="btn" id="ff-go" style="flex:1">Go</button></div>
 </div></div>
 
 <div class="mback" id="m-msvu" style="z-index:21"><div class="modal">
@@ -4293,8 +4303,12 @@ const FM_LAY={lab:['WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW'],mon:['WHSE_REFER
 const FM_MINZ={lab:18,mon:14,adr:18,int:16},FM_MAX={lab:1200,mon:1000,adr:900};
 const FM_CONTROL={};'CONP CP IP LP MON MONUMENT OAP OCC OCM OCN OCNT OCONP OCP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OMAG OMON OPCON OPIPE OPM OPP OPPIPE ORBR ORLT ORP OSC OSM OSP OSPK RP'.split(' ').forEach(k=>{FM_CONTROL[k]=1;});
 const FM_PINS={};'IP LP OIB OIP OIPB OIPT OIPDLS OIPIPE OIPIPE2 OIPNS OLP OPIPE OPPIPE ORBR ORP RP'.split(' ').forEach(k=>{FM_PINS[k]=1;});
-const FM_COL=['#d6336c','#7048e8','#e8590c','#0b7285','#5c940d','#862e9c'];
-let FM={z:19,c:null,base:'esri',key:'',imgs:{},geo:null,gps:null,watch:null,sets:[],msg:[],selW:null,fail:0,ok:0,all:false,tap:0,tapAt:[0,0],say:'',onv:{}};
+/* Build 35.4: points-file colours kept clear of everything else on the map (green / purple / red monuments, magenta control,
+   orange lot lines and SITE, light-blue interests and selection, blue GPS dot and job pins, yellow typed points). */
+const FM_COL=['#c6f432','#ffffff','#5eead4','#e0b184','#a5b4fc'];
+/* the point number beside a dot takes a lighter tint of the dot's colour, so it is not mistaken for the white PID / house-number / street text */
+function fmTint(col){const m=/^#([0-9a-f]{6})$/i.exec(col||'');if(!m)return '#fff';const n=parseInt(m[1],16);return '#'+[n>>16,(n>>8)&255,n&255].map(v=>Math.round(v+(255-v)*.45).toString(16).padStart(2,'0')).join('');}
+let FM={z:19,c:null,base:'esri',key:'',imgs:{},geo:null,gps:null,watch:null,sets:[],msg:[],selW:null,fail:0,ok:0,all:true,tap:0,tapAt:[0,0],say:'',onv:{}};
 let FMZ={ver:0,joinKey:'',monSel:null,
  lab:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0},
  mon:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0,more:false},
@@ -4441,19 +4455,19 @@ async function fmAddFiles(files){const S=FM.sets,msgs=[];
    const ref=FM.geo||FM.gps,km=ref?fmDist(ref,X)/1000:0;X.col=FM_COL[S.filter(x=>x.name!==nm).length%FM_COL.length];
    const at=S.findIndex(x=>x.name===nm);if(at>=0){X.col=S[at].col;S[at]=X;}else S.push(X);
    if(km>2){X.hold=true;msgs.push({bad:true,t:'<b>'+esc(nm)+'</b> is in UTM but its points are about '+(km<10?km.toFixed(1):Math.round(km))+' km from '+(FM.geo?'this site':'you')+' — is it the right job’s file? <a data-fmshow="'+esc(nm)+'" style="text-decoration:underline">Show it anyway</a> · <a data-fmx="'+esc(nm)+'" style="text-decoration:underline">Remove</a>'});}
-   else{if(!X.nc&&!X.np)msgs.push({t:'<b>'+esc(nm)+'</b>: '+X.n+' points, none on the control layer — tick “Every point” to see them.'});
+   else{if(!X.nc&&!X.np)msgs.push({t:'<b>'+esc(nm)+'</b>: '+X.n+' points with no control or pin codes — shown as dots with their point numbers (zoom in for the numbers).'});
     if(!FM.geo&&!FM.gps){FM.c=fmW(X.lat,X.lng);FM.z=18;}}
   }catch(e){msgs.push({bad:true,t:'<b>'+esc(nm)+'</b> '+esc((e&&e.message)||'couldn’t be read')+'.'});}}
  FM.msg=msgs;fmLegDraw();fmDraw();}
 function fmVisible(){const out=[];FM.sets.forEach(s=>{if(s.hold)return;s.pts.forEach(p=>{if(FM.all||p.cls!=='topo')out.push({p,s});});});return out;}
 function fmLegDraw(){const el=$('fm-leg');if(!el)return;const S=FM.sets;let h='';
- if(S.length){h+=S.map(s=>'<span class="fm-chip"><i style="background:'+s.col+'"></i>'+esc(s.name)+' — '+(s.typed?s.pts.length+' point'+(s.pts.length===1?'':'s')+', kept with this note':s.nc+' control, '+s.np+' pin'+(s.np===1?'':'s'))+(s.hold?' (not shown)':'')+' <a data-fmx="'+esc(s.name)+'" style="text-decoration:underline">'+(s.typed?'clear all':'remove')+'</a></span>').join('')+
-   '<label class="fm-cb"><input type="checkbox" id="fm-all" '+(FM.all?'checked':'')+'> Every point</label> <span style="opacity:.75">our control (magenta) and found pins (black) are drawn as on your plans · tap one for its legend name</span>';}
+ if(S.length){h+=S.map(s=>'<span class="fm-chip"><i style="background:'+s.col+'"></i>'+esc(s.name)+' — '+(s.typed?s.pts.length+' point'+(s.pts.length===1?'':'s')+(FM.solo?', kept until you close the app':', kept with this note'):s.nc+' control, '+s.np+' pin'+(s.np===1?'':'s'))+(s.hold?' (not shown)':'')+' <a data-fmx="'+esc(s.name)+'" style="text-decoration:underline">'+(s.typed?'clear all':'remove')+'</a></span>').join('')+
+   '<label class="fm-cb"><input type="checkbox" id="fm-all" '+(FM.all?'checked':'')+'> Every point</label><div style="margin-top:3px;opacity:.75">our control (magenta) and found pins (black) are drawn as on your plans · untick “Every point” to see control and pins only</div>';}
  FM.msg.forEach(m=>{h+='<div style="margin-top:4px'+(m.bad?';color:var(--danger)':'')+'">'+m.t+'</div>';});
  h+='<div style="margin-top:4px;opacity:.8"><span style="color:#16a34a">▲</span> geodetic · <span style="color:#a855f7">▲</span> benchmark · <span style="color:#ef4444">▲</span> destroyed · <span style="color:#e09000;font-weight:800">━</span> lot line · <span style="color:#06b6d4;font-weight:800">━</span> interest line · <span style="color:#ca8a04">◆</span> typed · tap anything for details</div>';
  el.innerHTML=h;
  const a=$('fm-all');if(a)a.onchange=()=>{FM.all=a.checked;fmDraw();};
- el.querySelectorAll('[data-fmx]').forEach(b=>{b.onclick=()=>{if(note&&FM.sets.some(x=>x.typed&&x.name===b.dataset.fmx)){note.mapPts=[];store.put(note).catch(()=>{});}FM.sets=FM.sets.filter(s=>s.name!==b.dataset.fmx);FM.msg=[];FM.selW=null;fmInfo('');fmLegDraw();fmDraw();};});
+ el.querySelectorAll('[data-fmx]').forEach(b=>{b.onclick=()=>{if(FM.sets.some(x=>x.typed&&x.name===b.dataset.fmx)){if(FM.solo)FM.soloPts=[];else if(note){note.mapPts=[];store.put(note).catch(()=>{});}}FM.sets=FM.sets.filter(s=>s.name!==b.dataset.fmx);FM.msg=[];FM.selW=null;fmInfo('');fmLegDraw();fmDraw();};});
  el.querySelectorAll('[data-fmshow]').forEach(b=>{b.onclick=()=>{const s=FM.sets.find(x=>x.name===b.dataset.fmshow);if(!s)return;s.hold=false;FM.msg=[];FM.c=fmW(s.lat,s.lng);FM.z=17;fmLegDraw();fmDraw();};});}
 /* ---- Build 35.2: control drawn as on the plan and frame legend — SAME TABLE AND RENDERER RULES AS OFFICE 1.48.1 ----
    (project doc claude/office-build-1.48.1-addendum.md, "Table for Field"; replaces the 35.1 / Office 1.48.0 version)
@@ -4495,18 +4509,21 @@ function fmSym(g,x,y,R,name,ring,sel){const P=FM_SYM[name];if(!P)return false;co
  if(sel){g.beginPath();g.arc(x,y,r+5,0,2*Math.PI);g.lineWidth=2.5;g.strokeStyle='#22d3ee';g.stroke();}
  g.restore();return true;}
 function fmPtsDraw(g,W,H){const L=fmVisible(),rank={topo:0,pin:1,typed:1,ctl:2};L.sort((a,b)=>rank[a.p.cls]-rank[b.p.cls]);const lab=FM.z>=18;
+ /* Build 35.4: every point carries its number. A dense topo file would bury the map, so with more than 250 uncoded points
+    in view their numbers wait until zoom 19.5; control, pins and typed points are always numbered from zoom 18. */
+ let nTopo=0;L.forEach(x=>{if(x.p.cls==='topo'){const q=fmXY(x.p.w,W,H);if(q[0]>=0&&q[1]>=0&&q[0]<=W&&q[1]<=H)nTopo++;}});const topoLab=nTopo<=250||FM.z>=19.5;
  L.forEach(x=>{const p=x.p,q=fmXY(p.w,W,H);if(q[0]<-20||q[1]<-20||q[0]>W+20||q[1]>H+20)return;const sel=FM.selW===p.w;
   /* control and found posts: the symbol from the plan legend; anything without one (OIPT, topo shots, typed points) as before */
   const sym=(p.cls==='ctl'||p.cls==='pin')?fmSymFor(p.code):null;
   if(sym)fmSym(g,q[0],q[1],7,sym,x.s.col,sel);
-  else{g.lineWidth=sel?3:1.5;g.strokeStyle=sel?'#111':'#fff';g.fillStyle=x.s.col;g.beginPath();
-   if(p.cls==='ctl'){g.moveTo(q[0],q[1]-7);g.lineTo(q[0]+6.5,q[1]+5);g.lineTo(q[0]-6.5,q[1]+5);g.closePath();}else if(p.cls==='typed'){g.moveTo(q[0],q[1]-7.5);g.lineTo(q[0]+7.5,q[1]);g.lineTo(q[0],q[1]+7.5);g.lineTo(q[0]-7.5,q[1]);g.closePath();}else g.arc(q[0],q[1],p.cls==='pin'?4.5:2.2,0,7);
-   g.fill();if(p.cls!=='topo'||sel)g.stroke();}
-  if(p.cls!=='topo'&&(lab||sel)){const t=p.pt+(FM.z>=19.5&&p.code?' '+p.code:''),dx=sym?(sel?Math.max(10,7*(FM_SYMSIZE[sym]||1)+9):10):8;g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';g.lineJoin='round';g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(t,q[0]+dx,q[1]);g.fillStyle=fmSymLabelCol(sym)||'#fff';g.fillText(t,q[0]+dx,q[1]);}});}
+  else{g.lineWidth=sel?3:(p.cls==='typed'?1.5:1.2);g.strokeStyle=(sel||p.cls!=='typed')?'#111':'#fff';g.fillStyle=x.s.col;g.beginPath();
+   if(p.cls==='ctl'){g.moveTo(q[0],q[1]-7);g.lineTo(q[0]+6.5,q[1]+5);g.lineTo(q[0]-6.5,q[1]+5);g.closePath();}else if(p.cls==='typed'){g.moveTo(q[0],q[1]-7.5);g.lineTo(q[0]+7.5,q[1]);g.lineTo(q[0],q[1]+7.5);g.lineTo(q[0]-7.5,q[1]);g.closePath();}else g.arc(q[0],q[1],p.cls==='pin'?4.5:3.2,0,7);
+   g.fill();g.stroke();}
+  if((sel||(lab&&(p.cls!=='topo'||topoLab)))){const t=p.pt+(FM.z>=19.5&&p.code?' '+p.code:''),dx=sym?(sel?Math.max(10,7*(FM_SYMSIZE[sym]||1)+9):10):8;g.font='bold 12px sans-serif';g.textAlign='left';g.textBaseline='middle';g.lineJoin='round';g.lineWidth=3.5;g.strokeStyle='rgba(0,0,0,.9)';g.strokeText(t,q[0]+dx,q[1]);g.fillStyle=fmSymLabelCol(sym)||(sym?'#fff':fmTint(x.s.col));g.fillText(t,q[0]+dx,q[1]);}});}
 function fmPtsPick(at){if(!FM.sets.length)return false;const [W,H]=fmSize();let best=null,bd=16;const rank={ctl:0,pin:1,typed:1,topo:2};
  fmVisible().forEach(x=>{const q=fmXY(x.p.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<=16&&(!best||rank[x.p.cls]<rank[best.p.cls]||(rank[x.p.cls]===rank[best.p.cls]&&d<bd))){best=x;bd=d;}});
  if(!best)return false;const p=best.p;FM.selW=p.w;FMZ.monSel=null;
- fmInfo('<b>'+esc(String(p.pt))+'</b> '+esc(p.desc||'(no description)')+' — '+(p.cls==='ctl'?'survey control':p.cls==='pin'?'found pin / post':p.cls==='typed'?'typed coordinate':'shot')+((p.cls==='ctl'||p.cls==='pin')&&fmSymLegend(p.code)?' — on the plan: '+esc(fmSymLegend(p.code)):'')+' · from <b>'+esc(best.s.name)+'</b>'+fmFrom(p)+'<br><span class="mono">N '+p.N.toFixed(3)+'  E '+p.E.toFixed(3)+(isFinite(p.Z)?'  Z '+p.Z.toFixed(3):'')+'</span>',{lat:p.lat,lng:p.lng,label:'point '+p.pt,typed:p.ti});
+ fmInfo('<b>'+esc(String(p.pt))+'</b> '+esc(p.desc||'(no description)')+' — '+(p.cls==='ctl'?'survey control':p.cls==='pin'?'found pin / post':p.cls==='typed'?'typed coordinate':(p.desc?'shot':'point'))+((p.cls==='ctl'||p.cls==='pin')&&fmSymLegend(p.code)?' — on the plan: '+esc(fmSymLegend(p.code)):'')+' · from <b>'+esc(best.s.name)+'</b>'+fmFrom(p)+'<br><span class="mono">N '+p.N.toFixed(3)+'  E '+p.E.toFixed(3)+(isFinite(p.Z)?'  Z '+p.Z.toFixed(3):'')+'</span>',{lat:p.lat,lng:p.lng,label:'point '+p.pt,typed:p.ti});
  fmDraw();return true;}
 /* ---- our existing jobs: read from the jobs master in SharePoint with the crew's Microsoft sign-in ---- */
 function fmCsvRows(text){const out=[];let row=[],cur='',q=false;
@@ -4566,19 +4583,22 @@ function fmTypedParse(nTxt,eTxt){const a=String(nTxt||'').trim(),b=String(eTxt||
  if(!(okN(N)&&okE(E))){if(okN(E)&&okE(N)){const t=N;N=E;E=t;swapped=true;}
   else return {err:'That isn’t a UTM zone 10 position (a northing is about 5,4xx,xxx and an easting about 5xx,xxx). Local or assumed coordinates can’t be placed on the map.'};}
  return {N,E,Z,pt,desc,swapped};}
-function fmTypedSync(){FM.sets=FM.sets.filter(s=>!s.typed);const L=(note&&note.mapPts)||[];if(!L.length)return;
+/* Build 35.5: the map can be opened from the home screen with no note. Typed points then live in FM.soloPts (until the app is closed). */
+function fmTypedList(make){if(FM.solo)return FM.soloPts||(FM.soloPts=[]);if(!note)return [];return note.mapPts||(make?(note.mapPts=[]):[]);}
+function fmTypedSave(){if(!FM.solo&&note)store.put(note).catch(()=>{});}
+function fmTypedSync(){FM.sets=FM.sets.filter(s=>!s.typed);const L=fmTypedList();if(!L.length)return;
  const pts=L.map((r,i)=>{const g=fmLL(r.E,r.N,10),d=String(r.desc||'').trim();return {pt:r.pt,N:r.N,E:r.E,Z:r.Z==null?NaN:r.Z,desc:d,code:(d.split(/[\s,]+/)[0]||'').toUpperCase(),cls:'typed',ti:i,lat:g.lat,lng:g.lng,w:fmW(g.lat,g.lng)};});
  FM.sets.unshift({name:'Typed coordinates',typed:true,col:'#fde047',pts,n:pts.length,nc:0,np:0,lat:pts[0].lat,lng:pts[0].lng});}
-function fmTypeOpen(){if(!note){toast('Open a note first.');return;}['ft-n','ft-e','ft-l'].forEach(id=>{$(id).value='';});FM.tpt='';const m=$('ft-msg');m.style.display='none';m.textContent='';$('m-fmtype').classList.add('on');try{$('ft-n').focus();}catch(e){}}
+function fmTypeOpen(){if(!note&&!FM.solo){toast('Open a note first.');return;}['ft-n','ft-e','ft-l'].forEach(id=>{$(id).value='';});FM.tpt='';const m=$('ft-msg');m.style.display='none';m.textContent='';$('m-fmtype').classList.add('on');try{$('ft-n').focus();}catch(e){}}
 function fmTypedAdd(){const r=fmTypedParse($('ft-n').value,$('ft-e').value),msg=$('ft-msg');
  if(r.err){msg.style.display='block';msg.style.color='var(--danger)';msg.textContent=r.err;return;}
- if(!note)return;const L=note.mapPts||(note.mapPts=[]),lab=String($('ft-l').value||'').trim();
+ if(!note&&!FM.solo)return;const L=fmTypedList(true),lab=String($('ft-l').value||'').trim();
  let pt=r.pt||FM.tpt||'';if(!pt||L.some(x=>x.pt===pt)){let n=L.length+1;while(L.some(x=>x.pt==='T'+n))n++;pt='T'+n;}
- L.push({pt,N:r.N,E:r.E,Z:isFinite(r.Z)?r.Z:null,desc:lab||r.desc||''});store.put(note).catch(()=>{});
+ L.push({pt,N:r.N,E:r.E,Z:isFinite(r.Z)?r.Z:null,desc:lab||r.desc||''});fmTypedSave();
  fmTypedSync();const p=FM.sets[0].pts[L.length-1];FM.c=p.w.slice();if(FM.z<18)FM.z=19;FM.selW=p.w;FMZ.monSel=null;
  $('m-fmtype').classList.remove('on');fmLegDraw();fmDraw();
  fmInfo('<b>'+esc(pt)+'</b> '+esc(p.desc||'(no label)')+' — typed coordinate'+(r.swapped?' <span style="color:var(--danger)">(northing and easting were the other way round — swapped)</span>':'')+fmFrom(p)+'<br><span class="mono">N '+p.N.toFixed(3)+'  E '+p.E.toFixed(3)+'</span>',{lat:p.lat,lng:p.lng,label:'point '+pt,typed:p.ti});}
-function fmTypedRemove(i){if(!note||!note.mapPts)return;note.mapPts.splice(i,1);store.put(note).catch(()=>{});fmTypedSync();FM.selW=null;fmInfo('');fmLegDraw();fmDraw();}
+function fmTypedRemove(i){const L=fmTypedList();if(!L.length)return;L.splice(i,1);fmTypedSave();fmTypedSync();FM.selW=null;fmInfo('');fmLegDraw();fmDraw();}
 /* ---- Build 35: directions — "Drive there" hands off to the phone's maps app; "Go to" is an arrow + distance ---- */
 function fmMapsUrl(t){const ll=t.lat.toFixed(6)+','+t.lng.toFixed(6);return /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent||'')?'https://maps.apple.com/?daddr='+ll+'&dirflg=d':'https://www.google.com/maps/dir/?api=1&destination='+ll;}
 function fmBearing(a,b){const r=Math.PI/180,y=Math.sin((b.lng-a.lng)*r)*Math.cos(b.lat*r),x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lng-a.lng)*r);return (Math.atan2(y,x)/r+360)%360;}
@@ -4640,6 +4660,7 @@ function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box|
  if(FM.geo&&FM.geo.w){const q=fmXY(FM.geo.w,W,H);g.beginPath();g.moveTo(q[0],q[1]);g.lineTo(q[0],q[1]-14);g.lineWidth=4;g.strokeStyle='#fff';g.stroke();g.lineWidth=2;g.strokeStyle='#7c2d12';g.stroke();
   g.beginPath();g.arc(q[0],q[1]-20,7,0,7);g.fillStyle='#f97316';g.fill();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();
   g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';fmText(g,'SITE',q[0]+11,q[1]-20,FM.base!=='esri');}
+ fmFindDraw(g,W,H);
  /* where the phone is: blue dot with its accuracy circle */
  const lat0=fmLatOfW(FM.c),mpp=156543.03392*Math.cos(lat0*Math.PI/180)/Math.pow(2,FM.z);
  if(FM.gps){const q=fmXY(fmW(FM.gps.lat,FM.gps.lng),W,H),r=Math.min(160,(FM.gps.acc||0)/mpp);
@@ -4655,7 +4676,7 @@ function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box|
 function fmZoomTo(z1,at){const [W,H]=fmSize(),z0=FM.z;z1=Math.max(8,Math.min(22,z1));if(z1===z0||!FM.c)return;
  if(at){const s0=Math.pow(2,z0),s1=Math.pow(2,z1),wx=FM.c[0]+(at[0]-W/2)/s0,wy=FM.c[1]+(at[1]-H/2)/s0;FM.c=[wx-(at[0]-W/2)/s1,wy-(at[1]-H/2)/s1];}FM.z=z1;fmDraw();}
 function fmZoom(d,at){fmZoomTo(FM.z+d,at);}
-function fmPick(at){FM.intSeq=(FM.intSeq||0)+1;if(fmPtsPick(at))return;if(fmMonPick(at))return;if(fmJobsPick(at))return;if(fmSitePick(at))return;FM.selW=null;FMZ.monSel=null;fmInfo('');fmDraw();fmIntLookup(at);}
+function fmPick(at){FM.intSeq=(FM.intSeq||0)+1;if(fmPtsPick(at))return;if(fmMonPick(at))return;if(fmJobsPick(at))return;if(fmFindPick(at))return;if(fmSitePick(at))return;FM.selW=null;FMZ.monSel=null;fmInfo('');fmDraw();fmIntLookup(at);}
 function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.dataset.wired='1';
  const P=new Map();let drag=null,moved=false,pinch=null;
  const pos=e=>{const r=box.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
@@ -4664,7 +4685,7 @@ function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.d
   else if(P.size===2){const a=[...P.values()];pinch={d0:Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])||1,z0:FM.z};drag=null;moved=true;}});
  box.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;P.set(e.pointerId,pos(e));
   if(pinch&&P.size===2){const a=[...P.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);if(d>10)fmZoomTo(pinch.z0+Math.log(d/pinch.d0)/Math.LN2,[(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2]);}
-  else if(drag){const p=pos(e),s=Math.pow(2,FM.z),dx=p[0]-drag.at[0],dy=p[1]-drag.at[1];if(Math.abs(dx)+Math.abs(dy)>4)moved=true;if(moved){FM.c=[drag.c[0]-dx/s,drag.c[1]-dy/s];fmDraw();}}});
+  else if(drag){const p=pos(e),s=Math.pow(2,FM.z),dx=p[0]-drag.at[0],dy=p[1]-drag.at[1];if(Math.abs(dx)+Math.abs(dy)>4)moved=true;if(moved){if(FM.follow){fmFollow(false);toast('Stopped following — tap 📍 to follow again.');}FM.c=[drag.c[0]-dx/s,drag.c[1]-dy/s];fmDraw();}}});
  box.addEventListener('pointerup',e=>{const was=P.has(e.pointerId);P.delete(e.pointerId);if(P.size<2)pinch=null;
   if(was&&drag&&!moved){const p=pos(e),t=Date.now();
    if(t-FM.tap<320&&Math.hypot(p[0]-FM.tapAt[0],p[1]-FM.tapAt[1])<26){FM.tap=0;fmZoom(1,p);}else{FM.tap=t;FM.tapAt=p;fmPick(p);}}
@@ -4687,32 +4708,66 @@ async function fmGeo(a){
   if(f.properties&&f.properties.score!=null&&+f.properties.score<50)return null;
   try{const c=JSON.parse(localStorage.getItem('efn-geo2')||'{}'),ks=Object.keys(c);if(ks.length>60)delete c[ks[0]];c[a]=g;localStorage.setItem('efn-geo2',JSON.stringify(c));}catch(e){}
   return g;}catch(e){return null;}}
+/* Build 35.5: go to an address. Same provincial address finder as the note's SITE pin; nothing is saved to the note.
+   The pin is labelled with the address the finder actually matched, so a wrong match is visible. */
+async function fmFindGo(){const q=String($('ff-q').value||'').trim(),msg=$('ff-msg'),say=(t,bad)=>{msg.style.display='block';msg.style.color=bad?'var(--danger)':'';msg.textContent=t;};
+ if(q.length<3){say('Type a street address and city.',true);return;}
+ if(!navigator.onLine){say('No signal — the address finder needs mobile data or Wi‑Fi.',true);return;}
+ say('Looking…');const b=$('ff-go');b.disabled=true;let f=null,fail=false;
+ try{const r=await fetch('https://geocoder.api.gov.bc.ca/addresses.json?maxResults=1&outputSRS=4326&addressString='+encodeURIComponent(q+(/\bbc\b|british columbia/i.test(q)?'':', BC')));
+  if(!r.ok)fail=true;else{const J=await r.json();f=J.features&&J.features[0];}}catch(e){fail=true;}
+ b.disabled=false;
+ if(fail){say('The address finder didn’t answer — check the signal and try again.',true);return;}
+ const c=f&&f.geometry&&f.geometry.coordinates,P=(f&&f.properties)||{},lat=c?+c[1]:NaN,lng=c?+c[0]:NaN;
+ if(!isFinite(lat)||!isFinite(lng)||(P.score!=null&&+P.score<50)){say('Couldn’t find “'+q+'”. Check the spelling and add the city, e.g. 16120 96 Ave, Surrey.',true);return;}
+ const full=String(P.fullAddress||q).replace(/,\s*BC$/i,''),vague=/^(LOCALITY|STREET|PROVINCE)$/i.test(String(P.matchPrecision||''));
+ FM.find={lat,lng,w:fmW(lat,lng),label:full,asked:q,vague};fmFollow(false);FM.c=FM.find.w.slice();FM.z=/^LOCALITY$/i.test(String(P.matchPrecision||''))?13:(vague?16:19);FM.say='';FM.selW=FM.find.w;FMZ.monSel=null;
+ $('m-fmfind').classList.remove('on');fmDraw();fmFindInfo();}
+function fmFindInfo(){const F=FM.find;if(!F)return;
+ fmInfo('<b>Address search</b> — '+esc(F.label)+fmFrom(F)+'<br><span style="opacity:.75">'+(F.vague?'<span style="color:var(--danger)">Only the street or town was matched, not a house number — treat this as approximate.</span> ':'')+'Where the province’s address finder places it. <a data-fmfx style="text-decoration:underline">remove pin</a></span>',{lat:F.lat,lng:F.lng,label:F.label});
+ const x=$('fm-info').querySelector('[data-fmfx]');if(x)x.onclick=()=>{FM.find=null;FM.selW=null;fmInfo('');fmDraw();};}
+function fmFindPick(at){const F=FM.find;if(!F)return false;const [W,H]=fmSize(),q=fmXY(F.w,W,H);if(Math.hypot(q[0]-at[0],q[1]-20-at[1])>16&&Math.hypot(q[0]-at[0],q[1]-at[1])>10)return false;FM.selW=F.w;FMZ.monSel=null;fmFindInfo();fmDraw();return true;}
+function fmFindDraw(g,W,H){const F=FM.find;if(!F)return;const q=fmXY(F.w,W,H);if(q[0]<-200||q[1]<-40||q[0]>W+40||q[1]>H+60)return;
+ g.beginPath();g.moveTo(q[0],q[1]);g.lineTo(q[0],q[1]-14);g.lineWidth=4;g.strokeStyle='#fff';g.stroke();g.lineWidth=2;g.strokeStyle='#111';g.stroke();
+ g.beginPath();g.arc(q[0],q[1]-20,7,0,7);g.fillStyle='#111';g.fill();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();g.beginPath();g.arc(q[0],q[1]-20,2.5,0,7);g.fillStyle='#fff';g.fill();
+ const t=F.label.length>34?F.label.slice(0,33)+'…':F.label;g.font='bold 11px sans-serif';g.textAlign='left';g.textBaseline='middle';fmText(g,t,q[0]+11,q[1]-20,FM.base!=='esri');}
+/* Build 35.4: follow me. 📍 turns it on — the map then re-centres on every GPS fix as the crew walks. Dragging the map turns it off
+   (so they can look around); 📍 again resumes. Zooming keeps it on. Off whenever a map is opened (it opens on the site). */
+function fmFollow(on){FM.follow=!!on;const b=$('fm-loc');if(b){b.style.background=FM.follow?'#2563eb':'';b.style.boxShadow=FM.follow?'0 0 0 2px #fff inset':'';b.title=FM.follow?'following you — drag the map to stop':'follow me';}}
 function fmGpsStart(){if(FM.watch!=null||!navigator.geolocation)return;
  try{FM.watch=navigator.geolocation.watchPosition(p=>{const first=!FM.gps;FM.gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0};if(typeof p.coords.heading==='number'&&isFinite(p.coords.heading)&&p.coords.speed>0.7)FM.course={v:p.coords.heading,t:Date.now()};
-   if(first&&!FM.geo){FM.c=fmW(FM.gps.lat,FM.gps.lng);FM.z=19;}fmDraw();},()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}catch(e){FM.watch=null;}}
+   if(first&&!FM.geo){FM.c=fmW(FM.gps.lat,FM.gps.lng);FM.z=19;}else if(FM.follow)FM.c=fmW(FM.gps.lat,FM.gps.lng);fmDraw();},()=>{},{enableHighAccuracy:true,maximumAge:1000,timeout:20000});}catch(e){FM.watch=null;}}
 function fmGpsStop(){if(FM.watch!=null&&navigator.geolocation){try{navigator.geolocation.clearWatch(FM.watch);}catch(e){}}FM.watch=null;}
-async function fmOpen(){show('v-fmap');fmWire();fmTypedSync();fmLayRow();fmLegDraw();fmInfo('');FM.say='';FM.fail=0;FM.ok=0;
- const addr=[($('f-addr')||{}).value,($('f-city')||{}).value].map(x=>String(x||'').trim()).filter(Boolean).join(', ');
- const job=String(($('f-job')||{}).value||(note&&note.job)||'').trim();
- $('fm-sub').textContent=[job,addr].filter(Boolean).join(' · ');
+async function fmOpen(solo){FM.solo=!!solo;show('v-fmap');fmWire();fmFollow(false);fmTypedSync();fmLayRow();fmLegDraw();fmInfo('');FM.say='';FM.fail=0;FM.ok=0;
+ /* from the home screen there is no note: ignore whatever the note form last held */
+ const addr=FM.solo?'':[($('f-addr')||{}).value,($('f-city')||{}).value].map(x=>String(x||'').trim()).filter(Boolean).join(', ');
+ const job=FM.solo?'':String(($('f-job')||{}).value||(note&&note.job)||'').trim();
+ $('fm-sub').textContent=FM.solo?'no note':[job,addr].filter(Boolean).join(' · ');
  if(!navigator.onLine)FM.say='No signal — the map needs mobile data or Wi‑Fi. It will fill in when you’re connected.';
  fmGpsStart();
- const key=addr||'(gps)';
+ const key=FM.solo?'(solo)':(addr||'(gps)');
  if(FM.key!==key){FM.key=key;FM.geo=null;FM.c=null;
   if(addr&&navigator.onLine){const g=await fmGeo(addr);if(g){FM.geo={lat:g.lat,lng:g.lng,w:fmW(g.lat,g.lng)};FM.c=FM.geo.w.slice();FM.z=19;}
    else FM.say='Couldn’t place “'+addr+'” on the map — showing your GPS position instead.';}
-  else if(!addr)FM.say='No site address on this note yet — showing your GPS position.';}
+  else if(FM.solo){if(FM.find){FM.c=FM.find.w.slice();FM.z=19;}else FM.say='Showing where you are — tap 🔍 to go to an address.';}
+  else if(!addr)FM.say='No site address on this note yet — showing your GPS position, or tap 🔍 for an address.';}
  if(!FM.c&&FM.gps){FM.c=fmW(FM.gps.lat,FM.gps.lng);FM.z=19;}
  if(!FM.c){FM.c=fmW(49.14,-122.85);FM.z=11;}   /* Lower Mainland until an address or a GPS fix lands */
  fmDraw();}
 $('b-fmap').onclick=()=>{fmOpen();};
-$('fm-back').onclick=()=>{fmGpsStop();FM.go=null;fmGoDraw();show('v-note');};
+$('b-hmap').onclick=()=>{fmOpen(true);};
+$('fm-back').onclick=()=>{fmGpsStop();fmFollow(false);FM.go=null;fmGoDraw();show(FM.solo?'v-home':'v-note');};
+$('fm-find').onclick=()=>{const m=$('ff-msg');m.style.display='none';m.textContent='';$('ff-q').value=FM.find?FM.find.asked:'';$('m-fmfind').classList.add('on');try{$('ff-q').focus();$('ff-q').select();}catch(e){}};
+$('ff-cancel').onclick=()=>{$('m-fmfind').classList.remove('on');};
+$('ff-go').onclick=fmFindGo;
+$('ff-q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fmFindGo();}});
 $('fm-zi').onclick=()=>fmZoom(1);
 $('fm-zo').onclick=()=>fmZoom(-1);
 $('fm-loc').onclick=()=>{
- if(FM.gps){FM.c=fmW(FM.gps.lat,FM.gps.lng);if(FM.z<18)FM.z=19;FM.say='';fmDraw();}
- else if(FM.geo){FM.c=FM.geo.w.slice();fmDraw();toast('No GPS fix yet — centred on the site. Check location is allowed for this app.');}
- else toast('No GPS fix yet — check that location is allowed for this app.');};
+ const was=FM.follow;fmFollow(true);
+ if(FM.gps){FM.c=fmW(FM.gps.lat,FM.gps.lng);if(FM.z<18)FM.z=19;FM.say='';fmDraw();if(!was)toast('Following you — the map moves as you walk. Drag the map to stop.');}
+ else if(FM.geo){FM.c=FM.geo.w.slice();fmDraw();toast('No GPS fix yet — centred on the site. The map will follow you once there is a fix. Check location is allowed for this app.');}
+ else toast('No GPS fix yet — the map will follow you once there is one. Check that location is allowed for this app.');};
 window.addEventListener('resize',()=>{if($('v-fmap').classList.contains('on'))fmDraw();});
 
 let muPend=null;
