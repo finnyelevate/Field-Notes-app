@@ -1,5 +1,42 @@
 # Elevate Field — Changelog
 
+## Build 35.7 — 2026-11-27 (all crews)
+Only `index.html` and this file changed. `sw.js` is the same as 34.1. **Includes 35.6** (monument coordinates), which was not uploaded on its own.
+- **City utilities on the Site map — Surrey first** (a crew asked for storm and sanitary manholes and the like; Finny: "Let's do Surrey first then we can move towards Langley and Delta, Abbotsford").
+  - New **Utilities** tick box under the map, **off by default** (it uses extra mobile data). Tick it and three more appear: **Storm ✓, Sanitary ✓, Water ☐**.
+  - What is drawn, in the City of Surrey's own colours and symbols — **storm green, sanitary dark red, water blue**: mains, laterals, manholes; storm catch basins, devices and service connections; water valves, hydrants and service connections. A thin white glow is added so the lines read on the air photo.
+  - Appears from zoom 16 (about a block or two across). Catch basins and service connections only appear when zoomed right in — that is the city's rule, and the map says "zoom in closer" when it applies.
+  - **Tap a manhole, catch basin, valve, hydrant or main** for what the city records: type, size, material, **rim elevation, inverts**, slope, length, year built, status and the city's ID. A manhole is preferred over the main it sits on; anything else under your finger is listed as "Also here". A tapped manhole or other point also gets Go to / Drive there.
+  - Every utility info box ends: **"From the city's records — position is approximate and elevations are the city's, not ours. Not a locate."**
+  - Outside Surrey the map says "Utilities: no city data here yet (Surrey only so far)" and asks the city nothing.
+  - Tapping a point, monument, job pin or the SITE pin works exactly as before; the city is only asked when you tap empty map with Utilities ticked. If the city has nothing there, the interest-line lookup still runs as before.
+- Where it comes from: the City of Surrey's public map service (the same data as COSMOS). There is no province-wide utility layer, so each city has to be added separately. City-owned mains only — no gas, hydro, telecom or private services.
+- Checked on Surrey's real service from Finny's Chrome: the storm, sanitary and water pictures load for map tiles at 96 Ave and 161 St (48 of 48 tiles), and a tap lookup returns the city's attributes (e.g. sanitary manhole: regular, 1050 mm, concrete, rim 60.8 m, 1989).
+- Tests: Site map suite 223 checks (22 new: off by default and silent, sub-boxes, the right pictures requested from the right service, tile boxes, credit line, water on / off, the tap lookup and its wording for a manhole and a main, "Also here", caution line, Go to for a point only, interest lookup still answering, city service down, monument tap not hijacked, zoomed out, outside Surrey, switching off); real-browser-with-service-worker 9; note-loss 23; symbol snap 20; storage 12 — all green.
+- **Not re-run: the 116-check upload suite** (still to be rebuilt before the upload go-live build). The upload code is untouched.
+- **Not checked by eye:** how the utility lines actually look over the air photo — the screenshot of the test page would not capture, so the colours were read from the pictures instead. The white glow in particular is unseen. Also not checked: on a real phone, and how much mobile data a day with Utilities left on uses.
+- Next cities asked for: Langley, Delta, Abbotsford — each needs its own check and its own entry.
+
+## Build 35.6 — 2026-11-27 (all crews)
+Only `index.html` and this file changed. `sw.js` is the same as 34.1.
+- **Tap a monument and see its coordinates and elevation** (Finny, with a screenshot of another control map's pop-up: "perhaps the UTM coordinate and the elevation, especially the orthometric. I don't think we care about the ellipsoid"). The monument info now shows:
+  - **UTM northing and easting**, each with the published uncertainty (e.g. `N 5444759.676 ±0.011`, `E 512880.244 ±0.014`).
+  - **Elevation** (orthometric), in metres.
+  - One line of detail: UTM zone, horizontal datum, vertical datum and how the elevation was established (e.g. spirit levels), quality class, and the monument's condition with the date its record was last updated.
+  - **Anything that should make you careful is in red**: a condition other than good (anomalous, paved over, damaged, not found…) and an elevation the province marks as approximate.
+  - No ellipsoid height.
+- Where it comes from: the province's own open data — the "high precision published" geodetic control layer — looked up for the one monument you tapped. The monument's name appears at once; the numbers follow in a moment ("Looking up its published coordinates…"). Each monument is only looked up once per session.
+- If a monument isn't in that list (for example some vertical-only benchmarks) it says "No published coordinates for this one… see its record". With no signal or if the lookup fails it says so, and tries again the next time you tap it. "Open its record" still goes to GeoNetBC.
+- The note under the numbers reads "The province's published values — confirm on its record before holding it as control."
+- **Datum names are shown as the province's codes** (e.g. `GVD08`, `BC05`, `VGV00`, `CVD28`), not translated — say how you want them worded and they can be.
+- **One thing to know:** for the test monument (GCM 341784) the open data gives the northing as 5444759.676 where the monument's record shows 5444759.677. Easting and elevation agree. A 1 mm difference in how the province publishes the number — another reason the note says to confirm on the record.
+- The info box can now grow a little taller (up to 62 % of the map, was 46 %) so Go to / Drive there stay in view under the extra lines.
+- Checked on the province's real service from Finny's Chrome: the layer answers by GCM number in well under a second, with the fields above; a number that doesn't exist returns nothing cleanly.
+- Tests: Site map suite 201 checks (14 new: looking-up state, the lookup itself, N / E with uncertainty, elevation with datum and method, zone / datum / class, condition and date, no ellipsoid, caution line and buttons kept, no second lookup on re-tap, not-in-list, lookup failure then retry, anomalous and approximate called out, no published elevation, late answer not reopening a closed box, offline); real-browser-with-service-worker 9; note-loss 23; symbol snap 20; storage 12 — all green. Monument info rendered at phone size and checked by eye.
+- **Not re-run: the 116-check upload suite** (still to be rebuilt before the upload go-live build). The upload code is untouched.
+- Not checked: on a real phone; what the datum codes stand for (shown as given); monuments outside UTM zone 10 (the zone is worked out from the province's reference meridian, only zone 10 seen in testing).
+- Office: the PM job map's monument info does not have this yet — details for the Office chat are in `claude/field-build-35.6-monument-coordinates.md`.
+
 ## Build 35.5 — 2026-11-27 (all crews)
 Only `index.html` and this file changed. `sw.js` is the same as 34.1. **Includes everything in 35.4** (which was not uploaded on its own).
 - **Site map from the home screen** (Finny: "accessible even on the main screen before starting a field note, as some initial legal searches and looking for monuments may apply before the crew creates field notes"). New **🗺 Map** button beside Notes / Resources / Training. It opens the same Site map with no note: it starts on the phone's GPS position, with lot lines, PIDs, house numbers, monuments, job pins, ＋ Points, Go to and follow me all as usual. Back returns to the home screen.

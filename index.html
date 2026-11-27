@@ -150,6 +150,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 #fm-wrap{position:relative;flex:1;overflow:hidden;background:#e5e7eb;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 #fm-tiles{position:absolute;left:0;top:0}
 #fm-cv{position:absolute;left:0;top:0;pointer-events:none}
+.fm-usub{display:inline-flex;gap:4px;flex-wrap:wrap;padding:2px 6px;border-radius:8px;background:rgba(94,148,120,.14)}
 #fm-by{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.8);font-size:9px;padding:1px 5px;color:#333;max-width:100%;z-index:3}
 #fm-note{position:absolute;left:8px;top:8px;right:8px;background:rgba(255,255,255,.93);font-size:12px;padding:5px 8px;border-radius:8px;z-index:3;color:#24312B;display:none}
 #fm-hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(20,28,24,.78);color:#fff;font-size:12px;padding:3px 10px;border-radius:999px;z-index:3;white-space:nowrap;display:none;pointer-events:none}
@@ -169,7 +170,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 #fm-lay .fmseg button{border:0;background:transparent;padding:3px 9px;font-size:12.5px;color:inherit}
 #fm-lay .fmseg button.on{background:var(--green,#5E9478);color:#fff}
 #fm-lay .fm-add{padding:3px 9px;font-size:12.5px;width:auto;margin:0;display:inline-flex}
-#fm-info{position:absolute;left:8px;right:8px;bottom:30px;z-index:4;background:var(--paper);color:var(--ink,#24312B);font-size:13px;line-height:1.45;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;display:none;word-break:break-word;max-height:46%;overflow-y:auto;box-shadow:0 4px 18px rgba(0,0,0,.35);cursor:auto;touch-action:auto;user-select:text;-webkit-user-select:text}
+#fm-info{position:absolute;left:8px;right:8px;bottom:30px;z-index:4;background:var(--paper);color:var(--ink,#24312B);font-size:13px;line-height:1.45;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;display:none;word-break:break-word;max-height:62%;overflow-y:auto;box-shadow:0 4px 18px rgba(0,0,0,.35);cursor:auto;touch-action:auto;user-select:text;-webkit-user-select:text}
 #fm-leg{font-size:12px;margin-top:6px;line-height:1.5}
 .fm-chip{display:inline-flex;align-items:center;gap:5px;margin:0 8px 2px 0}
 .fm-chip i{display:inline-block;width:11px;height:11px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
@@ -4311,6 +4312,7 @@ function fmTint(col){const m=/^#([0-9a-f]{6})$/i.exec(col||'');if(!m)return '#ff
 let FM={z:19,c:null,base:'esri',key:'',imgs:{},geo:null,gps:null,watch:null,sets:[],msg:[],selW:null,fail:0,ok:0,all:true,tap:0,tapAt:[0,0],say:'',onv:{}};
 let FMZ={ver:0,joinKey:'',monSel:null,
  lab:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0},
+ hp:{},
  mon:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0,more:false},
  adr:{f:[],box:null,want:null,seq:0,t:0,err:'',failAt:0}};
 let FMJ={rows:null,busy:false,err:''};
@@ -4397,11 +4399,40 @@ function fmInfo(h,tgt){const el=$('fm-info');if(!el)return;FM.cand=h&&tgt?tgt:nu
  el.style.display=h?'block':'none';el.innerHTML=(h||'')+acts;
  const go=el.querySelector('[data-fmgo]');if(go)go.onclick=()=>fmGoStart(FM.cand);
  const rm=el.querySelector('[data-fmtrm]');if(rm)rm.onclick=()=>fmTypedRemove(+rm.getAttribute('data-fmtrm'));}
+/* Build 35.6: published coordinates and elevation in the monument tap. The map layer (SRV_GEODETIC_CONTROL_SP) carries no
+   coordinates, so one small lookup per tapped monument goes to the province's high-precision published layer
+   (WHSE_REFERENCE.SRV_GEODETIC_CONTROL_HP_PUB_SP, by GCM number; checked on the real service 2026-11-27 with GCM 341784).
+   Answers are kept for the session. Ellipsoid height is not in that layer and not wanted. Datum names are shown as the
+   province's own codes. A monument not in that layer (e.g. vertical-only benchmarks) gets "no published coordinates here". */
+const FM_HP='WHSE_REFERENCE.SRV_GEODETIC_CONTROL_HP_PUB_SP';
+function fmMonHPUrl(gcm){const g=String(gcm).trim(),v=/^\d+$/.test(g)?g:"'"+g.replace(/'/g,"''")+"'";
+ return FM_WFS+FM_HP+'/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=pub:'+FM_HP+'&outputFormat=application%2Fjson&count=1&srsName=EPSG:4326&propertyName=GEODETIC_CONTROL_MARKER,UTM_NORTHING,UTM_EASTING,UTM_LAT_STANDARD_DEVIATION,UTM_LONG_STANDARD_DEVIATION,UTM_REFERENCE_MERIDIAN,DATUM_NAME_HORIZONTAL,ELEVATION,VERTICAL_DATUM_NAME,VERTICAL_SURVEY_METHOD,VERTICAL_STATION_ORDER,MARKER_CONDITION,QUALITY_CLASS,LAST_UPDATE_DATE&CQL_FILTER='+encodeURIComponent('GEODETIC_CONTROL_MARKER='+v);}
+function fmMonHPParse(J){const f=J&&J.features&&J.features[0];if(!f)return {none:true};const p=f.properties||{},num=v=>(v==null||v===''||!isFinite(+v))?NaN:+v,str=v=>String(v==null?'':v).trim();
+ const mer=num(p.UTM_REFERENCE_MERIDIAN);
+ return {N:num(p.UTM_NORTHING),E:num(p.UTM_EASTING),sN:num(p.UTM_LAT_STANDARD_DEVIATION),sE:num(p.UTM_LONG_STANDARD_DEVIATION),zone:isFinite(mer)?Math.round((183-mer)/6):NaN,
+  hd:str(p.DATUM_NAME_HORIZONTAL),Z:num(p.ELEVATION),vd:str(p.VERTICAL_DATUM_NAME),vm:str(p.VERTICAL_SURVEY_METHOD),vo:str(p.VERTICAL_STATION_ORDER),cond:str(p.MARKER_CONDITION),qc:str(p.QUALITY_CLASS),upd:str(p.LAST_UPDATE_DATE).replace(/Z$/,'')};}
+function fmMonHPHtml(h){if(!h)return '';if(h.wait)return '<div style="margin-top:5px;opacity:.7">Looking up its published coordinates…</div>';
+ if(h.err)return '<div style="margin-top:5px;opacity:.75">Couldn’t load its published coordinates just now — they are on its record.</div>';
+ if(h.none||!isFinite(h.N)||!isFinite(h.E))return '<div style="margin-top:5px;opacity:.75">No published coordinates for this one in the province’s high-precision list — see its record.</div>';
+ const sd=v=>isFinite(v)?' <span style="opacity:.7">±'+v.toFixed(3)+'</span>':'',low=t=>t.toLowerCase();
+ let o='<div class="mono" style="margin-top:6px;line-height:1.5">N '+h.N.toFixed(3)+sd(h.sN)+'<br>E '+h.E.toFixed(3)+sd(h.sE)+'<br>';
+ o+=isFinite(h.Z)?'Elev '+h.Z.toFixed(3)+' m':'Elev — none published';o+='</div>';
+ const bits=[];if(isFinite(h.zone))bits.push('UTM zone '+h.zone);if(h.hd)bits.push('datum '+esc(h.hd));
+ if(isFinite(h.Z)){if(h.vd)bits.push('vertical '+esc(h.vd)+(h.vm&&h.vm!=='UNKNOWN'?' ('+esc(low(h.vm))+')':''));if(h.vo&&h.vo!=='INTEGRATED')bits.push('<b style="color:var(--danger)">elevation '+esc(low(h.vo))+'</b>');}
+ if(h.qc)bits.push('class '+esc(h.qc));
+ if(h.cond)bits.push('condition '+(h.cond==='GOOD'?'good':'<b style="color:var(--danger)">'+esc(low(h.cond))+'</b>')+(h.upd?' ('+esc(h.upd)+')':''));
+ o+='<div style="opacity:.85;margin-top:2px">'+bits.join(' · ')+'</div>';
+ return o;}
+function fmMonShow(m){const u=/^https:\/\//i.test(m.url)?m.url:'',h=m.gcm?FMZ.hp[m.gcm]:null;
+ fmInfo('<b>Monument '+esc(m.tab||m.gcm)+'</b>'+(m.gcm&&m.tab?' · GCM '+esc(m.gcm):'')+(m.st==='dead'?' · <b style="color:var(--danger)">DESTROYED</b>':m.st==='vert'?' · vertical benchmark':' · geodetic, published')+(m.tag?' · '+esc(m.tag):'')+(m.mun?' · '+esc(m.mun):'')+fmFrom(m)+
+  (u?' <a href="'+esc(u)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open its record ↗</a>':'')+fmMonHPHtml(h)+
+  '<div style="opacity:.75;margin-top:3px">'+(m.st==='dead'?'The province lists this monument as destroyed — don’t expect to find it or rely on it.':(h&&isFinite(h.N)?'The province’s published values — confirm on its record before holding it as control.':'Provincial control monument — coordinates and elevation are on its record.'))+'</div>',{lat:m.lat,lng:m.lng,label:'monument '+(m.tab||m.gcm)});}
+function fmMonHP(m){if(!m.gcm)return;const k=m.gcm,c=FMZ.hp[k];if(c&&!c.err)return;if(!navigator.onLine){FMZ.hp[k]={err:true};return;}
+ FMZ.hp[k]={wait:true};
+ fetch(fmMonHPUrl(k)).then(r=>{if(!r.ok)throw 0;return r.json();}).then(J=>{FMZ.hp[k]=fmMonHPParse(J);}).catch(()=>{FMZ.hp[k]={err:true};}).then(()=>{if(FMZ.monSel===m)fmMonShow(m);});}
 function fmMonPick(at){if(!fmOn('mon')||FM.z<FM_MINZ.mon||!FMZ.mon.f.length)return false;const [W,H]=fmSize();let best=null,bd=16;
  FMZ.mon.f.forEach(m=>{if(m.st==='dead'&&!fmOn('dead'))return;const q=fmXY(m.w,W,H),d=Math.hypot(q[0]-at[0],q[1]-at[1]);if(d<bd||(d===bd&&best&&best.st==='dead'&&m.st!=='dead')){bd=d;best=m;}});if(!best)return false;FMZ.monSel=best;FM.selW=null;
- const u=/^https:\/\//i.test(best.url)?best.url:'';
- fmInfo('<b>Monument '+esc(best.tab||best.gcm)+'</b>'+(best.gcm&&best.tab?' · GCM '+esc(best.gcm):'')+(best.st==='dead'?' · <b style="color:var(--danger)">DESTROYED</b>':best.st==='vert'?' · vertical benchmark':' · geodetic, published')+(best.tag?' · '+esc(best.tag):'')+(best.mun?' · '+esc(best.mun):'')+fmFrom(best)+
-  (u?' <a href="'+esc(u)+'" target="_blank" rel="noopener" style="text-decoration:underline;white-space:nowrap">Open its record ↗</a>':'')+'<br><span style="opacity:.75">'+(best.st==='dead'?'The province lists this monument as destroyed — don’t expect to find it or rely on it.':'Provincial control monument — coordinates and elevation are on its record.')+'</span>',{lat:best.lat,lng:best.lng,label:'monument '+(best.tab||best.gcm)});
+ fmMonHP(best);fmMonShow(best);
  fmDraw();return true;}
 /* ---- street names over the aerial ---- */
 function fmNames(tl,W,H,want){if(!fmOn('names')||FM.base!=='esri')return;const tz=Math.max(0,Math.min(18,Math.round(FM.z))),wpt=256/Math.pow(2,tz),s=Math.pow(2,FM.z),nmax=Math.pow(2,tz);
@@ -4564,6 +4595,38 @@ function fmJobsPick(at){if(!fmOn('jobs')||!(FMJ.rows||[]).length)return false;co
    checked on real tiles 2026-11-25). A tap that hits nothing else asks the province what interest is under the finger. */
 const FM_INT_FILTER='hue-rotate(150deg) saturate(1.6) brightness(1.25)';
 function fmIntKind(n){n=String(n||'').trim();if(!n||n==='Interest')return 'Interest (covenant, easement or other — the kind is on the plan)';return n.replace(/\bRoW\b/g,'right of way');}
+/* ---- Build 35.7: city utilities (storm, sanitary, water) as an overlay — City of Surrey first ----
+   There is no province-wide utility layer; each city publishes its own. Surrey's public map service
+   (gisservices.surrey.ca/arcgis/rest/services/Public/{Sanitary,Drainage,Water}/MapServer, checked from Finny's Chrome 2026-11-27)
+   draws the picture for us (export → transparent PNG per map tile, the city's own colours and symbols) and answers a tap
+   (identify → the city's attributes: size, material, rim / invert elevations, year).  Off by default — it is extra mobile data.
+   To add a city: one more entry here with its box [south, west, north, east], service paths and the layer numbers to draw. */
+const FM_UTIL=[{id:'surrey',name:'City of Surrey',box:[48.99,-122.93,49.23,-122.67],base:'https://gisservices.surrey.ca/arcgis/rest/services/Public/',
+ svc:{ustm:{n:'Storm',path:'Drainage',lay:[2,3,4,11,12,14]},usan:{n:'Sanitary',path:'Sanitary',lay:[2,4,6]},uwat:{n:'Water',path:'Water',lay:[0,4,5,6,8]}}}];
+/* the city's dark green / dark red / blue lines get a thin white glow so they read on the air photo */
+const FM_UFILTER='drop-shadow(0 0 1.5px rgba(255,255,255,.95))';
+const FM_UKEYS=['ustm','usan','uwat'],FM_UDEF={util:false,ustm:true,usan:true,uwat:false},FM_UMINZ=16;
+const fmUOn=k=>{if(FM.onv[k]===undefined){FM.onv[k]=FM_UDEF[k];try{const v=localStorage.getItem('efn-fm'+k);if(v==='1')FM.onv[k]=true;else if(v==='0')FM.onv[k]=false;}catch(e){}}return FM.onv[k];};
+function fmUCity(lat,lng){return FM_UTIL.find(c=>lat>=c.box[0]&&lat<=c.box[2]&&lng>=c.box[1]&&lng<=c.box[3])||null;}
+function fmUHere(){if(!FM.c)return null;const ll=fmWLL(FM.c);return fmUCity(ll[0],ll[1]);}
+function fmUTileUrl(c,k,bb){const v=c.svc[k];return c.base+v.path+'/MapServer/export?bbox='+bb.join('%2C')+'&bboxSR=3857&imageSR=3857&size=512%2C512&dpi=192&format=png32&transparent=true&layers='+encodeURIComponent('show:'+v.lay.join(','))+'&f=image';}
+function fmUWords(v){v=String(v==null?'':v).trim();return /^[A-Z0-9 ()\/.,-]+$/.test(v)&&/[A-Z]{3}/.test(v)?v.toLowerCase():v;}
+function fmUAttrs(a){const out=[],used={};const pick=(re,lab,unit)=>{for(const k in a){if(used[k]||!re.test(k))continue;const v=String(a[k]==null?'':a[k]).trim();if(!v||/^null$/i.test(v))continue;used[k]=1;out.push((lab||k.replace(/\s*\(.*\)\s*$/,'').toLowerCase())+' '+fmUWords(v)+(unit&&!/[a-z]/i.test(v)?' '+unit:''));return;}};
+ pick(/^(MANHOLE|MAIN|LATERAL|DEVICE|VALVE|HYDRANT|CHAMBER|METER|IC)?\s*TYPE2?$/i,'type');pick(/CLASSIFICATION/i,'class');pick(/SIZE|DIAMETER/i,'size','mm');pick(/^MATERIAL/i,'material');
+ pick(/^RIM ELEV|RIM_ELEV|IC RIM ELEV/i,'rim','m');pick(/^INVERT/i,'invert','m');pick(/^UP(STREAM)? ?ELEV|UP_ELEV/i,'up invert','m');pick(/^DOWN(STREAM)? ?ELEV|DOWN_ELEV/i,'down invert','m');pick(/DEPTH/i,'depth','m');pick(/^SLOPE/i,'slope','%');
+ pick(/^LENGTH/i,'length','m');pick(/^YEAR/i,'built');pick(/^STATUS$/i,'');pick(/^FACILITY ?ID$/i,'city ID');return out;}
+function fmUtilLookup(at,then){const c=fmUOn('util')&&FM.z>=FM_UMINZ?fmUHere():null,ks=c?FM_UKEYS.filter(k=>fmUOn(k)):[];
+ if(!ks.length||typeof fetch!=='function'||!navigator.onLine){then();return;}
+ const [W,H]=fmSize(),s=Math.pow(2,FM.z),ll=fmWLL([FM.c[0]+(at[0]-W/2)/s,FM.c[1]+(at[1]-H/2)/s]),a=fmWLL([FM.c[0]-W/2/s,FM.c[1]+H/2/s]),b=fmWLL([FM.c[0]+W/2/s,FM.c[1]-H/2/s]),my=FM.intSeq;
+ Promise.all(ks.map(k=>{const v=c.svc[k];return fetch(c.base+v.path+'/MapServer/identify?f=json&geometryType=esriGeometryPoint&sr=4326&returnGeometry=true&tolerance=12&geometry='+ll[1].toFixed(7)+'%2C'+ll[0].toFixed(7)+'&mapExtent='+[a[1],a[0],b[1],b[0]].map(x=>x.toFixed(7)).join('%2C')+'&imageDisplay='+Math.round(W)+'%2C'+Math.round(H)+'%2C96&layers='+encodeURIComponent('visible:'+v.lay.join(',')))
+   .then(r=>r.ok?r.json():null).then(J=>((J&&J.results)||[]).map(x=>({k,x}))).catch(()=>[]);}))
+ .then(R=>{if(my!==FM.intSeq)return;const all=[].concat(...R);if(!all.length){then();return;}
+  const isPt=o=>o.x.geometryType==='esriGeometryPoint',best=all.find(isPt)||all[0],x=best.x,g=x.geometry||{},others=all.filter(o=>o!==best).map(o=>o.x.layerName).filter((n,i,A)=>n&&A.indexOf(n)===i).slice(0,4);
+  const tgt=isPt(best)&&isFinite(+g.y)&&isFinite(+g.x)?{lat:+g.y,lng:+g.x,label:String(x.layerName||'utility').toLowerCase()}:null,at2=fmUAttrs(x.attributes||{});
+  if(tgt)FM.selW=fmW(tgt.lat,tgt.lng);
+  fmInfo('<b>'+esc(String(x.layerName||'Utility').replace(/s$/,''))+'</b> · '+esc(c.name)+' map'+(tgt?fmFrom(tgt):'')+(at2.length?'<div style="margin-top:4px">'+at2.map(esc).join(' · ')+'</div>':'')+
+   (others.length?'<div style="opacity:.75;margin-top:2px">Also here: '+others.map(n=>esc(n.toLowerCase())).join(', ')+'</div>':'')+
+   '<div style="opacity:.75;margin-top:3px">From the city’s records — position is approximate and elevations are the city’s, not ours. Not a locate.</div>',tgt);fmDraw();}).catch(()=>{if(my===FM.intSeq)then();});}
 function fmIntLookup(at){if(!fmOn('lots')||!fmOn('int')||FM.z<FM_MINZ.int||typeof fetch!=='function'||!navigator.onLine)return;
  const [W,H]=fmSize(),s=Math.pow(2,FM.z),ll=fmWLL([FM.c[0]+(at[0]-W/2)/s,FM.c[1]+(at[1]-H/2)/s]),lat=ll[0],lng=ll[1],eLng=4/(256*s)*360,eLat=eLng*Math.cos(lat*Math.PI/180),my=FM.intSeq,lay=FM_LAY.lab[0];
  fetch(FM_WFS+lay+'/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=pub:'+lay+'&outputFormat=application%2Fjson&count=12&srsName=EPSG:4326&propertyName=PID,PLAN_NUMBER,PARCEL_NAME,PARCEL_CLASS,OWNER_TYPE&CQL_FILTER='+encodeURIComponent("PARCEL_CLASS='Interest' AND BBOX(SHAPE,"+[lng-eLng,lat-eLat,lng+eLng,lat+eLat].map(v=>v.toFixed(7)).join(',')+",'EPSG:4326')"))
@@ -4630,9 +4693,10 @@ $('ft-n').addEventListener('paste',()=>setTimeout(()=>{if($('ft-e').value.trim()
  if(r.swapped){const m=$('ft-msg');m.style.display='block';m.style.color='';m.textContent='Northing and easting were the other way round — swapped.';}},0));
 function fmHint(){ /* a ticked layer that this zoom is too far out to draw */
  const far=[],near=[];if((fmOn('lots')||fmOn('int'))&&Math.round(FM.z)<15)far.push('lot lines');if(fmOn('mon')&&FM.z<FM_MINZ.mon)far.push('monuments');
+ let uOut='';if(fmUOn('util')){if(!fmUHere())uOut='Utilities: no city data here yet (Surrey only so far)';else if(FM.z<FM_UMINZ)far.push('utilities');else if(FM.z<18&&fmUOn('ustm'))near.push('catch basins');}
  if(fmOn('adr')&&FM.z<FM_MINZ.adr)near.push('house numbers');if(fmOn('lab')&&FM.z<FM_MINZ.lab)near.push('PIDs');
  if(far.length)return 'Zoom in to see '+far.join(' and ');
- if(near.length&&FM.z>=16)return 'Zoom in closer for '+near.join(' and ');return '';}
+ if(near.length&&FM.z>=16)return 'Zoom in closer for '+near.join(' and ');return uOut;}
 function fmNote(){const el=$('fm-note');if(!el)return;const t=FM.say||(FM.fail>3&&!FM.ok?'The background isn’t loading — no signal, or this network blocks it. The map needs mobile data or Wi‑Fi.':'');
  el.style.display=t?'block':'none';el.textContent=t;
  const h=$('fm-hint');if(h){const ht=t?'':fmHint();h.style.display=ht?'block':'none';h.textContent=ht;}}
@@ -4645,14 +4709,17 @@ function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box|
   if(!im){im=document.createElement('img');im.draggable=false;im.alt='';im.style.position='absolute';im.style.opacity=op;im.style.zIndex=zi;if(flt)im.style.filter=flt;im.style.pointerEvents='none';const i2=im;
    im.onerror=()=>{i2.style.display='none';if(key.charAt(0)==='b'){FM.fail++;fmNote();}};im.onload=()=>{if(key.charAt(0)==='b'){FM.ok++;fmNote();}};im.src=url;FM.imgs[key]=im;tl.appendChild(im);}
   const px=(v,c0,half)=>Math.round((v*wpt-c0)*s+half),l=px(x,FM.c[0],W/2),t=px(y,FM.c[1],H/2);im.style.left=l+'px';im.style.top=t+'px';im.style.width=(px(x+1,FM.c[0],W/2)-l)+'px';im.style.height=(px(y+1,FM.c[1],H/2)-t)+'px';};
+ const uc=fmUOn('util')?fmUHere():null;
  if((x1-x0+1)*(y1-y0+1)<=80)for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){if(y<0||y>=nmax)continue;const xx=((x%nmax)+nmax)%nmax;
    put('b|'+FM.base+'|'+tz+'|'+x+'|'+y,B.u.replace('{z}',tz).replace('{x}',xx).replace('{y}',y),x,y,1,0);
    if(tz>=15&&(fmOn('lots')||fmOn('int'))){const m=20037508.342789244,w0=2*m/nmax,bq=FM_LOTS+[(-m+xx*w0).toFixed(3),(m-(y+1)*w0).toFixed(3),(-m+(xx+1)*w0).toFixed(3),(m-y*w0).toFixed(3)].join('%2C')+'&CQL_FILTER=';
     if(fmOn('lots'))put('l|'+tz+'|'+x+'|'+y,bq+encodeURIComponent("PARCEL_CLASS<>'Interest'"),x,y,0.75,1);
-    if(fmOn('int'))put('i|'+tz+'|'+x+'|'+y,bq+encodeURIComponent("PARCEL_CLASS='Interest'"),x,y,1,1,FM_INT_FILTER);}}
+    if(fmOn('int'))put('i|'+tz+'|'+x+'|'+y,bq+encodeURIComponent("PARCEL_CLASS='Interest'"),x,y,1,1,FM_INT_FILTER);}
+   if(uc&&tz>=FM_UMINZ){const m=20037508.342789244,w0=2*m/nmax,bb=[(-m+xx*w0).toFixed(3),(m-(y+1)*w0).toFixed(3),(-m+(xx+1)*w0).toFixed(3),(m-y*w0).toFixed(3)];
+    FM_UKEYS.forEach(k=>{if(fmUOn(k))put('u|'+k+'|'+tz+'|'+x+'|'+y,fmUTileUrl(uc,k,bb),x,y,1,2,FM.base==='esri'?FM_UFILTER:'');});}}
  fmNames(tl,W,H,want);
  Object.keys(FM.imgs).forEach(k=>{if(!want[k]){const im=FM.imgs[k];if(im.parentNode)im.parentNode.removeChild(im);delete FM.imgs[k];}});
- const by=$('fm-by');if(by)by.textContent=[B.by,fmOn('lots')?'Lots: ParcelMap BC':'',fmOn('mon')&&FM.z>=FM_MINZ.mon?(FMZ.mon.err?'Monuments couldn’t be loaded':'Monuments: GeoBC'+(FMZ.mon.more?' (zoom in for all)':'')):'',fmOn('adr')&&FM.z>=FM_MINZ.adr?(FMZ.adr.err?'Addresses couldn’t be loaded':'Addresses: BC Geocoder'):''].filter(Boolean).join(' · ');
+ const by=$('fm-by');if(by)by.textContent=[B.by,fmOn('lots')?'Lots: ParcelMap BC':'',fmOn('mon')&&FM.z>=FM_MINZ.mon?(FMZ.mon.err?'Monuments couldn’t be loaded':'Monuments: GeoBC'+(FMZ.mon.more?' (zoom in for all)':'')):'',fmOn('adr')&&FM.z>=FM_MINZ.adr?(FMZ.adr.err?'Addresses couldn’t be loaded':'Addresses: BC Geocoder'):'',uc&&FM.z>=FM_UMINZ?'Utilities: '+uc.name:''].filter(Boolean).join(' · ');
  if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
  const g=cv.getContext&&cv.getContext('2d');if(!g){fmNote();return;}g.clearRect(0,0,W,H);
  fmzDraw(g,W,H);fmJobsDraw(g,W,H);fmPtsDraw(g,W,H);
@@ -4676,7 +4743,7 @@ function fmDraw(){const box=$('fm-wrap'),tl=$('fm-tiles'),cv=$('fm-cv');if(!box|
 function fmZoomTo(z1,at){const [W,H]=fmSize(),z0=FM.z;z1=Math.max(8,Math.min(22,z1));if(z1===z0||!FM.c)return;
  if(at){const s0=Math.pow(2,z0),s1=Math.pow(2,z1),wx=FM.c[0]+(at[0]-W/2)/s0,wy=FM.c[1]+(at[1]-H/2)/s0;FM.c=[wx-(at[0]-W/2)/s1,wy-(at[1]-H/2)/s1];}FM.z=z1;fmDraw();}
 function fmZoom(d,at){fmZoomTo(FM.z+d,at);}
-function fmPick(at){FM.intSeq=(FM.intSeq||0)+1;if(fmPtsPick(at))return;if(fmMonPick(at))return;if(fmJobsPick(at))return;if(fmFindPick(at))return;if(fmSitePick(at))return;FM.selW=null;FMZ.monSel=null;fmInfo('');fmDraw();fmIntLookup(at);}
+function fmPick(at){FM.intSeq=(FM.intSeq||0)+1;if(fmPtsPick(at))return;if(fmMonPick(at))return;if(fmJobsPick(at))return;if(fmFindPick(at))return;if(fmSitePick(at))return;FM.selW=null;FMZ.monSel=null;fmInfo('');fmDraw();fmUtilLookup(at,()=>fmIntLookup(at));}
 function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.dataset.wired='1';
  const P=new Map();let drag=null,moved=false,pinch=null;
  const pos=e=>{const r=box.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
@@ -4692,11 +4759,12 @@ function fmWire(){const box=$('fm-wrap');if(!box||box.dataset.wired)return;box.d
   if(!P.size)drag=null;});
  box.addEventListener('pointercancel',e=>{P.delete(e.pointerId);if(P.size<2)pinch=null;if(!P.size)drag=null;});
  box.addEventListener('wheel',e=>{e.preventDefault();fmZoom(e.deltaY<0?0.5:-0.5,pos(e));},{passive:false});}
-function fmLayRow(){const cb=(k,lab)=>'<label class="fm-cb"><input type="checkbox" data-fmk="'+k+'" '+(fmOn(k)?'checked':'')+'> '+lab+'</label>';
+function fmLayRow(){const ucb=(k,lab)=>'<label class="fm-cb"><input type="checkbox" data-fmu="'+k+'" '+(fmUOn(k)?'checked':'')+'> '+lab+'</label>';const cb=(k,lab)=>'<label class="fm-cb"><input type="checkbox" data-fmk="'+k+'" '+(fmOn(k)?'checked':'')+'> '+lab+'</label>';
  $('fm-lay').innerHTML='<span class="fmseg">'+['esri','osm'].map(k=>'<button class="'+(FM.base===k?'on':'')+'" data-fmb="'+k+'">'+FM_BASE[k].n+'</button>').join('')+'</span>'+
-  cb('lots','Lots')+cb('int','Interest lines')+cb('adr','House #s')+cb('lab','PID / plan')+cb('mon','Monuments')+cb('dead','Destroyed')+cb('names','Streets')+cb('jobs','Our jobs')+
+  cb('lots','Lots')+cb('int','Interest lines')+cb('adr','House #s')+cb('lab','PID / plan')+cb('mon','Monuments')+cb('dead','Destroyed')+cb('names','Streets')+cb('jobs','Our jobs')+ucb('util','Utilities')+(fmUOn('util')?'<span class="fm-usub">'+FM_UKEYS.map(k=>ucb(k,FM_UTIL[0].svc[k].n)).join('')+'</span>':'')+
   '<label class="btn ghost fm-add">＋ Points<input type="file" id="fm-file" accept=".msz,.mbz,.txt,.csv,.asc" multiple hidden></label><button class="btn ghost fm-add" id="fm-type">Type N, E</button>';
  $('fm-lay').querySelectorAll('[data-fmk]').forEach(c=>{c.onchange=()=>fmSet(c.dataset.fmk,c.checked);});
+ $('fm-lay').querySelectorAll('[data-fmu]').forEach(c=>{c.onchange=()=>{const k=c.dataset.fmu;fmUOn(k);fmSet(k,c.checked);if(k==='util'){fmLayRow();if(c.checked&&!fmUHere())toast('Utilities are only available in Surrey so far.');else if(c.checked)toast('City utility records — approximate, not a locate.');}};});
  $('fm-lay').querySelectorAll('[data-fmb]').forEach(b=>{b.onclick=()=>{FM.base=b.dataset.fmb;FM.fail=0;FM.ok=0;try{localStorage.setItem('efn-fmbase',FM.base);}catch(e){}fmLayRow();fmDraw();};});
  $('fm-type').onclick=fmTypeOpen;
  const f=$('fm-file');f.onchange=()=>{if(f.files&&f.files.length)fmAddFiles([...f.files]);f.value='';};}
